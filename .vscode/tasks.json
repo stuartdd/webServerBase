@@ -1,0 +1,35 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "install",
+            "type": "shell",
+            "command": "go install",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "clean",
+            "type": "shell",
+            "command": "go clean webServerBase.go",
+            "problemMatcher": []
+        },
+        {
+            "label": "run",
+            "type": "shell",
+            "command": "webServerBase",
+            "problemMatcher": []
+        },
+        {
+            "label": "stop",
+            "type": "shell",
+            "command": "curl http://localhost:7999/stop",
+            "problemMatcher": []
+        }
+    ]
+}
