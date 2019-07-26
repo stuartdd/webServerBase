@@ -1,37 +1,31 @@
 package handlers
 
 import (
-	"errors"
+	"fmt"
 	"log"
 	"net/http"
+	"webServerBase/dto"
+	"webServerBase/state"
 )
 
 /*
 HandlerData is the state of the server
 */
 type HandlerData struct {
-	before       handlerListData
-	mappings     map[string]mappingData
-	after        handlerListData
-	errorHandler func(http.ResponseWriter, *http.Request, *ErrorResponse)
-}
-
-/*
-ErrorResponse is the defininition of an  error
-*/
-type ErrorResponse struct {
-	code int
-	resp string
-	err  error
+	before         handlerListData
+	mappings       map[string]mappingData
+	after          handlerListData
+	errorHandler   func(http.ResponseWriter, *http.Request, *dto.Response)
+	defaultHandler func(http.ResponseWriter, *http.Request, *dto.Response)
 }
 
 type handlerListData struct {
-	handlerFunc func(http.ResponseWriter, *http.Request) *ErrorResponse
+	handlerFunc func(*http.Request) *dto.Response
 	next        *handlerListData
 }
 
 type mappingData struct {
-	handlerFunc   func(http.ResponseWriter, *http.Request) *ErrorResponse
+	handlerFunc   func(*http.Request) *dto.Response
 	requestMethod string
 	requestPath   string
 }
@@ -50,38 +44,23 @@ func NewHandlerData() *HandlerData {
 			handlerFunc: nil,
 			next:        nil,
 		},
+		errorHandler:   defaultErrorResponseHandler,
+		defaultHandler: defaultResponseHandler,
 	}
 	return handler
 }
 
 /*
-NewErrorResponse create an error response
-*/
-func NewErrorResponse(statusCode int, response string, goErr error) *ErrorResponse {
-	if response == "" {
-		response = http.StatusText(statusCode)
-	}
-	if goErr == nil {
-		goErr = errors.New("")
-	}
-	return &ErrorResponse{
-		code: statusCode,
-		resp: response,
-		err:  goErr,
-	}
-}
-
-/*
 SetErrorHandler handle an error is one occurs
 */
-func (p *HandlerData) SetErrorHandler(errorHandler func(http.ResponseWriter, *http.Request, *ErrorResponse)) {
+func (p *HandlerData) SetErrorHandler(errorHandler func(http.ResponseWriter, *http.Request, *dto.Response)) {
 	p.errorHandler = errorHandler
 }
 
 /*
 AddMappedHandler creates a route to a function given a path
 */
-func (p *HandlerData) AddMappedHandler(path string, method string, handlerFunc func(http.ResponseWriter, *http.Request) *ErrorResponse) {
+func (p *HandlerData) AddMappedHandler(path string, method string, handlerFunc func(*http.Request) *dto.Response) {
 	mapping := mappingData{
 		handlerFunc:   handlerFunc,
 		requestMethod: method,
@@ -93,7 +72,7 @@ func (p *HandlerData) AddMappedHandler(path string, method string, handlerFunc f
 /*
 AddBeforeHandler adds a function called before the mapping function
 */
-func (p *HandlerData) AddBeforeHandler(beforeFunc func(http.ResponseWriter, *http.Request) *ErrorResponse) {
+func (p *HandlerData) AddBeforeHandler(beforeFunc func(*http.Request) *dto.Response) {
 	bef := &p.before
 	for bef.next != nil {
 		bef = bef.next
@@ -108,7 +87,7 @@ func (p *HandlerData) AddBeforeHandler(beforeFunc func(http.ResponseWriter, *htt
 /*
 AddAfterHandler adds a function called after the mapping function
 */
-func (p *HandlerData) AddAfterHandler(afterFunc func(http.ResponseWriter, *http.Request) *ErrorResponse) {
+func (p *HandlerData) AddAfterHandler(afterFunc func(*http.Request) *dto.Response) {
 	aft := &p.after
 	for aft.next != nil {
 		aft = aft.next
@@ -124,59 +103,68 @@ func (p *HandlerData) AddAfterHandler(afterFunc func(http.ResponseWriter, *http.
 ServeHTTP handle ALL calls
 */
 func (p *HandlerData) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	var handlerError *ErrorResponse
+	var handlerResponse *dto.Response
+	/*
+		Find the mapping
+	*/
 	mapping, found := p.mappings[r.URL.String()]
 	if !found {
-		notFound := NewErrorResponse(404, http.StatusText(404), nil)
-		if p.errorHandler == nil {
-			logHandlerError(r, notFound)
-			http.Error(w, notFound.resp, notFound.code)
-		} else {
-			p.errorHandler(w, r, notFound)
-		}
+		/*
+			Mapping was not found
+		*/
+		handlerResponse = dto.NewResponse(404, http.StatusText(404), "", nil)
+		logHandlerResponse(r, handlerResponse)
+		p.errorHandler(w, r, handlerResponse)
 		return
 	}
 
-	handlerError = iterateHandlerList(p, w, r, &p.before)
-	if handlerError != nil {
-		if p.errorHandler == nil {
-			logHandlerError(r, handlerError)
-			http.Error(w, handlerError.resp, handlerError.code)
-		} else {
-			p.errorHandler(w, r, handlerError)
-		}
+	handlerResponse = iterateHandlerListAndInvoke(p, w, r, &p.before)
+	if handlerResponse != nil {
+		logHandlerResponse(r, handlerResponse)
+		p.errorHandler(w, r, handlerResponse)
 		return
 	}
 
-	handlerError = mapping.handlerFunc(w, r)
-	if handlerError != nil {
-		if p.errorHandler == nil {
-			logHandlerError(r, handlerError)
-			http.Error(w, handlerError.resp, handlerError.code)
-		} else {
-			p.errorHandler(w, r, handlerError)
+	handlerResponse = mapping.handlerFunc(r)
+	if handlerResponse != nil {
+		logHandlerResponse(r, handlerResponse)
+		if handlerResponse != nil {
+			if handlerResponse.IsError() {
+				p.errorHandler(w, r, handlerResponse)
+				return
+			} else {
+
+			}
 		}
-		return
 	}
 
-	handlerError = iterateHandlerList(p, w, r, &p.after)
-	if handlerError != nil {
-		if p.errorHandler == nil {
-			logHandlerError(r, handlerError)
-			http.Error(w, handlerError.resp, handlerError.code)
-		} else {
-			p.errorHandler(w, r, handlerError)
-		}
+	handlerResponse = iterateHandlerListAndInvoke(p, w, r, &p.after)
+	if handlerResponse != nil {
+		logHandlerResponse(r, handlerResponse)
+		p.errorHandler(w, r, handlerResponse)
 		return
 	}
 }
 
-func iterateHandlerList(p *HandlerData, w http.ResponseWriter, r *http.Request, list *handlerListData) *ErrorResponse {
+func defaultErrorResponseHandler(w http.ResponseWriter, request *http.Request, response *dto.Response) {
+	log.Print("IN defaultErrorHandler")
+	http.Error(w, response.GetResp(), response.GetCode())
+}
+
+func defaultResponseHandler(w http.ResponseWriter, request *http.Request, response *dto.Response) {
+	log.Print("IN defaultHandler")
+	w.Header().Set("Content-Type", response.GetContentType())
+	w.Header().Set("Server", state.GetStatusExecutableName())
+	w.WriteHeader(response.GetCode())
+	fmt.Fprintf(w, response.GetResp())
+}
+
+func iterateHandlerListAndInvoke(p *HandlerData, w http.ResponseWriter, r *http.Request, list *handlerListData) *dto.Response {
 	for list.next != nil {
 		if list.handlerFunc != nil {
-			handlerError := list.handlerFunc(w, r)
-			if handlerError != nil {
-				return handlerError
+			handlerResponse := list.handlerFunc(r)
+			if handlerResponse != nil {
+				return handlerResponse
 			}
 		}
 		list = list.next
@@ -184,6 +172,11 @@ func iterateHandlerList(p *HandlerData, w http.ResponseWriter, r *http.Request, 
 	return nil
 }
 
-func logHandlerError(r *http.Request, h *ErrorResponse) {
-	log.Printf("ERROR: {\"URL\":\"%s\",\"code\":%d,\"err\":\"%s\",\"resp\":\"%s\"}", r.URL.String(), h.code, h.err, h.resp)
+func logHandlerResponse(r *http.Request, h *dto.Response) {
+	if h.IsError() {
+		log.Printf("ERROR: {\"URL\":\"%s\", \"ERROR\":\"%s\"}", r.URL.String(), h.GetJSON())
+	} else {
+		log.Printf("RESPONSE: {\"URL\":\"%s\", \"ERROR\":\"%s\"}", r.URL.String(), h.GetJSON())
+	}
+
 }

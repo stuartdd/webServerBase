@@ -8,11 +8,11 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"webServerBase/dto"
 	"webServerBase/handlers"
 	"webServerBase/state"
 )
 
-var statusData *state.StatusData
 var logFile *os.File
 
 func main() {
@@ -26,12 +26,12 @@ func main() {
 			configFileName = configFileName + ".json"
 		}
 	}
-	configData, err := state.LoadConfigData(configFileName)
+	err := state.LoadConfigData(configFileName)
 	if err != nil {
 		log.Fatal(err)
 		os.Exit(1)
 	}
-	RunWithConfig(configData)
+	RunWithConfig(state.GetConfigInstance())
 }
 
 /*
@@ -40,8 +40,7 @@ RunWithConfig runs with a sgeneric handler
 Param - config a ref to the config object
 */
 func RunWithConfig(configData *state.ConfigData) {
-
-	statusData = state.NewStatusData(configData)
+	state.SetStatusConfigData(configData)
 	/*
 		Open the logs. Log name is in the congig data. If not defined default to sysout
 	*/
@@ -56,7 +55,7 @@ func RunWithConfig(configData *state.ConfigData) {
 	log.Printf("Action:status - Return server status\n")
 	log.Printf("Server:Configured\n")
 	if configData.Debug {
-		log.Printf("State:%s\n", statusData.ToString())
+		log.Printf("State:%s\n", state.GetStatusJSON())
 	}
 	/*
 	   Start the server.
@@ -74,31 +73,27 @@ func RunWithConfig(configData *state.ConfigData) {
 Start of handlers section
 *************************************************/
 
-func stopHandler(w http.ResponseWriter, r *http.Request) *handlers.ErrorResponse {
-	statusData.SetState("STOPPING")
+func stopHandler(r *http.Request) *dto.Response {
+	state.SetStatusState("STOPPING")
 	go stopServer(false)
-	return logAndReturn200(w, r, statusData.ToStringWithoutConfig())
+	return dto.NewResponse(200, state.GetStatusJSONWithoutConfig(), "application/json", nil)
 }
 
-func statusHandler(w http.ResponseWriter, r *http.Request) *handlers.ErrorResponse {
-	return logAndReturn200(w, r, statusData.ToString())
+func statusHandler(r *http.Request) *dto.Response {
+	return dto.NewResponse(200, state.GetStatusJSON(), "application/json", nil)
 }
 
-func filterBefore(w http.ResponseWriter, r *http.Request) *handlers.ErrorResponse {
+func filterBefore(r *http.Request) *dto.Response {
 	log.Print("IN Filter Before 1")
-	return handlers.NewErrorResponse(500, "", nil)
+	return nil
 }
-func filterAfter(w http.ResponseWriter, r *http.Request) *handlers.ErrorResponse {
+func filterAfter(r *http.Request) *dto.Response {
 	log.Print("IN Filter After 1")
 	return nil
 }
-func errorHandler(w http.ResponseWriter, r *http.Request, e *handlers.ErrorResponse) {
+func errorHandler(w http.ResponseWriter, r *http.Request, e *dto.Response) {
 	log.Print("IN errorHandler")
 	http.Error(w, "bollocks", 400)
-}
-func filterAfter2(w http.ResponseWriter, r *http.Request) *handlers.ErrorResponse {
-	log.Print("IN Filter After 2")
-	return nil
 }
 
 /************************************************
@@ -106,13 +101,6 @@ End of handlers section
 
 Start of utility functions
 *************************************************/
-func logAndReturn200(w http.ResponseWriter, r *http.Request, resp string) *handlers.ErrorResponse {
-	log.Print("REQ:" + r.URL.Path + " RESP:" + resp)
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Server", statusData.GetExecutable())
-	fmt.Fprintf(w, resp)
-	return nil
-}
 
 func createLog(configData *state.ConfigData) {
 	if configData.LogFileName != "" {
