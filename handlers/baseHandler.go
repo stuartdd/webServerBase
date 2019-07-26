@@ -51,10 +51,17 @@ func NewHandlerData() *HandlerData {
 }
 
 /*
-SetErrorHandler handle an error is one occurs
+SetErrorHandler handle an error response if one occurs
 */
 func (p *HandlerData) SetErrorHandler(errorHandler func(http.ResponseWriter, *http.Request, *dto.Response)) {
 	p.errorHandler = errorHandler
+}
+
+/*
+SetHandler handle a NON error response
+*/
+func (p *HandlerData) SetHandler(handler func(http.ResponseWriter, *http.Request, *dto.Response)) {
+	p.defaultHandler = handler
 }
 
 /*
@@ -104,6 +111,7 @@ ServeHTTP handle ALL calls
 */
 func (p *HandlerData) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var handlerResponse *dto.Response
+	log.Printf("METHOD=%s: REQUEST=%s", r.Method, r.URL.String())
 	/*
 		Find the mapping
 	*/
@@ -118,7 +126,7 @@ func (p *HandlerData) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	handlerResponse = iterateHandlerListAndInvoke(p, w, r, &p.before)
+	handlerResponse = invokeAllHandlersInList(p, w, r, &p.before)
 	if handlerResponse != nil {
 		logHandlerResponse(r, handlerResponse)
 		p.errorHandler(w, r, handlerResponse)
@@ -132,13 +140,12 @@ func (p *HandlerData) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if handlerResponse.IsError() {
 				p.errorHandler(w, r, handlerResponse)
 				return
-			} else {
-
 			}
+			p.defaultHandler(w, r, handlerResponse)
 		}
 	}
 
-	handlerResponse = iterateHandlerListAndInvoke(p, w, r, &p.after)
+	handlerResponse = invokeAllHandlersInList(p, w, r, &p.after)
 	if handlerResponse != nil {
 		logHandlerResponse(r, handlerResponse)
 		p.errorHandler(w, r, handlerResponse)
@@ -147,19 +154,27 @@ func (p *HandlerData) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func defaultErrorResponseHandler(w http.ResponseWriter, request *http.Request, response *dto.Response) {
-	log.Print("IN defaultErrorHandler")
 	http.Error(w, response.GetResp(), response.GetCode())
 }
 
 func defaultResponseHandler(w http.ResponseWriter, request *http.Request, response *dto.Response) {
-	log.Print("IN defaultHandler")
-	w.Header().Set("Content-Type", response.GetContentType())
+	for key, value := range response.GetHeaders() {
+		w.Header().Set(key, value)
+	}
+	if response.GetContentType() != "" {
+		w.Header().Set("Content-Type", response.GetContentType())
+	}
 	w.Header().Set("Server", state.GetStatusExecutableName())
 	w.WriteHeader(response.GetCode())
 	fmt.Fprintf(w, response.GetResp())
 }
 
-func iterateHandlerListAndInvoke(p *HandlerData, w http.ResponseWriter, r *http.Request, list *handlerListData) *dto.Response {
+/*
+invokeAllHandlersInList
+Invoke ALL handlers in the list UNTIL a handler returns a response.
+Any response is considered an ERROR.
+*/
+func invokeAllHandlersInList(p *HandlerData, w http.ResponseWriter, r *http.Request, list *handlerListData) *dto.Response {
 	for list.next != nil {
 		if list.handlerFunc != nil {
 			handlerResponse := list.handlerFunc(r)
@@ -172,11 +187,6 @@ func iterateHandlerListAndInvoke(p *HandlerData, w http.ResponseWriter, r *http.
 	return nil
 }
 
-func logHandlerResponse(r *http.Request, h *dto.Response) {
-	if h.IsError() {
-		log.Printf("ERROR: {\"URL\":\"%s\", \"ERROR\":\"%s\"}", r.URL.String(), h.GetJSON())
-	} else {
-		log.Printf("RESPONSE: {\"URL\":\"%s\", \"ERROR\":\"%s\"}", r.URL.String(), h.GetJSON())
-	}
-
+func logHandlerResponse(r *http.Request, response *dto.Response) {
+	log.Printf("%s: STATUS=%d: RESP=%s", response.GetType(), response.GetCode(), response.GetResp())
 }

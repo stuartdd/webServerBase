@@ -18,20 +18,20 @@ type ConfigData struct {
 	ConfigName  string
 }
 
-var configInstance *ConfigData
+var configDataInstance *ConfigData
 
 /*
 GetConfigInstance get the confg data singleton
 */
 func GetConfigInstance() *ConfigData {
-	return configInstance
+	return configDataInstance
 }
 
 /*
 GetJSON string the configuration data as JSON. Used to record it in the logs
 */
 func GetConfigJSON() string {
-	return fmt.Sprintf("{\"configName\":\"%s\",\"port\":%d,\"timeout\":%d,\"logFileName\":\"%s\"}", configInstance.ConfigName, configInstance.Port, configInstance.Timeout, configInstance.LogFileName)
+	return fmt.Sprintf("{\"configName\":\"%s\",\"port\":%d,\"timeout\":%d,\"logFileName\":\"%s\"}", configDataInstance.ConfigName, configDataInstance.Port, configDataInstance.Timeout, configDataInstance.LogFileName)
 }
 
 /*
@@ -43,7 +43,7 @@ func LoadConfigData(configFileName string) error {
 		configFileName = "webServerBase.json"
 	}
 
-	configInstance := ConfigData{
+	configDataInstance = &ConfigData{
 		Debug:   true,
 		Port:    8080,
 		Timeout: 1000,
@@ -51,11 +51,11 @@ func LoadConfigData(configFileName string) error {
 	/*
 		load the config object
 	*/
-	err := jsonconfig.LoadJson(configFileName, &configInstance)
+	err := jsonconfig.LoadJson(configFileName, &configDataInstance)
 	if err != nil {
 		return err
 	}
 
-	configInstance.ConfigName = configFileName
+	configDataInstance.ConfigName = configFileName
 	return nil
 }

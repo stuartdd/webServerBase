@@ -40,11 +40,10 @@ RunWithConfig runs with a sgeneric handler
 Param - config a ref to the config object
 */
 func RunWithConfig(configData *state.ConfigData) {
-	state.SetStatusConfigData(configData)
 	/*
 		Open the logs. Log name is in the congig data. If not defined default to sysout
 	*/
-	createLog(configData)
+	createLog()
 	defer closeLog()
 	/*
 	   Say hello.
@@ -102,11 +101,12 @@ End of handlers section
 Start of utility functions
 *************************************************/
 
-func createLog(configData *state.ConfigData) {
-	if configData.LogFileName != "" {
-		f, err := os.OpenFile(configData.LogFileName, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+func createLog() {
+	logFileName := state.GetConfigInstance().LogFileName
+	if logFileName != "" {
+		f, err := os.OpenFile(logFileName, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 		if err != nil {
-			fmt.Printf("Log file '%s' could NOT be opened\nError:%s", configData.LogFileName, err.Error())
+			fmt.Printf("Log file '%s' could NOT be opened\nError:%s", logFileName, err.Error())
 			return
 		}
 		logFile = f
