@@ -2,9 +2,9 @@ package handlers
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"webServerBase/dto"
+	"webServerBase/logging"
 	"webServerBase/state"
 )
 
@@ -111,7 +111,7 @@ ServeHTTP handle ALL calls
 */
 func (p *HandlerData) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var handlerResponse *dto.Response
-	log.Printf("METHOD=%s: REQUEST=%s", r.Method, r.URL.String())
+	logging.Logf("METHOD=%s: REQUEST=%s", r.Method, r.URL.String())
 	/*
 		Find the mapping
 	*/
@@ -188,5 +188,5 @@ func invokeAllHandlersInList(p *HandlerData, w http.ResponseWriter, r *http.Requ
 }
 
 func logHandlerResponse(r *http.Request, response *dto.Response) {
-	log.Printf("%s: STATUS=%d: RESP=%s", response.GetType(), response.GetCode(), response.GetResp())
+	logging.Logf("%s: STATUS=%d: RESP=%s", response.GetType(), response.GetCode(), response.GetResp())
 }
