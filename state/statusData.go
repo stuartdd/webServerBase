@@ -21,47 +21,67 @@ var statusDataInstance *statusData
 var statusOnce sync.Once
 
 /*
-GetStatusInstance create only ONE!
+InitStatusDataInstance create only ONE!
 */
-func GetStatusDataInstance() *statusData {
+func InitStatusDataInstance() {
 	statusOnce.Do(func() {
-		t := time.Now()
+		var parts []string
+		var lastPart string
 		serverName, _ := os.Executable()
-		parts := strings.Split(serverName, "/")
-		lastPart := parts[len(parts)-1]
+		if strings.Contains(serverName, "/") {
+			parts = strings.Split(serverName, "/")
+		} else {
+			parts = strings.Split(serverName, "\\")
+		}
+		if len(parts) < 2 {
+			lastPart = serverName
+		} else {
+			lastPart = parts[len(parts)-1]
+		}
 		statusDataInstance = &statusData{
-			startTime:  t.Format("2006-01-02 15:04:05"),
+			startTime:  time.Now().Format("2006-01-02 15:04:05"),
 			executable: lastPart,
 			state:      "RUNNING",
 		}
 	})
-	return statusDataInstance
 }
 
 /*
-SetStatusState set the operational state of the server
+SetStatusDataState set the operational state of the server
 */
 func SetStatusDataState(newState string) {
-	GetStatusDataInstance().state = newState
+	if statusDataInstance == nil {
+		InitStatusDataInstance()
+	}
+	statusDataInstance.state = newState
 }
 
 /*
-GetStatusExecutableName returns the name os the exe file
+GetStatusDataExecutableName returns the name os the exe file
 */
 func GetStatusDataExecutableName() string {
-	return GetStatusDataInstance().executable
+	if statusDataInstance == nil {
+		InitStatusDataInstance()
+	}
+	return statusDataInstance.executable
 }
 
 /*
-GetStatusJSON return the server status (including config data) as a JSON String
+GetStatusDataJSON return the server status (including config data) as a JSON String
 */
 func GetStatusDataJSON() string {
-	return fmt.Sprintf("{\"state\":\"%s\",\"startTime\":\"%s\",\"executable\":\"%s\", \"config\":%s}", GetStatusDataInstance().state, GetStatusDataInstance().startTime, GetStatusDataInstance().executable, GetConfigDataJSON())
+	if statusDataInstance == nil {
+		InitStatusDataInstance()
+	}
+	return fmt.Sprintf("{\"state\":\"%s\",\"startTime\":\"%s\",\"executable\":\"%s\", \"config\":%s}", statusDataInstance.state, statusDataInstance.startTime, statusDataInstance.executable, GetConfigDataJSON())
 }
 
 /*
-GetStatusJSONWithoutConfig return the server status (excluding config data) as a JSON String
+GetStatusDataJSONWithoutConfig return the server status (excluding config data) as a JSON String
 */
 func GetStatusDataJSONWithoutConfig() string {
-	return fmt.Sprintf("{\"state\":\"%s\",\"startTime\":\"%s\",\"executable\":\"%s\"}", GetStatusDataInstance().state, GetStatusDataInstance().startTime, GetStatusDataInstance().executable)
+	if statusDataInstance == nil {
+		InitStatusDataInstance()
+	}
+	return fmt.Sprintf("{\"state\":\"%s\",\"startTime\":\"%s\",\"executable\":\"%s\"}", statusDataInstance.state, statusDataInstance.startTime, statusDataInstance.executable)
 }

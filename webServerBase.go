@@ -26,7 +26,6 @@ func main() {
 	err := state.LoadConfigData(configFileName)
 	if err != nil {
 		logging.Fatal(err)
-		os.Exit(1)
 	}
 	RunWithConfig(state.GetConfigDataInstance())
 }
@@ -40,7 +39,7 @@ func RunWithConfig(configData *state.ConfigData) {
 	/*
 		Open the logs. Log name is in the congig data. If not defined default to sysout
 	*/
-	logging.CreateLogWithFilename(configData.LogFileName)
+	logging.CreateLogWithFilename(configData.LogFileName, state.GetStatusDataExecutableName()+":"+strconv.Itoa(state.GetConfigDataInstance().Port))
 	defer logging.CloseLog()
 	/*
 	   Say hello.
@@ -48,9 +47,9 @@ func RunWithConfig(configData *state.ConfigData) {
 	logging.Logf("Server will start on port %d\n", configData.Port)
 	logging.Logf("Server will start on port %d\n", configData.Port)
 	logging.Logf("To stop the server http://localhost:%d/stop\n", configData.Port)
-	logging.Logf("Action:stop - Stop the server\n")
-	logging.Logf("Action:status - Return server status\n")
-	logging.Logf("Server:Configured\n")
+	logging.Log("Action:stop - Stop the server\n")
+	logging.Log("Action:status - Return server status\n")
+	logging.Log("Server:Configured\n")
 	if configData.Debug {
 		logging.Logf("State:%s\n", state.GetStatusDataJSON())
 	}
