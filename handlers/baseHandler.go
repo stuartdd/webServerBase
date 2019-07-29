@@ -164,7 +164,7 @@ func defaultResponseHandler(w http.ResponseWriter, request *http.Request, respon
 	if response.GetContentType() != "" {
 		w.Header().Set("Content-Type", response.GetContentType())
 	}
-	w.Header().Set("Server", state.GetStatusExecutableName())
+	w.Header().Set("Server", state.GetStatusDataExecutableName())
 	w.WriteHeader(response.GetCode())
 	fmt.Fprintf(w, response.GetResp())
 }

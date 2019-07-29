@@ -23,7 +23,7 @@ var statusOnce sync.Once
 /*
 GetStatusInstance create only ONE!
 */
-func GetStatusInstance() *statusData {
+func GetStatusDataInstance() *statusData {
 	statusOnce.Do(func() {
 		t := time.Now()
 		serverName, _ := os.Executable()
@@ -41,27 +41,27 @@ func GetStatusInstance() *statusData {
 /*
 SetStatusState set the operational state of the server
 */
-func SetStatusState(newState string) {
-	GetStatusInstance().state = newState
+func SetStatusDataState(newState string) {
+	GetStatusDataInstance().state = newState
 }
 
 /*
 GetStatusExecutableName returns the name os the exe file
 */
-func GetStatusExecutableName() string {
-	return GetStatusInstance().executable
+func GetStatusDataExecutableName() string {
+	return GetStatusDataInstance().executable
 }
 
 /*
 GetStatusJSON return the server status (including config data) as a JSON String
 */
-func GetStatusJSON() string {
-	return fmt.Sprintf("{\"state\":\"%s\",\"startTime\":\"%s\",\"executable\":\"%s\", \"config\":%s}", GetStatusInstance().state, GetStatusInstance().startTime, GetStatusInstance().executable, GetConfigJSON())
+func GetStatusDataJSON() string {
+	return fmt.Sprintf("{\"state\":\"%s\",\"startTime\":\"%s\",\"executable\":\"%s\", \"config\":%s}", GetStatusDataInstance().state, GetStatusDataInstance().startTime, GetStatusDataInstance().executable, GetConfigDataJSON())
 }
 
 /*
 GetStatusJSONWithoutConfig return the server status (excluding config data) as a JSON String
 */
-func GetStatusJSONWithoutConfig() string {
-	return fmt.Sprintf("{\"state\":\"%s\",\"startTime\":\"%s\",\"executable\":\"%s\"}", GetStatusInstance().state, GetStatusInstance().startTime, GetStatusInstance().executable)
+func GetStatusDataJSONWithoutConfig() string {
+	return fmt.Sprintf("{\"state\":\"%s\",\"startTime\":\"%s\",\"executable\":\"%s\"}", GetStatusDataInstance().state, GetStatusDataInstance().startTime, GetStatusDataInstance().executable)
 }

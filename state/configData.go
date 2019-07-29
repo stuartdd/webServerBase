@@ -23,14 +23,14 @@ var configDataInstance *ConfigData
 /*
 GetConfigInstance get the confg data singleton
 */
-func GetConfigInstance() *ConfigData {
+func GetConfigDataInstance() *ConfigData {
 	return configDataInstance
 }
 
 /*
 GetJSON string the configuration data as JSON. Used to record it in the logs
 */
-func GetConfigJSON() string {
+func GetConfigDataJSON() string {
 	return fmt.Sprintf("{\"configName\":\"%s\",\"port\":%d,\"timeout\":%d,\"logFileName\":\"%s\"}", configDataInstance.ConfigName, configDataInstance.Port, configDataInstance.Timeout, configDataInstance.LogFileName)
 }
 

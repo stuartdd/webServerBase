@@ -31,7 +31,7 @@ func main() {
 		log.Fatal(err)
 		os.Exit(1)
 	}
-	RunWithConfig(state.GetConfigInstance())
+	RunWithConfig(state.GetConfigDataInstance())
 }
 
 /*
@@ -54,7 +54,7 @@ func RunWithConfig(configData *state.ConfigData) {
 	log.Printf("Action:status - Return server status\n")
 	log.Printf("Server:Configured\n")
 	if configData.Debug {
-		log.Printf("State:%s\n", state.GetStatusJSON())
+		log.Printf("State:%s\n", state.GetStatusDataJSON())
 	}
 	/*
 	   Start the server.
@@ -73,13 +73,13 @@ Start of handlers section
 *************************************************/
 
 func stopHandler(r *http.Request) *dto.Response {
-	state.SetStatusState("STOPPING")
+	state.SetStatusDataState("STOPPING")
 	go stopServer(false)
-	return dto.NewResponse(200, state.GetStatusJSONWithoutConfig(), "application/json", nil)
+	return dto.NewResponse(200, state.GetStatusDataJSONWithoutConfig(), "application/json", nil)
 }
 
 func statusHandler(r *http.Request) *dto.Response {
-	return dto.NewResponse(200, state.GetStatusJSON(), "application/json", nil)
+	return dto.NewResponse(200, state.GetStatusDataJSON(), "application/json", nil)
 }
 
 func filterBefore(r *http.Request) *dto.Response {
@@ -102,7 +102,7 @@ Start of utility functions
 *************************************************/
 
 func createLog() {
-	logFileName := state.GetConfigInstance().LogFileName
+	logFileName := state.GetConfigDataInstance().LogFileName
 	if logFileName != "" {
 		f, err := os.OpenFile(logFileName, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 		if err != nil {
