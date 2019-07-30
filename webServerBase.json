@@ -1,6 +1,4 @@
 {
-  "debug": true,
   "loggerLevel" : ["INFO","DEBUG"],
-  "LogFileName" : "../LogFileWebServer.txt",
   "timeout": 180
 }

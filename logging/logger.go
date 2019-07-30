@@ -50,8 +50,9 @@ LoggerDataReference contains a ref to th esingle logger instance and the module 
 Created via NewLogger
 */
 type LoggerDataReference struct {
-	loggerPrefix  string
-	loggerDataRef *loggerData
+	loggerModuleName string
+	loggerPrefix     string
+	loggerDataRef    *loggerData
 }
 
 var logDataInstance *loggerData
@@ -100,19 +101,38 @@ func NewLogger(moduleName string) *LoggerDataReference {
 	if logDataInstance == nil {
 		LogPanicToStdErrAndExit("Application or Module (" + moduleName + ") Must call CreateLogWithFilenameAndAppID before calling NewLogger")
 	}
+
 	if val, ok := logDataModules[moduleName]; ok {
 		return val
 	}
-	if longestModuleName < len(moduleName) {
-		longestModuleName = len(moduleName)
-	}
 	ldRef := &LoggerDataReference{
-		loggerPrefix:  logApplicationID + " " + moduleName + " [-] ",
-		loggerDataRef: logDataInstance,
+		loggerModuleName: moduleName,
+		loggerPrefix:     logApplicationID,
+		loggerDataRef:    logDataInstance,
 	}
 	logDataModules[moduleName] = ldRef
+	updateLoggerPrefixesForAllModules()
 	return ldRef
+}
 
+func updateLoggerPrefixesForAllModules() {
+	longestName := 0
+	for _, value := range logDataModules {
+		length := len(value.loggerModuleName)
+		if longestName < length {
+			longestName = length
+		}
+	}
+	for _, value := range logDataModules {
+		value.loggerPrefix = logApplicationID + " " + (value.loggerModuleName + strings.Repeat(" ", longestName-len(value.loggerModuleName))) + " [-] "
+	}
+}
+
+/*
+IsDebug return true is the debug log function is enabled
+*/
+func (p *LoggerDataReference) IsDebug() bool {
+	return loggerLevelFlags[DebugLevel]
 }
 
 /*
@@ -127,7 +147,7 @@ func (p *LoggerDataReference) Fatal(err error) {
 LogErrorf delegates to log.Printf
 */
 func (p *LoggerDataReference) LogErrorf(format string, v ...interface{}) {
-	p.loggerDataRef.logger.Printf(p.loggerPrefix+loggerLevelTypeNames[ErrorLevel]+format, v)
+	p.loggerDataRef.logger.Printf(p.loggerPrefix+loggerLevelTypeNames[ErrorLevel]+format, v...)
 }
 
 /*
@@ -142,7 +162,7 @@ LogInfof delegates to log.Printf
 */
 func (p *LoggerDataReference) LogInfof(format string, v ...interface{}) {
 	if loggerLevelFlags[InfoLevel] {
-		p.loggerDataRef.logger.Printf(p.loggerPrefix+loggerLevelTypeNames[InfoLevel]+format, v)
+		p.loggerDataRef.logger.Printf(p.loggerPrefix+loggerLevelTypeNames[InfoLevel]+format, v...)
 	}
 }
 
@@ -160,7 +180,7 @@ LogDebugf delegates to log.Printf
 */
 func (p *LoggerDataReference) LogDebugf(format string, v ...interface{}) {
 	if loggerLevelFlags[DebugLevel] {
-		p.loggerDataRef.logger.Printf(p.loggerPrefix+loggerLevelTypeNames[DebugLevel]+format, v)
+		p.loggerDataRef.logger.Printf(p.loggerPrefix+loggerLevelTypeNames[DebugLevel]+format, v...)
 	}
 }
 

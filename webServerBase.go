@@ -43,15 +43,17 @@ func RunWithConfig(configData *state.ConfigData) {
 	*/
 	logging.CreateLogWithFilenameAndAppID(configData.LogFileName, state.GetStatusDataExecutableName()+":"+strconv.Itoa(state.GetConfigDataInstance().Port), state.GetConfigDataInstance().LoggerLevel)
 	defer logging.CloseLog()
-	logger = logging.NewLogger("WebServerBase")
 	/*
-	   Say hello.
+		Add loggers for each module (Makes for neater logs!)
+	*/
+	logger = logging.NewLogger("BaseHandler")
+	logger = logging.NewLogger("Web")
+	/*
+		Log server startup info
 	*/
 	logger.LogInfof("Server will start on port %d\n", configData.Port)
 	logger.LogInfof("To stop the server http://localhost:%d/stop\n", configData.Port)
-	if configData.Debug {
-		logger.LogDebugf("State:%s\n", state.GetStatusDataJSON())
-	}
+	logger.LogDebugf("State:%s\n", state.GetStatusDataJSON())
 	/*
 	   Configure and Start the server.
 	*/
@@ -78,14 +80,16 @@ func statusHandler(r *http.Request) *dto.Response {
 	return dto.NewResponse(200, state.GetStatusDataJSON(), "application/json", nil)
 }
 
-func filterBefore(r *http.Request) *dto.Response {
+func filterBefore(r *http.Request, response *dto.Response) *dto.Response {
 	logger.LogDebug("IN Filter Before 1")
 	return nil
 }
-func filterAfter(r *http.Request) *dto.Response {
+
+func filterAfter(r *http.Request, response *dto.Response) *dto.Response {
 	logger.LogDebug("IN Filter After 1")
 	return nil
 }
+
 func errorHandler(w http.ResponseWriter, r *http.Request, e *dto.Response) {
 	logger.LogDebug("IN errorHandler")
 	http.Error(w, e.GetResp(), 400)

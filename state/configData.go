@@ -11,10 +11,8 @@ ConfigData read cinfiguration data from the JSON configuration file.
 Note any undefined values are defaulted to constants defined below
 */
 type ConfigData struct {
-	Debug       bool
 	LoggerLevel []string
 	Port        int
-	Timeout     int64
 	LogFileName string
 	ConfigName  string
 }
@@ -22,17 +20,17 @@ type ConfigData struct {
 var configDataInstance *ConfigData
 
 /*
-GetConfigInstance get the confg data singleton
+GetConfigDataInstance get the confg data singleton
 */
 func GetConfigDataInstance() *ConfigData {
 	return configDataInstance
 }
 
 /*
-GetJSON string the configuration data as JSON. Used to record it in the logs
+GetConfigDataJSON string the configuration data as JSON. Used to record it in the logs
 */
 func GetConfigDataJSON() string {
-	return fmt.Sprintf("{\"configName\":\"%s\",\"port\":%d,\"timeout\":%d,\"logFileName\":\"%s\"}", configDataInstance.ConfigName, configDataInstance.Port, configDataInstance.Timeout, configDataInstance.LogFileName)
+	return fmt.Sprintf("{\"configName\":\"%s\",\"port\":%d,\"logFileName\":\"%s\"}", configDataInstance.ConfigName, configDataInstance.Port, configDataInstance.LogFileName)
 }
 
 /*
@@ -45,9 +43,7 @@ func LoadConfigData(configFileName string) error {
 	}
 
 	configDataInstance = &ConfigData{
-		Debug:   true,
-		Port:    8080,
-		Timeout: 1000,
+		Port: 8080,
 	}
 	/*
 		load the config object

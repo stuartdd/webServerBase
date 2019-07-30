@@ -17,7 +17,6 @@ type Response struct {
 	err         error
 }
 
-
 /*
 IsError returns the String response
 */
@@ -30,9 +29,9 @@ GetType returns the response type as a String
 */
 func (p *Response) GetType() string {
 	if p.IsError() {
-		return "RESP_ERR"
+		return "ERROR"
 	}
-	return "RESP__OK"
+	return " RESP"
 }
 
 /*
