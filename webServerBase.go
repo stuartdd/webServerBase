@@ -12,6 +12,8 @@ import (
 	"webServerBase/state"
 )
 
+var logger *logging.LoggerDataReference
+
 func main() {
 	/*
 		Read the configuration file. If no name is given use the default name.
@@ -25,7 +27,7 @@ func main() {
 	}
 	err := state.LoadConfigData(configFileName)
 	if err != nil {
-		logging.Fatal(err)
+		logger.Fatal(err)
 	}
 	RunWithConfig(state.GetConfigDataInstance())
 }
@@ -39,22 +41,19 @@ func RunWithConfig(configData *state.ConfigData) {
 	/*
 		Open the logs. Log name is in the congig data. If not defined default to sysout
 	*/
-	logging.CreateLogWithFilename(configData.LogFileName, state.GetStatusDataExecutableName()+":"+strconv.Itoa(state.GetConfigDataInstance().Port))
+	logging.CreateLogWithFilenameAndAppID(configData.LogFileName, state.GetStatusDataExecutableName()+":"+strconv.Itoa(state.GetConfigDataInstance().Port), state.GetConfigDataInstance().LoggerLevel)
 	defer logging.CloseLog()
+	logger = logging.NewLogger("WebServerBase")
 	/*
 	   Say hello.
 	*/
-	logging.Logf("Server will start on port %d\n", configData.Port)
-	logging.Logf("Server will start on port %d\n", configData.Port)
-	logging.Logf("To stop the server http://localhost:%d/stop\n", configData.Port)
-	logging.Log("Action:stop - Stop the server\n")
-	logging.Log("Action:status - Return server status\n")
-	logging.Log("Server:Configured\n")
+	logger.LogInfof("Server will start on port %d\n", configData.Port)
+	logger.LogInfof("To stop the server http://localhost:%d/stop\n", configData.Port)
 	if configData.Debug {
-		logging.Logf("State:%s\n", state.GetStatusDataJSON())
+		logger.LogDebugf("State:%s\n", state.GetStatusDataJSON())
 	}
 	/*
-	   Start the server.
+	   Configure and Start the server.
 	*/
 	handlerData := handlers.NewHandlerData()
 	handlerData.AddBeforeHandler(filterBefore)
@@ -62,7 +61,7 @@ func RunWithConfig(configData *state.ConfigData) {
 	handlerData.AddMappedHandler("/status", http.MethodGet, statusHandler)
 	handlerData.AddAfterHandler(filterAfter)
 	handlerData.SetErrorHandler(errorHandler)
-	logging.Fatal(http.ListenAndServe(":"+strconv.Itoa(configData.Port), handlerData))
+	logger.Fatal(http.ListenAndServe(":"+strconv.Itoa(configData.Port), handlerData))
 }
 
 /************************************************
@@ -80,16 +79,16 @@ func statusHandler(r *http.Request) *dto.Response {
 }
 
 func filterBefore(r *http.Request) *dto.Response {
-	logging.Logf("IN Filter Before 1")
+	logger.LogDebug("IN Filter Before 1")
 	return nil
 }
 func filterAfter(r *http.Request) *dto.Response {
-	logging.Logf("IN Filter After 1")
+	logger.LogDebug("IN Filter After 1")
 	return nil
 }
 func errorHandler(w http.ResponseWriter, r *http.Request, e *dto.Response) {
-	logging.Logf("IN errorHandler")
-	http.Error(w, "bollocks", 400)
+	logger.LogDebug("IN errorHandler")
+	http.Error(w, e.GetResp(), 400)
 }
 
 /************************************************

@@ -12,6 +12,7 @@ Note any undefined values are defaulted to constants defined below
 */
 type ConfigData struct {
 	Debug       bool
+	LoggerLevel []string
 	Port        int
 	Timeout     int64
 	LogFileName string

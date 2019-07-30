@@ -30,10 +30,13 @@ type mappingData struct {
 	requestPath   string
 }
 
+var logger *logging.LoggerDataReference
+
 /*
 NewHandlerData Create new HandlerData object
 */
 func NewHandlerData() *HandlerData {
+	logger = logging.NewLogger("BaseHandler")
 	handler := &HandlerData{
 		before: handlerListData{
 			handlerFunc: nil,
@@ -111,7 +114,7 @@ ServeHTTP handle ALL calls
 */
 func (p *HandlerData) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var handlerResponse *dto.Response
-	logging.Logf("METHOD=%s: REQUEST=%s", r.Method, r.URL.String())
+	logger.LogDebugf("METHOD=%s: REQUEST=%s", r.Method, r.URL.String())
 	/*
 		Find the mapping
 	*/
@@ -188,5 +191,5 @@ func invokeAllHandlersInList(p *HandlerData, w http.ResponseWriter, r *http.Requ
 }
 
 func logHandlerResponse(r *http.Request, response *dto.Response) {
-	logging.Logf("%s: STATUS=%d: RESP=%s", response.GetType(), response.GetCode(), response.GetResp())
+	logger.LogDebugf("%s: STATUS=%d: RESP=%s", response.GetType(), response.GetCode(), response.GetResp())
 }
