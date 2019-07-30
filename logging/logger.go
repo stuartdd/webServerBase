@@ -15,6 +15,8 @@ InfoLevel is the finest. Nothing stops ErrorLevel of FatalLevel
 const (
 	InfoLevel loggerLevelType = iota
 	DebugLevel
+	WarnLevel
+	AccessLevel
 	ErrorLevel
 	FatalLevel
 )
@@ -22,19 +24,19 @@ const (
 /*
 These names should be ALL the same length and should have a ' ' before AND after the name
 */
-var loggerLevelTypeNames = [...]string{"  INFO ", " DEBUG ", " ERROR ", " FATAL "}
+var loggerLevelTypeNames = [...]string{"  INFO ", " DEBUG ", "  WARN ", "ACCESS ", " ERROR ", " FATAL "}
 
 /*
 A true in the slot means that log level is active
 */
-var loggerLevelFlags = [...]bool{false, false, true, true}
+var loggerLevelFlags = [...]bool{false, false, false, false, true, true}
 
 /*
 These values (not case sensitive) must map to the values passed to CreateLogWithFilenameAndAppID.
 If these values are in the list then that log level will be active.
 An empty list will mean that only ERROR and FATAL will be logged
 */
-var loggerLevelMapNames = map[string]loggerLevelType{"INFO": InfoLevel, "DEBUG": DebugLevel, "ERROR": ErrorLevel, "FATAL": FatalLevel}
+var loggerLevelMapNames = map[string]loggerLevelType{"INFO": InfoLevel, "DEBUG": DebugLevel, "WARN": WarnLevel, "ACCESS": AccessLevel, "ERROR": ErrorLevel, "FATAL": FatalLevel}
 
 var longestModuleName int = 0
 
@@ -136,6 +138,27 @@ func (p *LoggerDataReference) IsDebug() bool {
 }
 
 /*
+IsAccess return true is the access log function is enabled
+*/
+func (p *LoggerDataReference) IsAccess() bool {
+	return loggerLevelFlags[AccessLevel]
+}
+
+/*
+IsInfo return true is the info log function is enabled
+*/
+func (p *LoggerDataReference) IsInfo() bool {
+	return loggerLevelFlags[InfoLevel]
+}
+
+/*
+IsWarn return true is the info log function is enabled
+*/
+func (p *LoggerDataReference) IsWarn() bool {
+	return loggerLevelFlags[WarnLevel]
+}
+
+/*
 Fatal does the same as log.Fatal
 */
 func (p *LoggerDataReference) Fatal(err error) {
@@ -172,6 +195,42 @@ LogInfo delegates to log.Print
 func (p *LoggerDataReference) LogInfo(message string) {
 	if loggerLevelFlags[InfoLevel] {
 		p.loggerDataRef.logger.Print(p.loggerPrefix + loggerLevelTypeNames[InfoLevel] + message)
+	}
+}
+
+/*
+LogAccessf delegates to log.Printf
+*/
+func (p *LoggerDataReference) LogAccessf(format string, v ...interface{}) {
+	if loggerLevelFlags[AccessLevel] {
+		p.loggerDataRef.logger.Printf(p.loggerPrefix+loggerLevelTypeNames[AccessLevel]+format, v...)
+	}
+}
+
+/*
+LogAccess delegates to log.Print
+*/
+func (p *LoggerDataReference) LogAccess(message string) {
+	if loggerLevelFlags[AccessLevel] {
+		p.loggerDataRef.logger.Print(p.loggerPrefix + loggerLevelTypeNames[AccessLevel] + message)
+	}
+}
+
+/*
+LogWarnf delegates to log.Printf
+*/
+func (p *LoggerDataReference) LogWarnf(format string, v ...interface{}) {
+	if loggerLevelFlags[WarnLevel] {
+		p.loggerDataRef.logger.Printf(p.loggerPrefix+loggerLevelTypeNames[WarnLevel]+format, v...)
+	}
+}
+
+/*
+LogWarn delegates to log.Print
+*/
+func (p *LoggerDataReference) LogWarn(message string) {
+	if loggerLevelFlags[WarnLevel] {
+		p.loggerDataRef.logger.Print(p.loggerPrefix + loggerLevelTypeNames[WarnLevel] + message)
 	}
 }
 

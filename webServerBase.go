@@ -47,7 +47,7 @@ func RunWithConfig(configData *state.ConfigData) {
 		Add loggers for each module (Makes for neater logs!)
 	*/
 	logger = logging.NewLogger("BaseHandler")
-	logger = logging.NewLogger("Web")
+	logger = logging.NewLogger("ServerMain")
 	/*
 		Log server startup info
 	*/
@@ -62,7 +62,6 @@ func RunWithConfig(configData *state.ConfigData) {
 	handlerData.AddMappedHandler("/stop", http.MethodGet, stopHandler)
 	handlerData.AddMappedHandler("/status", http.MethodGet, statusHandler)
 	handlerData.AddAfterHandler(filterAfter)
-	handlerData.SetErrorHandler(errorHandler)
 	logger.Fatal(http.ListenAndServe(":"+strconv.Itoa(configData.Port), handlerData))
 }
 

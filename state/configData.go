@@ -30,7 +30,18 @@ func GetConfigDataInstance() *ConfigData {
 GetConfigDataJSON string the configuration data as JSON. Used to record it in the logs
 */
 func GetConfigDataJSON() string {
-	return fmt.Sprintf("{\"configName\":\"%s\",\"port\":%d,\"logFileName\":\"%s\"}", configDataInstance.ConfigName, configDataInstance.Port, configDataInstance.LogFileName)
+	return fmt.Sprintf("{\"configName\":\"%s\",\"port\":%d,\"logFileName\":\"%s\",\"LoggerLevel\":%s}", configDataInstance.ConfigName, configDataInstance.Port, configDataInstance.LogFileName, toStringList(configDataInstance.LoggerLevel))
+}
+
+func toStringList(list []string) string {
+	out := "["
+	ind := len(out)
+	for _, element := range list {
+		out = out + "\"" + element + "\""
+		ind = len(out)
+		out = out + ", "
+	}
+	return string(out[0:ind]) + "]"
 }
 
 /*

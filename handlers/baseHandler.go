@@ -113,7 +113,8 @@ func (p *HandlerFunctionData) AddAfterHandler(afterFunc func(*http.Request, *dto
 ServeHTTP handle ALL calls
 */
 func (p *HandlerFunctionData) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	logger.LogDebugf("METHOD=%s: REQUEST=%s", r.Method, r.URL.Path)
+	var mappingResponse *dto.Response
+	logRequest(r)
 	/*
 		Find the mapping
 	*/
@@ -123,53 +124,55 @@ func (p *HandlerFunctionData) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 			Mapping was not found
 		*/
 		error404 := dto.NewResponse(404, http.StatusText(404), "", nil)
-		logHandlerResponse(r, error404)
+		logResponse(error404)
 		p.errorHandler(w, r, error404)
 		return
+	}
+
+	if logger.IsDebug() {
+		logger.LogDebugf("Request mapping found. METHOD:%s PATH:%s", mapping.requestMethod, mapping.requestPath)
 	}
 
 	/*
 		We found a matching function for the request so lets check each before handler to see if we can procceed.
 		If a before handler returns a response then we abandon the request.
 	*/
-	beforeVetoHandlerError := invokeAllVetoHandlersInList(p, w, r, nil, &p.before)
-	if beforeVetoHandlerError != nil {
-		preProcessResponse(r, beforeVetoHandlerError)
-		logHandlerResponse(r, beforeVetoHandlerError)
-		p.errorHandler(w, r, beforeVetoHandlerError)
-		return
-	}
-
-	/*
-		We found a matching function for the request so lets get the response.
-		Do not return it immediatly as the after handlers may want to veto the response!
-	*/
-	mappingResponse := mapping.handlerFunc(r)
+	mappingResponse = invokeAllVetoHandlersInList(p, w, r, nil, &p.before)
 	if mappingResponse == nil {
 		/*
-			Bad Request: The server cannot or will not process the request due to an
-				apparent client error (e.g., malformed request syntax, size too large,
-				invalid request message framing, or deceptive request routing)
+			We found a matching function for the request so lets get the response.
+			Do not return it immediatly as the after handlers may want to veto the response!
 		*/
-		mappingResponse = dto.NewResponse(400, http.StatusText(400), "", nil)
-	}
+		mappingResponse = mapping.handlerFunc(r)
+		if mappingResponse == nil {
+			/*
+				Bad Request: The server cannot or will not process the request due to an
+					apparent client error (e.g., malformed request syntax, size too large,
+					invalid request message framing, or deceptive request routing)
+			*/
+			mappingResponse = dto.NewResponse(400, http.StatusText(400), "", nil)
+		}
 
-	/*
-		If an after handler returns a response then we abandon the request AND the response even if it is valid.
-	*/
-	afterVetoHandlerError := invokeAllVetoHandlersInList(p, w, r, mappingResponse, &p.after)
-	if afterVetoHandlerError != nil {
-		preProcessResponse(r, afterVetoHandlerError)
-		logHandlerResponse(r, afterVetoHandlerError)
-		p.errorHandler(w, r, afterVetoHandlerError)
-		return
+		/*
+			If an after handler returns a response then we abandon the request AND the response even if it is valid.
+		*/
+		afterVetoHandlerError := invokeAllVetoHandlersInList(p, w, r, mappingResponse, &p.after)
+		if afterVetoHandlerError != nil {
+			mappingResponse = afterVetoHandlerError
+			if logger.IsWarn() {
+				logger.LogWarnf("Response was Vetoed by 'After' handler:%s", mappingResponse.GetCSV())
+			}
+		}
+	} else {
+		if logger.IsWarn() {
+			logger.LogWarnf("Request was Vetoed by 'Before' handler:%s", mappingResponse.GetCSV())
+		}
 	}
-
 	/*
 		No after handler vetoed the response so return it!
 	*/
 	preProcessResponse(r, mappingResponse)
-	logHandlerResponse(r, mappingResponse)
+	logResponse(mappingResponse)
 	if mappingResponse.IsError() {
 		p.errorHandler(w, r, mappingResponse)
 	} else {
@@ -179,23 +182,36 @@ func (p *HandlerFunctionData) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 func preProcessResponse(request *http.Request, response *dto.Response) {
 	if response.GetContentType() != "" {
-		response.AddHeader("Content-Type", response.GetContentType())
+		response.AddHeader("Content-Type", []string{response.GetContentType()})
 	}
-	response.AddHeader("Server", state.GetStatusDataExecutableName())
+
+	response.AddHeader("Server", []string{state.GetStatusDataExecutableName()})
+
+	connection := request.Header["Connection"]
+	if len(connection) > 0 {
+		response.AddHeader("Connection", connection)
+	}
 }
 
 func defaultErrorResponseHandler(w http.ResponseWriter, request *http.Request, response *dto.Response) {
+	if logger.IsWarn() {
+		logger.LogWarn("Using default Error ResponseHandler")
+	}
 	http.Error(w, response.GetResp(), response.GetCode())
 }
 
 func defaultResponseHandler(w http.ResponseWriter, request *http.Request, response *dto.Response) {
+	if logger.IsWarn() {
+		logger.LogWarn("Using default ResponseHandler")
+	}
 	for key, value := range response.GetHeaders() {
-		w.Header().Set(key, value)
+		w.Header()[key] = value
 	}
 	if response.GetContentType() != "" {
-		w.Header().Set("Content-Type", response.GetContentType())
+		w.Header()["Content-Type"] = []string{response.GetContentType()}
 	}
-	w.Header().Set("Server", state.GetStatusDataExecutableName())
+	w.Header()["Server"] = []string{state.GetStatusDataExecutableName()}
+
 	w.WriteHeader(response.GetCode())
 	fmt.Fprintf(w, response.GetResp())
 }
@@ -218,11 +234,24 @@ func invokeAllVetoHandlersInList(p *HandlerFunctionData, w http.ResponseWriter, 
 	return nil
 }
 
-func logHandlerResponse(r *http.Request, response *dto.Response) {
-	logger.LogDebugf("%s: STATUS=%d: RESP=%s", response.GetType(), response.GetCode(), response.GetResp())
-	if logger.IsDebug() {
-		for k, v := range response.GetHeaders() {
-			logger.LogDebugf("HEADER=%s=%s", k, v)
+func logResponse(response *dto.Response) {
+	if logger.IsAccess() {
+		logger.LogAccessf("<<< STATUS=%d: RESP=%s", response.GetCode(), response.GetResp())
+		if logger.IsDebug() {
+			for k, v := range response.GetHeaders() {
+				logger.LogAccessf("<<< HEADER=%s=%s", k, v)
+			}
+		}
+	}
+}
+
+func logRequest(r *http.Request) {
+	if logger.IsAccess() {
+		logger.LogAccessf(">>> METHOD=%s: REQUEST=%s", r.Method, r.URL.Path)
+		if logger.IsDebug() {
+			for k, v := range r.Header {
+				logger.LogAccessf(">>> HEADER=%s=%s", k, v)
+			}
 		}
 	}
 }

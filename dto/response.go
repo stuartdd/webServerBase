@@ -13,7 +13,7 @@ type Response struct {
 	code        int
 	resp        string
 	contentType string
-	headers     map[string]string
+	headers     map[string][]string
 	err         error
 }
 
@@ -44,14 +44,14 @@ func (p *Response) GetContentType() string {
 /*
 GetHeaders returns the list of headers
 */
-func (p *Response) GetHeaders() map[string]string {
+func (p *Response) GetHeaders() map[string][]string {
 	return p.headers
 }
 
 /*
-AddHeader returns the String response
+AddHeader adds an array/slice of strings to a header
 */
-func (p *Response) AddHeader(name string, value string) {
+func (p *Response) AddHeader(name string, value []string) {
 	p.GetHeaders()[name] = value
 }
 
@@ -104,7 +104,7 @@ func NewResponse(statusCode int, response string, contentType string, goErr erro
 		code:        statusCode,
 		resp:        response,
 		contentType: contentType,
-		headers:     make(map[string]string),
+		headers:     make(map[string][]string),
 		err:         goErr,
 	}
 }

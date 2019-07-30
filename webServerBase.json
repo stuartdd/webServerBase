@@ -1,4 +1,3 @@
 {
-  "loggerLevel" : ["INFO","DEBUG"],
-  "timeout": 180
+  "loggerLevel" : ["INFO","DEBUG","WARN","ACCESS"]
 }
