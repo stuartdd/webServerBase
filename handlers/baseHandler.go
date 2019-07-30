@@ -169,11 +169,11 @@ func (p *HandlerFunctionData) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 	/*
-		No after handler vetoed the response so return it!
+		None pof the 'after' handlers vetoed the response so return it!
 	*/
 	preProcessResponse(r, mappingResponse)
 	logResponse(mappingResponse)
-	if mappingResponse.IsError() {
+	if mappingResponse.IsNot200() {
 		p.errorHandler(w, r, mappingResponse)
 	} else {
 		p.defaultHandler(w, r, mappingResponse)

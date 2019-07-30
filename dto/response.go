@@ -18,20 +18,10 @@ type Response struct {
 }
 
 /*
-IsError returns the String response
+IsNot200 returns true is the response is NOT a 2xx
 */
-func (p *Response) IsError() bool {
+func (p *Response) IsNot200() bool {
 	return (p.code < 200) || (p.code > 299)
-}
-
-/*
-GetType returns the response type as a String
-*/
-func (p *Response) GetType() string {
-	if p.IsError() {
-		return "ERROR"
-	}
-	return " RESP"
 }
 
 /*
@@ -74,13 +64,6 @@ GetCode returns the http status code
 */
 func (p *Response) GetCode() int {
 	return p.code
-}
-
-/*
-GetJSON returns JSON string representing this object
-*/
-func (p *Response) GetJSON() string {
-	return fmt.Sprintf("{\"code\":%d,\"contentType\":\"%s\",\"err\":\"%s\",\"resp\":\"%s\"}", p.code, p.resp, p.contentType, p.err)
 }
 
 /*

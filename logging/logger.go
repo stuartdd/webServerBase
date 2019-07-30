@@ -255,9 +255,12 @@ func (p *LoggerDataReference) LogDebug(message string) {
 /*
 CloseLog close the log file
 */
-func CloseLog() {
+func CloseLog(logger *LoggerDataReference) {
 	if logDataInstance.logFile != nil {
+		logger.LogInfof("logging.CloseLog: Log file %s is closing", logDataInstance.fileName)
 		logDataInstance.logFile.Close()
+	} else {
+		logger.LogWarn("logging.CloseLog: Was called but there is NO log file open")
 	}
 }
 

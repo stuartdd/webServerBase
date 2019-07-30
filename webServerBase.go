@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"net/http"
 	"os"
 	"strconv"
@@ -13,6 +14,7 @@ import (
 )
 
 var logger *logging.LoggerDataReference
+var server *http.Server
 
 func main() {
 	/*
@@ -42,7 +44,7 @@ func RunWithConfig(configData *state.ConfigData) {
 		Open the logs. Log name is in the congig data. If not defined default to sysout
 	*/
 	logging.CreateLogWithFilenameAndAppID(configData.LogFileName, state.GetStatusDataExecutableName()+":"+strconv.Itoa(state.GetConfigDataInstance().Port), state.GetConfigDataInstance().LoggerLevel)
-	defer logging.CloseLog()
+	defer CloseLog()
 	/*
 		Add loggers for each module (Makes for neater logs!)
 	*/
@@ -62,7 +64,15 @@ func RunWithConfig(configData *state.ConfigData) {
 	handlerData.AddMappedHandler("/stop", http.MethodGet, stopHandler)
 	handlerData.AddMappedHandler("/status", http.MethodGet, statusHandler)
 	handlerData.AddAfterHandler(filterAfter)
-	logger.Fatal(http.ListenAndServe(":"+strconv.Itoa(configData.Port), handlerData))
+
+	server = &http.Server{Addr: ":" + strconv.Itoa(configData.Port)}
+	server.Handler = handlerData
+	err := server.ListenAndServe()
+	if err != nil {
+		logger.LogInfo(err.Error())
+	} else {
+		logger.LogInfo("http: Server closed")
+	}
 }
 
 /************************************************
@@ -100,10 +110,21 @@ End of handlers section
 Start of utility functions
 *************************************************/
 
+/*
+CloseLog closes the logger file if it exists
+
+A logger os passed to enable the CloseLog function to log that fact it has been closed!
+*/
+func CloseLog() {
+	logging.CloseLog(logger)
+}
+
 func stopServer(immediate bool) {
 	if !immediate {
 		time.Sleep(time.Millisecond * 500)
 	}
-	logging.CloseLog()
-	os.Exit(0)
+	err := server.Shutdown(context.TODO())
+	if err != nil {
+		panic(err)
+	}
 }

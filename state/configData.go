@@ -2,7 +2,6 @@ package state
 
 import (
 	"fmt"
-
 	jsonconfig "github.com/stuartdd/tools_jsonconfig"
 )
 
