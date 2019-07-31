@@ -60,6 +60,7 @@ func RunWithConfig(configData *state.ConfigData) {
 	   Configure and Start the server.
 	*/
 	handlerData := handlers.NewHandlerData()
+	handlerData.AddFileServer("/static/", "static")
 	handlerData.AddBeforeHandler(filterBefore)
 	handlerData.AddMappedHandler("/stop", http.MethodGet, stopHandler)
 	handlerData.AddMappedHandler("/status", http.MethodGet, statusHandler)

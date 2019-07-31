@@ -61,6 +61,14 @@ func (p *HandlerFunctionData) SetErrorHandler(errorHandler func(http.ResponseWri
 }
 
 /*
+AddFileServer creates a file server at a given path
+*/
+func (p *HandlerFunctionData) AddFileServer(path string, fileRoot string) {
+	fs := http.FileServer(http.Dir(fileRoot))
+	http.Handle(path, http.StripPrefix(path, fs))
+}
+
+/*
 SetHandler handle a NON error response
 */
 func (p *HandlerFunctionData) SetHandler(handler func(http.ResponseWriter, *http.Request, *dto.Response)) {
