@@ -173,7 +173,7 @@ func (p *HandlerFunctionData) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 					loggingResponseWriter.Header()["Content-Type"] = contentType
 				}
 			}
-			logFileServerFesponse(loggingResponseWriter, fileServerMapping)
+3			logFileServerFesponse(loggingResponseWriter, fileServerMapping)
 			return
 		}
 		fileServerMapping = fileServerMapping.next
@@ -333,7 +333,7 @@ func logHeaderMap(headers map[string][]string, dir string) {
 func getContentType(url string) []string {
 	pos := strings.LastIndex(url, ".")
 	if pos > 0 {
-		ext := url[pos:]
+		ext := url[pos+1:]
 		mapping, found := state.GetConfigDataInstance().ContentTypes[ext]
 		if found {
 			return []string{mapping, "charset=" + state.GetConfigDataInstance().ContentTypeCharset}

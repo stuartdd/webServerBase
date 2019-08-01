@@ -9,7 +9,7 @@
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "C:\\Users\\802996013\\go\\src\\webServerBase\\webServerBase.go",
+            "program": "/home/stuart/git/go/src/webServerBase/webServerBase.go",
             "env": {},
             "args": []
         }
