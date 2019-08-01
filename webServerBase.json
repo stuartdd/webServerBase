@@ -1,3 +1,6 @@
 {
-  "loggerLevel" : ["INFO","DEBUG","WARN","ACCESS"]
+  "loggerLevel" : ["INFO","DEBUG","WARN","ACCESS"],
+  "staticPaths" : {"/static/":"E:\\logs", "/static2/":"E:\\logs\\consumer"},
+  "contentTypes": {"json": "application/json"},
+  "contentTypeCharset":"utf-8"   
 }

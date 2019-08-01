@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"webServerBase/dto"
 	"webServerBase/logging"
 	"webServerBase/state"
@@ -17,11 +18,19 @@ type HandlerFunctionData struct {
 	after          vetoHandlerListData
 	errorHandler   func(http.ResponseWriter, *http.Request, *dto.Response)
 	defaultHandler func(http.ResponseWriter, *http.Request, *dto.Response)
+	fileServerList *fileServerContainer
 }
 
 type vetoHandlerListData struct {
 	handlerFunc func(*http.Request, *dto.Response) *dto.Response
 	next        *vetoHandlerListData
+}
+
+type fileServerContainer struct {
+	path string
+	root string
+	fs   http.Handler
+	next *fileServerContainer
 }
 
 type mappingData struct {
@@ -49,6 +58,12 @@ func NewHandlerData() *HandlerFunctionData {
 		},
 		errorHandler:   defaultErrorResponseHandler,
 		defaultHandler: defaultResponseHandler,
+		fileServerList: &fileServerContainer{
+			path: "",
+			root: "",
+			fs:   nil,
+			next: nil,
+		},
 	}
 	return handler
 }
@@ -61,11 +76,31 @@ func (p *HandlerFunctionData) SetErrorHandler(errorHandler func(http.ResponseWri
 }
 
 /*
-AddFileServer creates a file server at a given path
+AddFileServerDataFromMap creates a file servers for each mapping
 */
-func (p *HandlerFunctionData) AddFileServer(path string, fileRoot string) {
-	fs := http.FileServer(http.Dir(fileRoot))
-	http.Handle(path, http.StripPrefix(path, fs))
+func (p *HandlerFunctionData) AddFileServerDataFromMap(mappings map[string]string) {
+	for key, value := range mappings {
+		p.AddFileServerData(key, value)
+	}
+}
+
+/*
+AddFileServerData creates a file server for a path and a root directory
+*/
+func (p *HandlerFunctionData) AddFileServerData(path string, root string) {
+	container := p.fileServerList
+	for container.next != nil {
+		container = container.next
+	}
+	container.path = path
+	container.root = root
+	container.fs = http.FileServer(http.Dir(root))
+	container.next = &fileServerContainer{
+		path: "",
+		root: "",
+		fs:   nil,
+		next: nil,
+	}
 }
 
 /*
@@ -122,17 +157,41 @@ ServeHTTP handle ALL calls
 */
 func (p *HandlerFunctionData) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var mappingResponse *dto.Response
+	var url = r.URL.String()
+
 	logRequest(r)
+
+	fileServerMapping := p.fileServerList
+
+	for fileServerMapping.fs != nil {
+		if strings.HasPrefix(url, fileServerMapping.path) {
+			loggingResponseWriter := NewLoggingResponseWriter(w)
+			http.StripPrefix(fileServerMapping.path, fileServerMapping.fs).ServeHTTP(loggingResponseWriter, r)
+			if loggingResponseWriter.Is2XX() {
+				contentType := getContentType(url)
+				if contentType != nil {
+					loggingResponseWriter.Header()["Content-Type"] = contentType
+				}
+			}
+			logFileServerFesponse(loggingResponseWriter, fileServerMapping)
+			return
+		}
+		fileServerMapping = fileServerMapping.next
+	}
+
 	/*
 		Find the mapping
 	*/
-	mapping, found := p.mappings[r.URL.String()]
+	mapping, found := p.mappings[url]
 	if !found {
 		/*
 			Mapping was not found
 		*/
 		error404 := dto.NewResponse(404, http.StatusText(404), "", nil)
 		logResponse(error404)
+		/*
+			delegate to the current error handler to manage the error
+		*/
 		p.errorHandler(w, r, error404)
 		return
 	}
@@ -245,21 +304,40 @@ func invokeAllVetoHandlersInList(p *HandlerFunctionData, w http.ResponseWriter, 
 func logResponse(response *dto.Response) {
 	if logger.IsAccess() {
 		logger.LogAccessf("<<< STATUS=%d: RESP=%s", response.GetCode(), response.GetResp())
-		if logger.IsDebug() {
-			for k, v := range response.GetHeaders() {
-				logger.LogAccessf("<<< HEADER=%s=%s", k, v)
-			}
-		}
+		logHeaderMap(response.GetHeaders(), "<-<")
+	}
+}
+
+func logFileServerFesponse(response *LoggingResponseWriter, fileServerMapping *fileServerContainer) {
+	if logger.IsAccess() {
+		logger.LogAccessf("<<< STATUS=%d staticPath:%s root:%s", response.GetStatusCode(), fileServerMapping.path, fileServerMapping.root)
+		logHeaderMap(response.Header(), "<-<")
 	}
 }
 
 func logRequest(r *http.Request) {
 	if logger.IsAccess() {
 		logger.LogAccessf(">>> METHOD=%s: REQUEST=%s", r.Method, r.URL.Path)
-		if logger.IsDebug() {
-			for k, v := range r.Header {
-				logger.LogAccessf(">>> HEADER=%s=%s", k, v)
-			}
+		logHeaderMap(r.Header, ">->")
+	}
+}
+
+func logHeaderMap(headers map[string][]string, dir string) {
+	if logger.IsDebug() {
+		for k, v := range headers {
+			logger.LogDebugf("%s HEADER=%s=%s", dir, k, v)
 		}
 	}
+}
+
+func getContentType(url string) []string {
+	pos := strings.LastIndex(url, ".")
+	if pos > 0 {
+		ext := url[pos:]
+		mapping, found := state.GetConfigDataInstance().ContentTypes[ext]
+		if found {
+			return []string{mapping, "charset=" + state.GetConfigDataInstance().ContentTypeCharset}
+		}
+	}
+	return nil
 }
