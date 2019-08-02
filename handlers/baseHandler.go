@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"path/filepath"
 	"strings"
 	"webServerBase/dto"
 	"webServerBase/logging"
@@ -37,6 +38,32 @@ type mappingData struct {
 	handlerFunc   func(*http.Request) *dto.Response
 	requestMethod string
 	requestPath   string
+}
+
+type mappingElement struct {
+	name  string
+	value bool
+	next  *mappingElement
+}
+
+func mapPath(url string) *mappingElement {
+	parts := strings.Split(url, "/")
+	root := &mappingElement{
+		name:  "",
+		value: false,
+		next:  nil,
+	}
+	current := root
+	for _, val := range parts {
+		current.name = val
+		current.value = false
+		current.next = &mappingElement{
+			name:  "",
+			value: false,
+			next:  nil,
+		}
+	}
+	return root
 }
 
 var logger *logging.LoggerDataReference
@@ -153,6 +180,36 @@ func (p *HandlerFunctionData) AddAfterHandler(afterFunc func(*http.Request, *dto
 }
 
 /*
+ServeStaticFile Read a file from a static file location and return it
+*/
+func (p *HandlerFunctionData) ServeStaticFile(w http.ResponseWriter, r *http.Request, url string) bool {
+	fileServerMapping := p.fileServerList
+	for fileServerMapping.fs != nil {
+		if strings.HasPrefix(url, fileServerMapping.path) {
+			contentType, ext := getContentType(url)
+			if contentType != "" {
+				w.Header()["Content-Type"] = []string{contentType + "; charset=" + state.GetConfigDataInstance().ContentTypeCharset}
+			}
+			filename := filepath.Join(fileServerMapping.root, url[len(fileServerMapping.path):])
+			responseWriterWrapper := NewLoggingResponseWriter(w)
+			http.ServeFile(responseWriterWrapper, r, filename)
+			logFileServerResponse(responseWriterWrapper, fileServerMapping.path, ext, contentType, filename)
+			return true
+		}
+		fileServerMapping = fileServerMapping.next
+	}
+	return false
+}
+
+func (p *HandlerFunctionData) resolveUrlMapping(url string) (*mappingData, bool) {
+	mapping, found := p.mappings[url]
+	if found {
+		return &mapping, true
+	}
+	return nil, false
+}
+
+/*
 ServeHTTP handle ALL calls
 */
 func (p *HandlerFunctionData) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -160,27 +217,13 @@ func (p *HandlerFunctionData) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	var url = r.URL.Path
 
 	logRequest(r)
-
-	fileServerMapping := p.fileServerList
-
-	for fileServerMapping.fs != nil {
-		if strings.HasPrefix(url, fileServerMapping.path) {
-			loggingResponseWriter := NewLoggingResponseWriter(w)
-			contentType := getContentType(url)
-			if contentType != "" {
-				loggingResponseWriter.Header()["Content-Type"] = []string{contentType + "; charset=" + state.GetConfigDataInstance().ContentTypeCharset}
-			}
-			http.StripPrefix(fileServerMapping.path, fileServerMapping.fs).ServeHTTP(loggingResponseWriter, r)
-			logFileServerResponse(loggingResponseWriter, fileServerMapping)
-			return
-		}
-		fileServerMapping = fileServerMapping.next
+	if p.ServeStaticFile(w, r, url) {
+		return
 	}
-
 	/*
 		Find the mapping
 	*/
-	mapping, found := p.mappings[url]
+	mapping, found := p.resolveUrlMapping(url)
 	if !found {
 		/*
 			Mapping was not found
@@ -195,7 +238,7 @@ func (p *HandlerFunctionData) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if logger.IsDebug() {
-		logger.LogDebugf("Request mapping found. METHOD:%s PATH:%s", mapping.requestMethod, mapping.requestPath)
+		logger.LogDebugf("Request mapping found. METHOD:%s URL:%s", mapping.requestMethod, url)
 	}
 
 	/*
@@ -306,9 +349,9 @@ func logResponse(response *dto.Response) {
 	}
 }
 
-func logFileServerResponse(response *LoggingResponseWriter, fileServerMapping *fileServerContainer) {
+func logFileServerResponse(response *LoggingResponseWriter, path string, ext string, mime string, fileName string) {
 	if logger.IsAccess() {
-		logger.LogAccessf("<<< STATUS=%d staticPath:%s root:%s", response.GetStatusCode(), fileServerMapping.path, fileServerMapping.root)
+		logger.LogAccessf("<<< STATUS=%d staticPath:%s ext:%s content-type:%s file:%s", response.GetStatusCode(), path, ext, mime, fileName)
 		logHeaderMap(response.Header(), "<-<")
 	}
 }
@@ -328,14 +371,14 @@ func logHeaderMap(headers map[string][]string, dir string) {
 	}
 }
 
-func getContentType(url string) string {
+func getContentType(url string) (string, string) {
 	pos := strings.LastIndex(url, ".")
 	if pos > 0 {
 		ext := url[pos+1:]
 		mapping, found := state.GetConfigDataInstance().ContentTypes[ext]
 		if found {
-			return mapping
+			return mapping, ext
 		}
 	}
-	return ""
+	return "", ""
 }

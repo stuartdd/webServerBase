@@ -1,5 +1,5 @@
 {
   "loggerLevel" : ["INFO","DEBUG","WARN","ACCESS"],
-  "staticPaths" : {"/static/":"C:\\Users\\802996013\\go\\src\\webServerBase", "/static2/":"/home/stuart/git/go/src/webServerBase"},
-  "contentTypes": {"json": "application/json"}
+  "staticPaths" : {"/win/":"C:\\Users\\802996013\\go\\src\\webServerBase\\", "/lin/":"/home/stuart/git/go/src/webServerBase/"},
+  "contentTypes": {}
 }
