@@ -73,7 +73,8 @@ func LoadConfigData(configFileName string) error {
 	}
 
 	configDataInstance = &ConfigData{
-		Port: 8080,
+		Port:               8080,
+		ContentTypeCharset: "utf-8",
 	}
 	/*
 		load the config object

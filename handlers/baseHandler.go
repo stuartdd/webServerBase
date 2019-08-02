@@ -157,7 +157,7 @@ ServeHTTP handle ALL calls
 */
 func (p *HandlerFunctionData) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var mappingResponse *dto.Response
-	var url = r.URL.String()
+	var url = r.URL.Path
 
 	logRequest(r)
 
@@ -166,14 +166,12 @@ func (p *HandlerFunctionData) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	for fileServerMapping.fs != nil {
 		if strings.HasPrefix(url, fileServerMapping.path) {
 			loggingResponseWriter := NewLoggingResponseWriter(w)
-			http.StripPrefix(fileServerMapping.path, fileServerMapping.fs).ServeHTTP(loggingResponseWriter, r)
-			if loggingResponseWriter.Is2XX() {
-				contentType := getContentType(url)
-				if contentType != nil {
-					loggingResponseWriter.Header()["Content-Type"] = contentType
-				}
+			contentType := getContentType(url)
+			if contentType != "" {
+				loggingResponseWriter.Header()["Content-Type"] = []string{contentType + "; charset=" + state.GetConfigDataInstance().ContentTypeCharset}
 			}
-3			logFileServerFesponse(loggingResponseWriter, fileServerMapping)
+			http.StripPrefix(fileServerMapping.path, fileServerMapping.fs).ServeHTTP(loggingResponseWriter, r)
+			logFileServerResponse(loggingResponseWriter, fileServerMapping)
 			return
 		}
 		fileServerMapping = fileServerMapping.next
@@ -308,7 +306,7 @@ func logResponse(response *dto.Response) {
 	}
 }
 
-func logFileServerFesponse(response *LoggingResponseWriter, fileServerMapping *fileServerContainer) {
+func logFileServerResponse(response *LoggingResponseWriter, fileServerMapping *fileServerContainer) {
 	if logger.IsAccess() {
 		logger.LogAccessf("<<< STATUS=%d staticPath:%s root:%s", response.GetStatusCode(), fileServerMapping.path, fileServerMapping.root)
 		logHeaderMap(response.Header(), "<-<")
@@ -330,14 +328,14 @@ func logHeaderMap(headers map[string][]string, dir string) {
 	}
 }
 
-func getContentType(url string) []string {
+func getContentType(url string) string {
 	pos := strings.LastIndex(url, ".")
 	if pos > 0 {
 		ext := url[pos+1:]
 		mapping, found := state.GetConfigDataInstance().ContentTypes[ext]
 		if found {
-			return []string{mapping, "charset=" + state.GetConfigDataInstance().ContentTypeCharset}
+			return mapping
 		}
 	}
-	return nil
+	return ""
 }
