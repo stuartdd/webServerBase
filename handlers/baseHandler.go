@@ -40,32 +40,6 @@ type mappingData struct {
 	requestPath   string
 }
 
-type mappingElement struct {
-	name  string
-	value bool
-	next  *mappingElement
-}
-
-func mapPath(url string) *mappingElement {
-	parts := strings.Split(url, "/")
-	root := &mappingElement{
-		name:  "",
-		value: false,
-		next:  nil,
-	}
-	current := root
-	for _, val := range parts {
-		current.name = val
-		current.value = false
-		current.next = &mappingElement{
-			name:  "",
-			value: false,
-			next:  nil,
-		}
-	}
-	return root
-}
-
 var logger *logging.LoggerDataReference
 
 /*
@@ -201,14 +175,6 @@ func (p *HandlerFunctionData) ServeStaticFile(w http.ResponseWriter, r *http.Req
 	return false
 }
 
-func (p *HandlerFunctionData) resolveUrlMapping(url string) (*mappingData, bool) {
-	mapping, found := p.mappings[url]
-	if found {
-		return &mapping, true
-	}
-	return nil, false
-}
-
 /*
 ServeHTTP handle ALL calls
 */
@@ -223,7 +189,7 @@ func (p *HandlerFunctionData) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	/*
 		Find the mapping
 	*/
-	mapping, found := p.resolveUrlMapping(url)
+	mapping, found := dto.GetPathMappingElement(url)
 	if !found {
 		/*
 			Mapping was not found
@@ -238,7 +204,7 @@ func (p *HandlerFunctionData) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if logger.IsDebug() {
-		logger.LogDebugf("Request mapping found. METHOD:%s URL:%s", mapping.requestMethod, url)
+		logger.LogDebugf("Request mapping found. METHOD:%s URL:%s", mapping.RequestMethod, url)
 	}
 
 	/*
@@ -251,7 +217,7 @@ func (p *HandlerFunctionData) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 			We found a matching function for the request so lets get the response.
 			Do not return it immediatly as the after handlers may want to veto the response!
 		*/
-		mappingResponse = mapping.handlerFunc(r)
+		mappingResponse = mapping.HandlerFunc(r)
 		if mappingResponse == nil {
 			/*
 				Bad Request: The server cannot or will not process the request due to an
