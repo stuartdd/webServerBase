@@ -26,6 +26,12 @@
             "problemMatcher": []
         },
         {
+            "label": "test",
+            "type": "shell",
+            "command": "go test ./...",
+            "problemMatcher": []
+        },
+        {
             "label": "stop",
             "type": "shell",
             "command": "curl http://localhost:7999/stop",

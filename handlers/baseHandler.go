@@ -15,7 +15,6 @@ HandlerFunctionData is the state of the server
 */
 type HandlerFunctionData struct {
 	before         vetoHandlerListData
-	mappings       map[string]mappingData
 	after          vetoHandlerListData
 	errorHandler   func(http.ResponseWriter, *http.Request, *dto.Response)
 	defaultHandler func(http.ResponseWriter, *http.Request, *dto.Response)
@@ -34,12 +33,6 @@ type fileServerContainer struct {
 	next *fileServerContainer
 }
 
-type mappingData struct {
-	handlerFunc   func(*http.Request) *dto.Response
-	requestMethod string
-	requestPath   string
-}
-
 var logger *logging.LoggerDataReference
 
 /*
@@ -52,7 +45,6 @@ func NewHandlerData() *HandlerFunctionData {
 			handlerFunc: nil,
 			next:        nil,
 		},
-		mappings: make(map[string]mappingData),
 		after: vetoHandlerListData{
 			handlerFunc: nil,
 			next:        nil,
@@ -93,7 +85,7 @@ func (p *HandlerFunctionData) AddFileServerData(path string, root string) {
 	for container.next != nil {
 		container = container.next
 	}
-	container.path = path
+	container.path = "/" + path + "/"
 	container.root = root
 	container.fs = http.FileServer(http.Dir(root))
 	container.next = &fileServerContainer{
@@ -115,12 +107,7 @@ func (p *HandlerFunctionData) SetHandler(handler func(http.ResponseWriter, *http
 AddMappedHandler creates a route to a function given a path
 */
 func (p *HandlerFunctionData) AddMappedHandler(path string, method string, handlerFunc func(*http.Request) *dto.Response) {
-	mapping := mappingData{
-		handlerFunc:   handlerFunc,
-		requestMethod: method,
-		requestPath:   path,
-	}
-	p.mappings[path] = mapping
+	dto.AddPathMappingElement(path, method, handlerFunc)
 }
 
 /*
