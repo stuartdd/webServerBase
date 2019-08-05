@@ -1,9 +1,10 @@
 package handlers
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
+
+	jsonconfig "github.com/stuartdd/tools_jsonconfig"
 )
 
 /*
@@ -11,7 +12,7 @@ Response is the defininition of a response
 */
 type Response struct {
 	code        int
-	resp        string
+	resp        interface{}
 	contentType string
 	headers     map[string][]string
 	err         error
@@ -49,7 +50,15 @@ func (p *Response) AddHeader(name string, value []string) {
 GetResp returns the String response
 */
 func (p *Response) GetResp() string {
-	return p.resp
+	str, ok := p.resp.(string)
+	if ok {
+		return str
+	}
+	json, err := jsonconfig.StringJson(p.resp)
+	if err == nil {
+		return json
+	}
+	return fmt.Sprintf("%v", p.resp)
 }
 
 /*
@@ -76,12 +85,9 @@ func (p *Response) GetCSV() string {
 /*
 NewResponse create an error response
 */
-func NewResponse(statusCode int, response string, contentType string, goErr error) *Response {
+func NewResponse(statusCode int, response interface{}, contentType string, goErr error) *Response {
 	if response == "" {
 		response = http.StatusText(statusCode)
-	}
-	if goErr == nil {
-		goErr = errors.New("")
 	}
 	return &Response{
 		code:        statusCode,

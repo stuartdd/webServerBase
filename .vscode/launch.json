@@ -23,6 +23,17 @@
             "env": {},
             "args": [],
             "showLog": true
+        } ,
+        {
+            "name": "Test Response",
+            "type": "go",
+            "request": "launch",
+            "mode": "test",
+            "remotePath": "",
+            "program": "${workspaceRoot}/test/response_test.go",
+            "env": {},
+            "args": [],
+            "showLog": true
         }    
     ]
 }
