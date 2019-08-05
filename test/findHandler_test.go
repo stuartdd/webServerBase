@@ -8,7 +8,8 @@ import (
 	"webServerBase/handlers"
 )
 
-func CreateWithWC(t *testing.T) {
+func TestCreateWithWC(t *testing.T) {
+	handlers.ResetMappingElementTree()
 	handlers.AddPathMappingElement("a1/b3", "GET4", statusHandler)
 	handlers.AddPathMappingElement("/a1/b1/c1", "GET1", statusHandler)
 	handlers.AddPathMappingElement("/a1/?/c3", "GET2", statusHandler)
@@ -43,17 +44,20 @@ func CreateWithWC(t *testing.T) {
 TestCreateSimple test simple (no wildcard) lookup creation
 */
 func TestCreateSimple(t *testing.T) {
+	handlers.ResetMappingElementTree()
 	handlers.AddPathMappingElement("/a1/b1/c1", "GET", statusHandler)
 	handlers.AddPathMappingElement("/a1/b1/c3/", "GET", statusHandler)
-	handlers.AddPathMappingElement("/a1/b2/c1", "GET", statusHandler)
+	handlers.AddPathMappingElement("/a1/b2/c1", "post", statusHandler)
 	handlers.AddPathMappingElement("/a1/b3", "POST", statusHandler)
 	handlers.AddPathMappingElement("a2/b1/c1", "get", statusHandler)
 	fmt.Println(handlers.GetMappingElementTreeString("----------------- TestCreateSimple -----------------"))
-	assertNotFound(t, "/a1/b1/c1", "POST")
 	assertNotFound(t, "/a1/b5", "")
+	assertNotFound(t, "/a1/b5", "GET")
+	assertNotFound(t, "/a1/b5", "POST")
+	assertNotFound(t, "/a1/b1/c1", "Post")
 	assertFound(t, "/a1/b1/c1", "GET")
 	assertFound(t, "/a1/b1/c3", "GET")
-	assertFound(t, "/a1/b2/c1", "GET")
+	assertFound(t, "/a1/b2/c1", "POST")
 	assertFound(t, "a1/b3", "Post")
 	assertNotFound(t, "a1/b3", "GET")
 	assertFound(t, "a2/b1/c1", "GET")

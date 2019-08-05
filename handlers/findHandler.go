@@ -19,6 +19,13 @@ type MappingElements struct {
 }
 
 /*
+ResetMappingElementTree Clear ALL mappings
+*/
+func ResetMappingElementTree() {
+	mappingElementInstance = nil
+}
+
+/*
 AddPathMappingElement Add a path to the mapping
 */
 func AddPathMappingElement(url string, method string, handlerFunc func(*http.Request) *Response) {
@@ -71,10 +78,7 @@ func GetMappingElementTreeString(heading string) string {
 
 func getPathMappingElement(parts []string, method string, pos int, me *MappingElements) (*MappingElements, bool) {
 	if pos >= len(parts) {
-		if me.RequestMethod == "" {
-			return nil, false
-		}
-		if me.RequestMethod != method {
+		if me.RequestMethod != method || me.RequestMethod == "" {
 			return nil, false
 		}
 		return me, true
