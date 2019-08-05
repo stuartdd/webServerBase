@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"webServerBase/dto"
 	"webServerBase/handlers"
 	"webServerBase/logging"
 	"webServerBase/state"
@@ -64,6 +63,7 @@ func RunWithConfig(configData *state.ConfigData) {
 	handlerData.AddBeforeHandler(filterBefore)
 	handlerData.AddMappedHandler("/stop", http.MethodGet, stopHandler)
 	handlerData.AddMappedHandler("/status", http.MethodGet, statusHandler)
+	handlerData.AddMappedHandler("/calc/?/add/?", http.MethodGet, adderHandler)
 	handlerData.AddAfterHandler(filterAfter)
 
 	server = &http.Server{Addr: ":" + strconv.Itoa(configData.Port)}
@@ -80,27 +80,40 @@ func RunWithConfig(configData *state.ConfigData) {
 Start of handlers section
 *************************************************/
 
-func stopHandler(r *http.Request) *dto.Response {
+func stopHandler(r *http.Request) *handlers.Response {
 	state.SetStatusDataState("STOPPING")
 	go stopServer(false)
-	return dto.NewResponse(200, state.GetStatusDataJSONWithoutConfig(), "application/json", nil)
+	return handlers.NewResponse(200, state.GetStatusDataJSONWithoutConfig(), "application/json", nil)
 }
 
-func statusHandler(r *http.Request) *dto.Response {
-	return dto.NewResponse(200, state.GetStatusDataJSON(), "application/json", nil)
+func adderHandler(r *http.Request) *handlers.Response {
+	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	a, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return handlers.NewResponse(400, "invalid number "+parts[1], "", err)
+	}
+	b, err := strconv.Atoi(parts[3])
+	if err != nil {
+		return handlers.NewResponse(400, "invalid number "+parts[3], "", err)
+	}
+	return handlers.NewResponse(200, strconv.Itoa(a+b), "", nil)
 }
 
-func filterBefore(r *http.Request, response *dto.Response) *dto.Response {
+func statusHandler(r *http.Request) *handlers.Response {
+	return handlers.NewResponse(200, state.GetStatusDataJSON(), "application/json", nil)
+}
+
+func filterBefore(r *http.Request, response *handlers.Response) *handlers.Response {
 	logger.LogDebug("IN Filter Before 1")
 	return nil
 }
 
-func filterAfter(r *http.Request, response *dto.Response) *dto.Response {
+func filterAfter(r *http.Request, response *handlers.Response) *handlers.Response {
 	logger.LogDebug("IN Filter After 1")
 	return nil
 }
 
-func errorHandler(w http.ResponseWriter, r *http.Request, e *dto.Response) {
+func errorHandler(w http.ResponseWriter, r *http.Request, e *handlers.Response) {
 	logger.LogDebug("IN errorHandler")
 	http.Error(w, e.GetResp(), 400)
 }

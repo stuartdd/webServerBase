@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
-	"webServerBase/dto"
 	"webServerBase/logging"
 	"webServerBase/state"
 )
@@ -16,13 +15,13 @@ HandlerFunctionData is the state of the server
 type HandlerFunctionData struct {
 	before         vetoHandlerListData
 	after          vetoHandlerListData
-	errorHandler   func(http.ResponseWriter, *http.Request, *dto.Response)
-	defaultHandler func(http.ResponseWriter, *http.Request, *dto.Response)
+	errorHandler   func(http.ResponseWriter, *http.Request, *Response)
+	defaultHandler func(http.ResponseWriter, *http.Request, *Response)
 	fileServerList *fileServerContainer
 }
 
 type vetoHandlerListData struct {
-	handlerFunc func(*http.Request, *dto.Response) *dto.Response
+	handlerFunc func(*http.Request, *Response) *Response
 	next        *vetoHandlerListData
 }
 
@@ -64,7 +63,7 @@ func NewHandlerData() *HandlerFunctionData {
 /*
 SetErrorHandler handle an error response if one occurs
 */
-func (p *HandlerFunctionData) SetErrorHandler(errorHandler func(http.ResponseWriter, *http.Request, *dto.Response)) {
+func (p *HandlerFunctionData) SetErrorHandler(errorHandler func(http.ResponseWriter, *http.Request, *Response)) {
 	p.errorHandler = errorHandler
 }
 
@@ -99,21 +98,21 @@ func (p *HandlerFunctionData) AddFileServerData(path string, root string) {
 /*
 SetHandler handle a NON error response
 */
-func (p *HandlerFunctionData) SetHandler(handler func(http.ResponseWriter, *http.Request, *dto.Response)) {
+func (p *HandlerFunctionData) SetHandler(handler func(http.ResponseWriter, *http.Request, *Response)) {
 	p.defaultHandler = handler
 }
 
 /*
 AddMappedHandler creates a route to a function given a path
 */
-func (p *HandlerFunctionData) AddMappedHandler(path string, method string, handlerFunc func(*http.Request) *dto.Response) {
-	dto.AddPathMappingElement(path, method, handlerFunc)
+func (p *HandlerFunctionData) AddMappedHandler(path string, method string, handlerFunc func(*http.Request) *Response) {
+	AddPathMappingElement(path, method, handlerFunc)
 }
 
 /*
 AddBeforeHandler adds a function called before the mapping function
 */
-func (p *HandlerFunctionData) AddBeforeHandler(beforeFunc func(*http.Request, *dto.Response) *dto.Response) {
+func (p *HandlerFunctionData) AddBeforeHandler(beforeFunc func(*http.Request, *Response) *Response) {
 	bef := &p.before
 	for bef.next != nil {
 		bef = bef.next
@@ -128,7 +127,7 @@ func (p *HandlerFunctionData) AddBeforeHandler(beforeFunc func(*http.Request, *d
 /*
 AddAfterHandler adds a function called after the mapping function
 */
-func (p *HandlerFunctionData) AddAfterHandler(afterFunc func(*http.Request, *dto.Response) *dto.Response) {
+func (p *HandlerFunctionData) AddAfterHandler(afterFunc func(*http.Request, *Response) *Response) {
 	aft := &p.after
 	for aft.next != nil {
 		aft = aft.next
@@ -152,7 +151,7 @@ func (p *HandlerFunctionData) ServeStaticFile(w http.ResponseWriter, r *http.Req
 				w.Header()["Content-Type"] = []string{contentType + "; charset=" + state.GetConfigDataInstance().ContentTypeCharset}
 			}
 			filename := filepath.Join(fileServerMapping.root, url[len(fileServerMapping.path):])
-			responseWriterWrapper := NewLoggingResponseWriter(w)
+			responseWriterWrapper := NewResponseWriterWrapper(w)
 			http.ServeFile(responseWriterWrapper, r, filename)
 			logFileServerResponse(responseWriterWrapper, fileServerMapping.path, ext, contentType, filename)
 			return true
@@ -166,7 +165,7 @@ func (p *HandlerFunctionData) ServeStaticFile(w http.ResponseWriter, r *http.Req
 ServeHTTP handle ALL calls
 */
 func (p *HandlerFunctionData) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	var mappingResponse *dto.Response
+	var mappingResponse *Response
 	var url = r.URL.Path
 
 	logRequest(r)
@@ -176,12 +175,12 @@ func (p *HandlerFunctionData) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	/*
 		Find the mapping
 	*/
-	mapping, found := dto.GetPathMappingElement(url)
+	mapping, found := GetPathMappingElement(url, r.Method)
 	if !found {
 		/*
 			Mapping was not found
 		*/
-		error404 := dto.NewResponse(404, http.StatusText(404), "", nil)
+		error404 := NewResponse(404, http.StatusText(404), "", nil)
 		logResponse(error404)
 		/*
 			delegate to the current error handler to manage the error
@@ -211,7 +210,7 @@ func (p *HandlerFunctionData) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 					apparent client error (e.g., malformed request syntax, size too large,
 					invalid request message framing, or deceptive request routing)
 			*/
-			mappingResponse = dto.NewResponse(400, http.StatusText(400), "", nil)
+			mappingResponse = NewResponse(400, http.StatusText(400), "", nil)
 		}
 
 		/*
@@ -241,7 +240,7 @@ func (p *HandlerFunctionData) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
-func preProcessResponse(request *http.Request, response *dto.Response) {
+func preProcessResponse(request *http.Request, response *Response) {
 	if response.GetContentType() != "" {
 		response.AddHeader("Content-Type", []string{response.GetContentType()})
 	}
@@ -254,14 +253,14 @@ func preProcessResponse(request *http.Request, response *dto.Response) {
 	}
 }
 
-func defaultErrorResponseHandler(w http.ResponseWriter, request *http.Request, response *dto.Response) {
+func defaultErrorResponseHandler(w http.ResponseWriter, request *http.Request, response *Response) {
 	if logger.IsWarn() {
 		logger.LogWarn("Using default Error ResponseHandler")
 	}
 	http.Error(w, response.GetResp(), response.GetCode())
 }
 
-func defaultResponseHandler(w http.ResponseWriter, request *http.Request, response *dto.Response) {
+func defaultResponseHandler(w http.ResponseWriter, request *http.Request, response *Response) {
 	if logger.IsWarn() {
 		logger.LogWarn("Using default ResponseHandler")
 	}
@@ -282,7 +281,7 @@ invokeAllHandlersInList
 Invoke ALL handlers in the list UNTIL a handler returns a response.
 Any response is considered an ERROR.
 */
-func invokeAllVetoHandlersInList(p *HandlerFunctionData, w http.ResponseWriter, r *http.Request, response *dto.Response, list *vetoHandlerListData) *dto.Response {
+func invokeAllVetoHandlersInList(p *HandlerFunctionData, w http.ResponseWriter, r *http.Request, response *Response, list *vetoHandlerListData) *Response {
 	for list.next != nil {
 		if list.handlerFunc != nil {
 			handlerResponse := list.handlerFunc(r, response)
@@ -295,14 +294,14 @@ func invokeAllVetoHandlersInList(p *HandlerFunctionData, w http.ResponseWriter, 
 	return nil
 }
 
-func logResponse(response *dto.Response) {
+func logResponse(response *Response) {
 	if logger.IsAccess() {
 		logger.LogAccessf("<<< STATUS=%d: RESP=%s", response.GetCode(), response.GetResp())
 		logHeaderMap(response.GetHeaders(), "<-<")
 	}
 }
 
-func logFileServerResponse(response *LoggingResponseWriter, path string, ext string, mime string, fileName string) {
+func logFileServerResponse(response *ResponseWriterWrapper, path string, ext string, mime string, fileName string) {
 	if logger.IsAccess() {
 		logger.LogAccessf("<<< STATUS=%d staticPath:%s ext:%s content-type:%s file:%s", response.GetStatusCode(), path, ext, mime, fileName)
 		logHeaderMap(response.Header(), "<-<")
