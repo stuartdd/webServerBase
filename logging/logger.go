@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"webServerBase/state"
 )
 
 type loggerLevelType int
@@ -67,7 +68,7 @@ CreateLogWithFilenameAndAppID should configure the logger to output somthing lik
 2019-07-16 14:47:43.993 applicationID module  [-]  INFO Starti
 2019-07-16 14:47:43.993 applicationID module  [-] DEBUG Runnin
 */
-func CreateLogWithFilenameAndAppID(logFileName string, applicationID string, loggerLevelStrings []string) {
+func CreateLogWithFilenameAndAppID(config state.ConfigData, applicationID string) {
 	processAndValidateLogLevels(loggerLevelStrings)
 
 	logApplicationID = applicationID
@@ -93,6 +94,20 @@ func CreateLogWithFilenameAndAppID(logFileName string, applicationID string, log
 		logFile:  fileInstance,
 		logger:   logInstance,
 	}
+}
+
+/*
+CloseLog close the log file
+*/
+func CloseLog(logger *LoggerDataReference) {
+	if logDataInstance.logFile != nil {
+		logger.LogInfof("logging.CloseLog: Log file %s is closing", logDataInstance.fileName)
+		logDataInstance.logFile.Close()
+		logDataInstance.logFile = nil
+	} else {
+		logger.LogWarn("logging.CloseLog: Was called but there is NO log file open")
+	}
+
 }
 
 /*
@@ -249,18 +264,6 @@ LogDebug delegates to log.Print
 func (p *LoggerDataReference) LogDebug(message string) {
 	if loggerLevelFlags[DebugLevel] {
 		p.loggerDataRef.logger.Print(p.loggerPrefix + loggerLevelTypeNames[DebugLevel] + message)
-	}
-}
-
-/*
-CloseLog close the log file
-*/
-func CloseLog(logger *LoggerDataReference) {
-	if logDataInstance.logFile != nil {
-		logger.LogInfof("logging.CloseLog: Log file %s is closing", logDataInstance.fileName)
-		logDataInstance.logFile.Close()
-	} else {
-		logger.LogWarn("logging.CloseLog: Was called but there is NO log file open")
 	}
 }
 

@@ -48,7 +48,7 @@ func TestRespAsInt(t *testing.T) {
 	}
 }
 
-func TestRespAsStruct(t *testing.T) {
+func TestRespAsStructWithHeader(t *testing.T) {
 	resp := handlers.NewResponse(299, testStruct{
 		A: "A",
 		B: true,

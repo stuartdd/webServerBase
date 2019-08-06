@@ -7,12 +7,17 @@ import (
 	jsonconfig "github.com/stuartdd/tools_jsonconfig"
 )
 
+type LoggerLevelData struct {
+	LoggerLevel string
+	LoggerFile  string
+}
+
 /*
-ConfigData read cinfiguration data from the JSON configuration file.
+ConfigData read configuration data from the JSON configuration file.
 Note any undefined values are defaulted to constants defined below
 */
 type ConfigData struct {
-	LoggerLevel        []string
+	LoggerLevel        []LoggerLevelData
 	Port               int
 	LogFileName        string
 	ConfigName         string
@@ -22,6 +27,10 @@ type ConfigData struct {
 }
 
 var configDataInstance *ConfigData
+
+func (p *LoggerLevelData) String() string {
+	return fmt.Sprintf("{\"level\":\"%s\", \"file\":\"%s\"}", p.LoggerLevel, p.LoggerFile)
+}
 
 /*
 GetConfigDataInstance get the confg data singleton
@@ -42,11 +51,11 @@ func GetConfigDataJSON() string {
 		toStringMap(configDataInstance.StaticPaths))
 }
 
-func toStringList(list []string) string {
+func toStringList(list []LoggerLevelData) string {
 	out := "["
 	ind := len(out)
 	for _, element := range list {
-		out = out + "\"" + element + "\""
+		out = out + "\"" + element.String() + "\""
 		ind = len(out)
 		out = out + ", "
 	}
