@@ -8,8 +8,8 @@ import (
 )
 
 type LoggerLevelData struct {
-	LoggerLevel string
-	LoggerFile  string
+	Level string
+	File  string
 }
 
 /*
@@ -17,7 +17,7 @@ ConfigData read configuration data from the JSON configuration file.
 Note any undefined values are defaulted to constants defined below
 */
 type ConfigData struct {
-	LoggerLevel        []LoggerLevelData
+	LoggerLevels       []LoggerLevelData
 	Port               int
 	LogFileName        string
 	ConfigName         string
@@ -29,7 +29,7 @@ type ConfigData struct {
 var configDataInstance *ConfigData
 
 func (p *LoggerLevelData) String() string {
-	return fmt.Sprintf("{\"level\":\"%s\", \"file\":\"%s\"}", p.LoggerLevel, p.LoggerFile)
+	return fmt.Sprintf("{\"level\":\"%s\", \"file\":\"%s\"}", p.Level, p.File)
 }
 
 /*
@@ -47,7 +47,7 @@ func GetConfigDataJSON() string {
 		configDataInstance.ConfigName,
 		configDataInstance.Port,
 		configDataInstance.LogFileName,
-		toStringList(configDataInstance.LoggerLevel),
+		toStringList(configDataInstance.LoggerLevels),
 		toStringMap(configDataInstance.StaticPaths))
 }
 

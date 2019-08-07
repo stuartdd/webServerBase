@@ -11,6 +11,20 @@ import (
 type loggerLevelType int
 
 /*
+loggerLevelData One instance per Log Level
+*/
+type loggerLevelData struct {
+	active bool
+	logger *log.Logger
+	file   *loggerFileData
+}
+
+type loggerFileData struct {
+	fileName string
+	logFile  *os.File
+}
+
+/*
 InfoLevel is the finest. Nothing stops ErrorLevel of FatalLevel
 */
 const (
@@ -28,9 +42,9 @@ These names should be ALL the same length and should have a ' ' before AND after
 var loggerLevelTypeNames = [...]string{"  INFO ", " DEBUG ", "  WARN ", "ACCESS ", " ERROR ", " FATAL "}
 
 /*
-A true in the slot means that log level is active
+LoggerLevelDataList data structure for each level
 */
-var loggerLevelFlags = [...]bool{false, false, false, false, true, true}
+var LoggerLevelDataList = [...]*loggerLevelData{newLoggerLevelTypeData(false), newLoggerLevelTypeData(false), newLoggerLevelTypeData(false), newLoggerLevelTypeData(false), newLoggerLevelTypeData(true), newLoggerLevelTypeData(true)}
 
 /*
 These values (not case sensitive) must map to the values passed to CreateLogWithFilenameAndAppID.
@@ -39,13 +53,12 @@ An empty list will mean that only ERROR and FATAL will be logged
 */
 var loggerLevelMapNames = map[string]loggerLevelType{"INFO": InfoLevel, "DEBUG": DebugLevel, "WARN": WarnLevel, "ACCESS": AccessLevel, "ERROR": ErrorLevel, "FATAL": FatalLevel}
 
-var longestModuleName int = 0
+/*
+For each logger level there MAY be a file. Indexed by file name. This is so we can re-use the file with the same name for different levels
+*/
+var loggerLevelFiles = make(map[string]*loggerFileData)
 
-type loggerData struct {
-	fileName string
-	logFile  *os.File
-	logger   *log.Logger
-}
+var longestModuleName int = 0
 
 /*
 LoggerDataReference contains a ref to th esingle logger instance and the module name (id).
@@ -55,59 +68,40 @@ Created via NewLogger
 type LoggerDataReference struct {
 	loggerModuleName string
 	loggerPrefix     string
-	loggerDataRef    *loggerData
 }
 
-var logDataInstance *loggerData
 var logDataModules map[string]*LoggerDataReference
 var logDataFlags int
 var logApplicationID string
+var logFileNameGlobal string
 
 /*
 CreateLogWithFilenameAndAppID should configure the logger to output somthing like this!
 2019-07-16 14:47:43.993 applicationID module  [-]  INFO Starti
 2019-07-16 14:47:43.993 applicationID module  [-] DEBUG Runnin
 */
-func CreateLogWithFilenameAndAppID(config state.ConfigData, applicationID string) {
-	processAndValidateLogLevels(loggerLevelStrings)
-
+func CreateLogWithFilenameAndAppID(logFileName string, applicationID string, config []state.LoggerLevelData) {
+	logFileNameGlobal = logFileName
 	logApplicationID = applicationID
 	logDataFlags = log.LstdFlags | log.Lmicroseconds
 	logDataModules = make(map[string]*LoggerDataReference)
-
-	var logInstance *log.Logger
-	var fileInstance *os.File
-	if logFileName != "" {
-		f, err := os.OpenFile(logFileName, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-		if err != nil {
-			LogPanicToStdErrAndExit("applicationID " + applicationID + ". Log file " + logFileName + " could NOT be opened\nError:" + err.Error())
-		} else {
-			logInstance = log.New(f, "", logDataFlags)
-			fileInstance = f
-		}
-	} else {
-		logInstance = log.New(os.Stdout, "", logDataFlags)
-		fileInstance = nil
-	}
-	logDataInstance = &loggerData{
-		fileName: logFileName,
-		logFile:  fileInstance,
-		logger:   logInstance,
-	}
+	/*
+		Validate and Activate each log level.
+	*/
+	validateAndActivateLogLevels(config)
 }
 
 /*
 CloseLog close the log file
 */
 func CloseLog(logger *LoggerDataReference) {
-	if logDataInstance.logFile != nil {
-		logger.LogInfof("logging.CloseLog: Log file %s is closing", logDataInstance.fileName)
-		logDataInstance.logFile.Close()
-		logDataInstance.logFile = nil
-	} else {
-		logger.LogWarn("logging.CloseLog: Was called but there is NO log file open")
-	}
-
+	// if logDataInstance.logFile != nil {
+	// 	logger.LogInfof("logging.CloseLog: Log file %s is closing", logDataInstance.fileName)
+	// 	logDataInstance.logFile.Close()
+	// 	logDataInstance.logFile = nil
+	// } else {
+	// 	logger.LogWarn("logging.CloseLog: Was called but there is NO log file open")
+	// }
 }
 
 /*
@@ -115,17 +109,12 @@ NewLogger created a new logger instance for a specific module
 All log lines printed via the returned ref will contain the specific module name.
 */
 func NewLogger(moduleName string) *LoggerDataReference {
-	if logDataInstance == nil {
-		LogPanicToStdErrAndExit("Application or Module (" + moduleName + ") Must call CreateLogWithFilenameAndAppID before calling NewLogger")
-	}
-
 	if val, ok := logDataModules[moduleName]; ok {
 		return val
 	}
 	ldRef := &LoggerDataReference{
 		loggerModuleName: moduleName,
 		loggerPrefix:     logApplicationID,
-		loggerDataRef:    logDataInstance,
 	}
 	logDataModules[moduleName] = ldRef
 	updateLoggerPrefixesForAllModules()
@@ -149,35 +138,35 @@ func updateLoggerPrefixesForAllModules() {
 IsDebug return true is the debug log function is enabled
 */
 func (p *LoggerDataReference) IsDebug() bool {
-	return loggerLevelFlags[DebugLevel]
+	return LoggerLevelDataList[DebugLevel].active
 }
 
 /*
 IsAccess return true is the access log function is enabled
 */
 func (p *LoggerDataReference) IsAccess() bool {
-	return loggerLevelFlags[AccessLevel]
+	return LoggerLevelDataList[AccessLevel].active
 }
 
 /*
 IsInfo return true is the info log function is enabled
 */
 func (p *LoggerDataReference) IsInfo() bool {
-	return loggerLevelFlags[InfoLevel]
+	return LoggerLevelDataList[InfoLevel].active
 }
 
 /*
 IsWarn return true is the info log function is enabled
 */
 func (p *LoggerDataReference) IsWarn() bool {
-	return loggerLevelFlags[WarnLevel]
+	return LoggerLevelDataList[WarnLevel].active
 }
 
 /*
 Fatal does the same as log.Fatal
 */
 func (p *LoggerDataReference) Fatal(err error) {
-	p.loggerDataRef.logger.Printf(p.loggerPrefix+"%s%s", loggerLevelTypeNames[FatalLevel], err)
+	LoggerLevelDataList[FatalLevel].logger.Printf(p.loggerPrefix+"%s%s", loggerLevelTypeNames[FatalLevel], err)
 	os.Exit(1)
 }
 
@@ -185,22 +174,22 @@ func (p *LoggerDataReference) Fatal(err error) {
 LogErrorf delegates to log.Printf
 */
 func (p *LoggerDataReference) LogErrorf(format string, v ...interface{}) {
-	p.loggerDataRef.logger.Printf(p.loggerPrefix+loggerLevelTypeNames[ErrorLevel]+format, v...)
+	LoggerLevelDataList[ErrorLevel].logger.Printf(p.loggerPrefix+loggerLevelTypeNames[ErrorLevel]+format, v...)
 }
 
 /*
 LogError delegates to log.Print
 */
 func (p *LoggerDataReference) LogError(message string) {
-	p.loggerDataRef.logger.Print(p.loggerPrefix + loggerLevelTypeNames[ErrorLevel] + message)
+	LoggerLevelDataList[ErrorLevel].logger.Print(p.loggerPrefix + loggerLevelTypeNames[ErrorLevel] + message)
 }
 
 /*
 LogInfof delegates to log.Printf
 */
 func (p *LoggerDataReference) LogInfof(format string, v ...interface{}) {
-	if loggerLevelFlags[InfoLevel] {
-		p.loggerDataRef.logger.Printf(p.loggerPrefix+loggerLevelTypeNames[InfoLevel]+format, v...)
+	if LoggerLevelDataList[InfoLevel].active {
+		LoggerLevelDataList[InfoLevel].logger.Printf(p.loggerPrefix+loggerLevelTypeNames[InfoLevel]+format, v...)
 	}
 }
 
@@ -208,8 +197,8 @@ func (p *LoggerDataReference) LogInfof(format string, v ...interface{}) {
 LogInfo delegates to log.Print
 */
 func (p *LoggerDataReference) LogInfo(message string) {
-	if loggerLevelFlags[InfoLevel] {
-		p.loggerDataRef.logger.Print(p.loggerPrefix + loggerLevelTypeNames[InfoLevel] + message)
+	if LoggerLevelDataList[InfoLevel].active {
+		LoggerLevelDataList[InfoLevel].logger.Print(p.loggerPrefix + loggerLevelTypeNames[InfoLevel] + message)
 	}
 }
 
@@ -217,8 +206,8 @@ func (p *LoggerDataReference) LogInfo(message string) {
 LogAccessf delegates to log.Printf
 */
 func (p *LoggerDataReference) LogAccessf(format string, v ...interface{}) {
-	if loggerLevelFlags[AccessLevel] {
-		p.loggerDataRef.logger.Printf(p.loggerPrefix+loggerLevelTypeNames[AccessLevel]+format, v...)
+	if LoggerLevelDataList[AccessLevel].active {
+		LoggerLevelDataList[AccessLevel].logger.Printf(p.loggerPrefix+loggerLevelTypeNames[AccessLevel]+format, v...)
 	}
 }
 
@@ -226,8 +215,8 @@ func (p *LoggerDataReference) LogAccessf(format string, v ...interface{}) {
 LogAccess delegates to log.Print
 */
 func (p *LoggerDataReference) LogAccess(message string) {
-	if loggerLevelFlags[AccessLevel] {
-		p.loggerDataRef.logger.Print(p.loggerPrefix + loggerLevelTypeNames[AccessLevel] + message)
+	if LoggerLevelDataList[AccessLevel].active {
+		LoggerLevelDataList[AccessLevel].logger.Print(p.loggerPrefix + loggerLevelTypeNames[AccessLevel] + message)
 	}
 }
 
@@ -235,8 +224,8 @@ func (p *LoggerDataReference) LogAccess(message string) {
 LogWarnf delegates to log.Printf
 */
 func (p *LoggerDataReference) LogWarnf(format string, v ...interface{}) {
-	if loggerLevelFlags[WarnLevel] {
-		p.loggerDataRef.logger.Printf(p.loggerPrefix+loggerLevelTypeNames[WarnLevel]+format, v...)
+	if LoggerLevelDataList[WarnLevel].active {
+		LoggerLevelDataList[WarnLevel].logger.Printf(p.loggerPrefix+loggerLevelTypeNames[WarnLevel]+format, v...)
 	}
 }
 
@@ -244,8 +233,8 @@ func (p *LoggerDataReference) LogWarnf(format string, v ...interface{}) {
 LogWarn delegates to log.Print
 */
 func (p *LoggerDataReference) LogWarn(message string) {
-	if loggerLevelFlags[WarnLevel] {
-		p.loggerDataRef.logger.Print(p.loggerPrefix + loggerLevelTypeNames[WarnLevel] + message)
+	if LoggerLevelDataList[WarnLevel].active {
+		LoggerLevelDataList[WarnLevel].logger.Print(p.loggerPrefix + loggerLevelTypeNames[WarnLevel] + message)
 	}
 }
 
@@ -253,8 +242,8 @@ func (p *LoggerDataReference) LogWarn(message string) {
 LogDebugf delegates to log.Printf
 */
 func (p *LoggerDataReference) LogDebugf(format string, v ...interface{}) {
-	if loggerLevelFlags[DebugLevel] {
-		p.loggerDataRef.logger.Printf(p.loggerPrefix+loggerLevelTypeNames[DebugLevel]+format, v...)
+	if LoggerLevelDataList[DebugLevel].active {
+		LoggerLevelDataList[DebugLevel].logger.Printf(p.loggerPrefix+loggerLevelTypeNames[DebugLevel]+format, v...)
 	}
 }
 
@@ -262,21 +251,64 @@ func (p *LoggerDataReference) LogDebugf(format string, v ...interface{}) {
 LogDebug delegates to log.Print
 */
 func (p *LoggerDataReference) LogDebug(message string) {
-	if loggerLevelFlags[DebugLevel] {
-		p.loggerDataRef.logger.Print(p.loggerPrefix + loggerLevelTypeNames[DebugLevel] + message)
+	if LoggerLevelDataList[DebugLevel].active {
+		LoggerLevelDataList[DebugLevel].logger.Print(p.loggerPrefix + loggerLevelTypeNames[DebugLevel] + message)
 	}
 }
 
-func processAndValidateLogLevels(values []string) {
-	for _, value := range values {
-		name := strings.ToUpper(value)
-		if val, ok := loggerLevelMapNames[name]; ok {
-			loggerLevelFlags[val] = true
+/*
+	Validate and Activate each log level.
+*/
+func validateAndActivateLogLevels(values []state.LoggerLevelData) {
+	/*
+		For each log level definition
+	*/
+	for index, value := range values {
+		/*
+			check the name is valid
+		*/
+		name := strings.ToUpper(strings.TrimSpace(value.Level))
+		if _, ok := loggerLevelMapNames[name]; ok {
+			filedata := getLoggerWithFilename(value.File)
+			LoggerLevelDataList[index].file = filedata
+			if filedata == nil {
+				LoggerLevelDataList[index].logger = log.New(os.Stdout, "", logDataFlags)
+			} else {
+				LoggerLevelDataList[index].logger = log.New(filedata.logFile, "", logDataFlags)
+			}
 		} else {
 			list := strings.Trim(strings.Join(strings.Fields(fmt.Sprint(loggerLevelTypeNames)), ", "), "[]")
-			LogPanicToStdErrAndExit("The Log level name '" + value + "' is not a valid log level. Valid values are:" + list)
+			LogPanicToStdErrAndExit("The Log level name '" + value.Level + "' is not a valid log level. Valid values are:" + list)
 		}
 	}
+}
+
+func newLoggerLevelTypeData(active bool) *loggerLevelData {
+	return &loggerLevelData{
+		active: active,
+		logger: nil,
+		file:   nil,
+	}
+}
+
+func getLoggerWithFilename(logFileName string) *loggerFileData {
+	name := strings.TrimSpace(strings.ToUpper(logFileName))
+	if name == "" {
+		return nil
+	}
+	if val, ok := loggerLevelFiles[name]; ok {
+		return val
+	}
+	f, err := os.OpenFile(logFileName, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		LogPanicToStdErrAndExit("applicationID " + logApplicationID + ". Log file " + logFileName + " could NOT be Created or Opened\nError:" + err.Error())
+	}
+	lfd := &loggerFileData{
+		fileName: logFileName,
+		logFile:  f,
+	}
+	loggerLevelFiles[name] = lfd
+	return lfd
 }
 
 /*
