@@ -130,7 +130,7 @@ CloseLog closes the logger file if it exists
 A logger os passed to enable the CloseLog function to log that fact it has been closed!
 */
 func CloseLog() {
-	logging.CloseLog(logger)
+	logging.CloseLog()
 }
 
 func stopServer(immediate bool) {

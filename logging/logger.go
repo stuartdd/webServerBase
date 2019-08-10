@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 	"webServerBase/state"
 )
 
-type loggerLevelType int
+type LoggerLevelType int
 
 /*
 loggerLevelData One instance per Log Level
@@ -25,15 +26,26 @@ type loggerFileData struct {
 }
 
 /*
+LoggerDataReference contains a ref to th esingle logger instance and the module name (id).
+
+Created via NewLogger
+*/
+type LoggerDataReference struct {
+	loggerModuleName string
+	loggerPrefix     string
+}
+
+/*
 InfoLevel is the finest. Nothing stops ErrorLevel of FatalLevel
 */
 const (
-	InfoLevel loggerLevelType = iota
+	InfoLevel LoggerLevelType = iota
 	DebugLevel
 	WarnLevel
 	AccessLevel
 	ErrorLevel
 	FatalLevel
+	NotFound
 )
 
 /*
@@ -51,7 +63,7 @@ These values (not case sensitive) must map to the values passed to CreateLogWith
 If these values are in the list then that log level will be active.
 An empty list will mean that only ERROR and FATAL will be logged
 */
-var loggerLevelMapNames = map[string]loggerLevelType{"INFO": InfoLevel, "DEBUG": DebugLevel, "WARN": WarnLevel, "ACCESS": AccessLevel, "ERROR": ErrorLevel, "FATAL": FatalLevel}
+var loggerLevelMapNames = map[string]LoggerLevelType{"INFO": InfoLevel, "DEBUG": DebugLevel, "WARN": WarnLevel, "ACCESS": AccessLevel, "ERROR": ErrorLevel, "FATAL": FatalLevel}
 
 /*
 For each logger level there MAY be a file. Indexed by file name. This is so we can re-use the file with the same name for different levels
@@ -60,17 +72,8 @@ var loggerLevelFiles = make(map[string]*loggerFileData)
 
 var longestModuleName int = 0
 
-/*
-LoggerDataReference contains a ref to th esingle logger instance and the module name (id).
-
-Created via NewLogger
-*/
-type LoggerDataReference struct {
-	loggerModuleName string
-	loggerPrefix     string
-}
-
 var logDataModules map[string]*LoggerDataReference
+
 var logDataFlags int
 var logApplicationID string
 var logFileNameGlobal string
@@ -92,16 +95,73 @@ func CreateLogWithFilenameAndAppID(logFileName string, applicationID string, con
 }
 
 /*
+GetLogLevelTypeForName get the index for the level name
+*/
+func GetLogLevelTypeForName(name string) LoggerLevelType {
+	if index, ok := loggerLevelMapNames[strings.ToUpper(strings.TrimSpace(name))]; ok {
+		return index
+	}
+	return NotFound
+}
+
+/*
+GetLogLevelFileName get the index for the level name
+*/
+func GetLogLevelFileName(name string) string {
+	index := GetLogLevelTypeForName(name)
+	if index != NotFound {
+		typeInstance := LoggerLevelDataList[index]
+		if typeInstance.file != nil {
+			return typeInstance.file.fileName
+		}
+	}
+	return ""
+}
+
+/*
+LogPanicToStdErrAndExit - Last resort!
+This creates a logger for System Error channel and use it to log.Fatal.
+It then exits the application with a return code of 1
+*/
+func LogPanicToStdErrAndExit(message string) {
+	log.Panic(message)
+	os.Exit(1)
+}
+
+/*
+LoggerLevelDataString return the state of a log level as a string
+*/
+func LoggerLevelDataString(name string) string {
+	index := GetLogLevelTypeForName(name)
+	if index != NotFound {
+		lld := LoggerLevelDataList[index]
+		if lld.active {
+			active := name + ":Active:"
+			if lld.file == nil {
+				return active + "Out=SysOut:"
+			}
+			active = active + "Out=:" + filepath.Base(lld.file.fileName)
+			if lld.file.logFile == nil {
+				return active + ":Closed"
+			}
+			return active + ":Open"
+
+		}
+		return name + ":In-Active"
+	}
+	return name + ":Not Found"
+}
+
+/*
 CloseLog close the log file
 */
-func CloseLog(logger *LoggerDataReference) {
-	// if logDataInstance.logFile != nil {
-	// 	logger.LogInfof("logging.CloseLog: Log file %s is closing", logDataInstance.fileName)
-	// 	logDataInstance.logFile.Close()
-	// 	logDataInstance.logFile = nil
-	// } else {
-	// 	logger.LogWarn("logging.CloseLog: Was called but there is NO log file open")
-	// }
+func CloseLog() {
+	for _, value := range LoggerLevelDataList {
+		if value.file != nil {
+			value.file.logFile.Close()
+			value.active = false
+		}
+	}
 }
 
 /*
@@ -119,19 +179,6 @@ func NewLogger(moduleName string) *LoggerDataReference {
 	logDataModules[moduleName] = ldRef
 	updateLoggerPrefixesForAllModules()
 	return ldRef
-}
-
-func updateLoggerPrefixesForAllModules() {
-	longestName := 0
-	for _, value := range logDataModules {
-		length := len(value.loggerModuleName)
-		if longestName < length {
-			longestName = length
-		}
-	}
-	for _, value := range logDataModules {
-		value.loggerPrefix = logApplicationID + " " + (value.loggerModuleName + strings.Repeat(" ", longestName-len(value.loggerModuleName))) + " [-] "
-	}
 }
 
 /*
@@ -263,23 +310,51 @@ func validateAndActivateLogLevels(values []state.LoggerLevelData) {
 	/*
 		For each log level definition
 	*/
-	for index, value := range values {
+	for _, loggerLevelData := range values {
 		/*
 			check the name is valid
 		*/
-		name := strings.ToUpper(strings.TrimSpace(value.Level))
-		if _, ok := loggerLevelMapNames[name]; ok {
-			filedata := getLoggerWithFilename(value.File)
-			LoggerLevelDataList[index].file = filedata
+		typeIndex := GetLogLevelTypeForName(loggerLevelData.Level)
+		if typeIndex != NotFound {
+			filedata := getLoggerWithFilename(loggerLevelData.File)
+			LoggerLevelDataList[typeIndex].file = filedata
 			if filedata == nil {
-				LoggerLevelDataList[index].logger = log.New(os.Stdout, "", logDataFlags)
+				LoggerLevelDataList[typeIndex].logger = log.New(os.Stdout, "", logDataFlags)
 			} else {
-				LoggerLevelDataList[index].logger = log.New(filedata.logFile, "", logDataFlags)
+				LoggerLevelDataList[typeIndex].logger = log.New(filedata.logFile, "", logDataFlags)
 			}
+			LoggerLevelDataList[typeIndex].active = true
 		} else {
 			list := strings.Trim(strings.Join(strings.Fields(fmt.Sprint(loggerLevelTypeNames)), ", "), "[]")
-			LogPanicToStdErrAndExit("The Log level name '" + value.Level + "' is not a valid log level. Valid values are:" + list)
+			LogPanicToStdErrAndExit("The Log level name '" + loggerLevelData.Level + "' is not a valid log level. Valid values are:" + list)
 		}
+	}
+	if logFileNameGlobal != "" {
+		for _, lld := range LoggerLevelDataList {
+			if lld.active && (lld.file == nil) {
+				filedata := getLoggerWithFilename(logFileNameGlobal)
+				lld.file = filedata
+				if filedata == nil {
+					lld.logger = log.New(os.Stdout, "", logDataFlags)
+				} else {
+					lld.logger = log.New(filedata.logFile, "", logDataFlags)
+				}
+
+			}
+		}
+	}
+}
+
+func updateLoggerPrefixesForAllModules() {
+	longestName := 0
+	for _, value := range logDataModules {
+		length := len(value.loggerModuleName)
+		if longestName < length {
+			longestName = length
+		}
+	}
+	for _, value := range logDataModules {
+		value.loggerPrefix = logApplicationID + " " + (value.loggerModuleName + strings.Repeat(" ", longestName-len(value.loggerModuleName))) + " [-] "
 	}
 }
 
@@ -292,31 +367,25 @@ func newLoggerLevelTypeData(active bool) *loggerLevelData {
 }
 
 func getLoggerWithFilename(logFileName string) *loggerFileData {
-	name := strings.TrimSpace(strings.ToUpper(logFileName))
-	if name == "" {
+	nameUcTrim := strings.TrimSpace(strings.ToUpper(logFileName))
+	if nameUcTrim == "" {
 		return nil
 	}
-	if val, ok := loggerLevelFiles[name]; ok {
+	if val, ok := loggerLevelFiles[nameUcTrim]; ok {
 		return val
 	}
-	f, err := os.OpenFile(logFileName, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	absFileName, err := filepath.Abs(logFileName)
+	if err != nil {
+		LogPanicToStdErrAndExit("applicationID " + logApplicationID + ". Log file " + logFileName + " is not a valid path:" + err.Error())
+	}
+	f, err := os.OpenFile(absFileName, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		LogPanicToStdErrAndExit("applicationID " + logApplicationID + ". Log file " + logFileName + " could NOT be Created or Opened\nError:" + err.Error())
 	}
 	lfd := &loggerFileData{
-		fileName: logFileName,
+		fileName: absFileName,
 		logFile:  f,
 	}
-	loggerLevelFiles[name] = lfd
+	loggerLevelFiles[nameUcTrim] = lfd
 	return lfd
-}
-
-/*
-LogPanicToStdErrAndExit - Last resort!
-This creates a logger for System Error channel and use it to log.Fatal.
-It then exits the application with a return code of 1
-*/
-func LogPanicToStdErrAndExit(message string) {
-	log.Panic(message)
-	os.Exit(1)
 }
