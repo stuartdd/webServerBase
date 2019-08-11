@@ -68,13 +68,14 @@ For each logger level there MAY be a file. Indexed by file name. This is so we c
 */
 var loggerLevelFiles map[string]*loggerFileData
 var logDataModules map[string]*LoggerDataReference
-var loggerLevelDataList []*loggerLevelData
+var loggerLevelDataList = initLoggerLevelDataList()
 
 var longestModuleName int
 
 var logDataFlags int
 var logApplicationID string
 var logFileNameGlobal string
+var fallBack = true
 
 /*
 CreateLogWithFilenameAndAppID should configure the logger to output somthing like this!
@@ -88,18 +89,23 @@ func CreateLogWithFilenameAndAppID(logFileName string, applicationID string, con
 	logDataFlags = log.LstdFlags | log.Lmicroseconds
 	logDataModules = make(map[string]*LoggerDataReference)
 	loggerLevelFiles = make(map[string]*loggerFileData)
-	loggerLevelDataList = []*loggerLevelData{
+	loggerLevelDataList = initLoggerLevelDataList()
+	longestModuleName = 0
+	/*
+		Validate and Activate each log level.
+	*/
+	validateAndActivateLogLevels(config)
+	fallBack = false
+}
+
+func initLoggerLevelDataList() []*loggerLevelData {
+	return []*loggerLevelData{
 		newLoggerLevelTypeData(false),
 		newLoggerLevelTypeData(false),
 		newLoggerLevelTypeData(false),
 		newLoggerLevelTypeData(false),
 		newLoggerLevelTypeData(true),
 		newLoggerLevelTypeData(true)}
-	longestModuleName = 0
-	/*
-		Validate and Activate each log level.
-	*/
-	validateAndActivateLogLevels(config)
 }
 
 /*
@@ -221,7 +227,11 @@ func (p *LoggerDataReference) IsWarn() bool {
 Fatal does the same as log.Fatal
 */
 func (p *LoggerDataReference) Fatal(err error) {
-	loggerLevelDataList[FatalLevel].logger.Printf(p.loggerPrefix+"%s%s", loggerLevelTypeNames[FatalLevel], err)
+	if fallBack {
+		fmt.Printf("FATAL: [%T] %s", err, err.Error())
+	} else {
+		loggerLevelDataList[FatalLevel].logger.Printf(p.loggerPrefix+"[%s] %T %s", loggerLevelTypeNames[FatalLevel], err, err.Error())
+	}
 	os.Exit(1)
 }
 

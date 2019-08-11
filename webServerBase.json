@@ -1,6 +1,5 @@
 {
-  "loggerLevels" : [{"Level":"INFO"},{"Level":"DEBUG", "File":"debugFile.log"},{"Level":"WARN"},{"Level":"ACCESS"}],
-  "LogFileName"  : "allFile.log",
+  "loggerLevels" : [{"Level":"INFO"},{"Level":"DEBUG", "File":""},{"Level":"WARN"},{"Level":"ACCESS"}],
   "staticPaths"  : {"win":"C:\\Users\\802996013\\go\\src\\webServerBase\\", "lin":"/home/stuart/git/go/src/webServerBase/"},
   "contentTypes" : {}
 }

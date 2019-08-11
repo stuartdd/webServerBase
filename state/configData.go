@@ -7,6 +7,9 @@ import (
 	jsonconfig "github.com/stuartdd/tools_jsonconfig"
 )
 
+/*
+LoggerLevelData defines whicl log levels are active and their output{
+*/
 type LoggerLevelData struct {
 	Level string
 	File  string
@@ -55,7 +58,7 @@ func toStringList(list []LoggerLevelData) string {
 	out := "["
 	ind := len(out)
 	for _, element := range list {
-		out = out + "\"" + element.String() + "\""
+		out = out + element.String()
 		ind = len(out)
 		out = out + ", "
 	}
