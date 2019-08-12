@@ -17,6 +17,51 @@ func AssertEqualInt(t *testing.T, message string, expected int, actual int) {
 }
 
 /*
+AssertEqualInt assert ints are equal
+*/
+func AssertNotEqualInt(t *testing.T, message string, expected int, actual int) {
+	if expected == actual {
+		t.Fatalf("Failed: Actual value %d should NOT equal %d - %s", actual, expected, message)
+	}
+}
+
+/*
+AssertNil assert object is (null) nil
+*/
+func AssertNil(t *testing.T, message string, expected interface{}) {
+	if expected != nil {
+		t.Fatalf("Failed: Expected (%T) should be nil %s", expected, message)
+	}
+}
+
+/*
+AssertNotNil assert object is NOT (null) nil
+*/
+func AssertNotNil(t *testing.T, message string, expected interface{}) {
+	if expected == nil {
+		t.Fatalf("Failed: Expected value should NOT be nil %s", message)
+	}
+}
+
+/*
+AssertEmptyString assert string has a value ""
+*/
+func AssertEmptyString(t *testing.T, message string, expected string) {
+	if expected != "" {
+		t.Fatalf("Failed: Expected should be \"\" %s", message)
+	}
+}
+
+/*
+AssertNotEmptyString assert string has a value, NOT ""
+*/
+func AssertNotEmptyString(t *testing.T, message string, expected string) {
+	if expected != "" {
+		t.Fatalf("Failed: Expected should be \"\" %s", message)
+	}
+}
+
+/*
 AssertTrue assert value is true
 */
 func AssertTrue(t *testing.T, message string, actual bool) {
@@ -40,6 +85,18 @@ AssertEqualString assert strings are equal
 func AssertEqualString(t *testing.T, message string, expected string, actual string) {
 	if expected != actual {
 		t.Fatalf("Failed: Expected '%s' actual '%s' - %s", expected, actual, message)
+	}
+}
+
+/*
+AssertErrorString assert strings are equal
+*/
+func AssertErrorString(t *testing.T, message string, expected error, actual string) {
+	if expected == nil {
+		t.Fatalf("Failed: Expected error value should NOT be nil %s", message)
+	}
+	if expected.Error() != actual {
+		t.Fatalf("Failed: Error message. Expected '%s' actual '%s' - %s", expected.Error(), actual, message)
 	}
 }
 
