@@ -2,6 +2,8 @@ package state
 
 import (
 	"fmt"
+	"log"
+	"runtime"
 	"strings"
 
 	jsonconfig "github.com/stuartdd/tools_jsonconfig"
@@ -24,7 +26,7 @@ type ConfigData struct {
 	Port               int
 	LogFileName        string
 	ConfigName         string
-	StaticPaths        map[string]string
+	StaticPaths        map[string]map[string]string
 	ContentTypes       map[string]string
 	ContentTypeCharset string
 }
@@ -33,6 +35,17 @@ var configDataInstance *ConfigData
 
 func (p *LoggerLevelData) String() string {
 	return fmt.Sprintf("{\"level\":\"%s\", \"file\":\"%s\"}", p.Level, p.File)
+}
+
+/*
+GetConfigDataStaticPathForOS Get the static path for the OS. If not sound return the first one!
+*/
+func GetConfigDataStaticPathForOS() map[string]string {
+	path := GetConfigDataInstance().StaticPaths[runtime.GOOS]
+	if path == nil {
+		log.Fatalf("Unable to find staticPath in configuration file '%s' for operating system '%s'", GetConfigDataInstance().ConfigName, runtime.GOOS)
+	}
+	return path
 }
 
 /*
@@ -46,12 +59,11 @@ func GetConfigDataInstance() *ConfigData {
 GetConfigDataJSON string the configuration data as JSON. Used to record it in the logs
 */
 func GetConfigDataJSON() string {
-	return fmt.Sprintf("{\"configName\":\"%s\",\"port\":%d,\"logFileName\":\"%s\",\"LoggerLevel\":%s,\"staticPath\":%s}",
+	return fmt.Sprintf("{\"configName\":\"%s\",\"port\":%d,\"logFileName\":\"%s\",\"LoggerLevel\":%s}",
 		configDataInstance.ConfigName,
 		configDataInstance.Port,
 		configDataInstance.LogFileName,
-		toStringList(configDataInstance.LoggerLevels),
-		toStringMap(configDataInstance.StaticPaths))
+		toStringList(configDataInstance.LoggerLevels))
 }
 
 func toStringList(list []LoggerLevelData) string {

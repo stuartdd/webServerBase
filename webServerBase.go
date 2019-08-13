@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -53,13 +54,14 @@ func RunWithConfig(configData *state.ConfigData) {
 		Log server startup info
 	*/
 	logger.LogInfof("Server will start on port %d\n", configData.Port)
+	logger.LogInfof("OS '%s'. Static path will be:%s\n", runtime.GOOS, state.GetConfigDataStaticPathForOS())
 	logger.LogInfof("To stop the server http://localhost:%d/stop\n", configData.Port)
 	logger.LogDebugf("State:%s\n", state.GetStatusDataJSON())
 	/*
 	   Configure and Start the server.
 	*/
 	handlerData := handlers.NewHandlerData()
-	handlerData.AddFileServerDataFromMap(state.GetConfigDataInstance().StaticPaths)
+	handlerData.AddFileServerDataFromMap(state.GetConfigDataStaticPathForOS())
 	handlerData.AddBeforeHandler(filterBefore)
 	handlerData.AddMappedHandler("/stop", http.MethodGet, stopHandler)
 	handlerData.AddMappedHandler("/status", http.MethodGet, statusHandler)
