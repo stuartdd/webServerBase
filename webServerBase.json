@@ -1,8 +1,8 @@
 {
   "loggerLevels" : [{"Level":"INFO"},{"Level":"DEBUG", "File":""},{"Level":"WARN"},{"Level":"ACCESS"}],
   "staticPaths"  : {
-    "windows":{"static":"C:\\Users\\802996013\\go\\src\\webServerBase\\"}, 
-    "linux":{"static":"/home/stuart/git/go/src/webServerBase/"}
+    "windows":{"static":""}, 
+    "linux":{"static":""}
   },
   "contentTypes" : {}
 }
