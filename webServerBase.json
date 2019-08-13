@@ -1,8 +1,10 @@
 {
-  "loggerLevels" : [{"Level":"INFO"},{"Level":"DEBUG", "File":""},{"Level":"WARN"},{"Level":"ACCESS"}],
+  "loggerLevels" : [{"Level":"DEBUG"},{"Level":"INFO"},{"Level":"WARN"},{"Level":"ACCESS"}],
   "staticPaths"  : {
     "windows":{"static":"site\\"}, 
     "linux":{"static":"site/"}
   },
-  "contentTypes" : {}
+  "redirections" : {"/":"/static/index.html"},
+  "contentTypes" : {},
+  "contentTypeCharset":"utf-8"
 }

@@ -61,6 +61,7 @@ func RunWithConfig(configData *state.ConfigData) {
 	   Configure and Start the server.
 	*/
 	handlerData := handlers.NewHandlerData()
+	handlerData.SetRedirections(state.GetConfigDataInstance().Redirections)
 	handlerData.AddFileServerDataFromMap(state.GetConfigDataStaticPathForOS())
 	handlerData.AddBeforeHandler(filterBefore)
 	handlerData.AddMappedHandler("/stop", http.MethodGet, stopHandler)

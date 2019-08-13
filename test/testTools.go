@@ -136,7 +136,7 @@ func AssertFileContains(t *testing.T, message string, fileName string, contains 
 }
 
 /*
-AssertFileDoesNotContains read a file ans see if any if the strings are contained in it
+AssertFileDoesNotContain read a file ans see if any if the strings are contained in it
 */
 func AssertFileDoesNotContain(t *testing.T, message string, fileName string, contains []string) {
 	b, err := ioutil.ReadFile(fileName)

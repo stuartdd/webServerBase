@@ -18,6 +18,7 @@ type HandlerFunctionData struct {
 	errorHandler   func(http.ResponseWriter, *http.Request, *Response)
 	defaultHandler func(http.ResponseWriter, *http.Request, *Response)
 	fileServerList *fileServerContainer
+	redirections   map[string]string
 }
 
 type vetoHandlerListData struct {
@@ -39,6 +40,7 @@ NewHandlerData Create new HandlerData object
 */
 func NewHandlerData() *HandlerFunctionData {
 	logger = logging.NewLogger("BaseHandler")
+
 	handler := &HandlerFunctionData{
 		before: vetoHandlerListData{
 			handlerFunc: nil,
@@ -56,6 +58,7 @@ func NewHandlerData() *HandlerFunctionData {
 			fs:   nil,
 			next: nil,
 		},
+		redirections: make(map[string]string),
 	}
 	return handler
 }
@@ -65,6 +68,13 @@ SetErrorHandler handle an error response if one occurs
 */
 func (p *HandlerFunctionData) SetErrorHandler(errorHandler func(http.ResponseWriter, *http.Request, *Response)) {
 	p.errorHandler = errorHandler
+}
+
+/*
+SetErrorHandler handle an error response if one occurs
+*/
+func (p *HandlerFunctionData) SetRedirections(redirections map[string]string) {
+	p.redirections = redirections
 }
 
 /*
@@ -169,7 +179,12 @@ func (p *HandlerFunctionData) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	var url = r.URL.Path
 
 	logRequest(r)
-	if p.ServeStaticFile(w, r, url) {
+	trans := p.redirections[url]
+	if trans != "" {
+		if logger.IsInfo() {
+			logger.LogInfof(">>> REDIRECT: %s --> %s", url, trans)
+		}
+		http.Redirect(w, r, trans, http.StatusSeeOther)
 		return
 	}
 	/*
@@ -177,6 +192,9 @@ func (p *HandlerFunctionData) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	*/
 	mapping, found := GetPathMappingElement(url, r.Method)
 	if !found {
+		if p.ServeStaticFile(w, r, url) {
+			return
+		}
 		/*
 			Mapping was not found
 		*/
