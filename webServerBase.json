@@ -5,6 +5,6 @@
     "linux":{"static":"site/"}
   },
   "redirections" : {"/":"/static/index.html"},
-  "contentTypes" : {},
+  "contentTypes" : {"ico": "image/x-icon"},
   "contentTypeCharset":"utf-8"
 }

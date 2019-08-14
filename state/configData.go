@@ -139,7 +139,7 @@ func addContentTypes() {
 	doNotOverwriteContentTypes("gif", "image/gif")
 	doNotOverwriteContentTypes("htm", "text/html")
 	doNotOverwriteContentTypes("html", "text/html")
-	doNotOverwriteContentTypes("ico", "image/vnd.microsoft.icon")
+	doNotOverwriteContentTypes("ico", "image/vnd.microsoft.icon") // Some browsers use image/x-icon. Add to config data to override!
 	doNotOverwriteContentTypes("ics", "text/calendar")
 	doNotOverwriteContentTypes("jar", "application/java-archive")
 	doNotOverwriteContentTypes("jpeg", "image/jpeg")
