@@ -57,16 +57,6 @@ func SetStatusDataState(newState string) {
 }
 
 /*
-GetStatusDataExecutableName returns the name os the exe file
-*/
-func GetStatusDataExecutableName() string {
-	if statusDataInstance == nil {
-		InitStatusDataInstance()
-	}
-	return statusDataInstance.executable
-}
-
-/*
 GetStatusDataJSON return the server status (including config data) as a JSON String
 */
 func GetStatusDataJSON() string {

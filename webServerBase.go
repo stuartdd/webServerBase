@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"runtime"
@@ -31,7 +32,19 @@ func main() {
 	if err != nil {
 		logger.Fatal(err)
 	}
-	RunWithConfig(state.GetConfigDataInstance())
+
+	exec, err := os.Executable()
+	if err != nil {
+		exec = "UnknownModule"
+	} else {
+		parts := strings.Split(exec, fmt.Sprintf("%c", os.PathSeparator))
+		exec = parts[len(parts)-1]
+		if exec == "debug" {
+			exec = parts[len(parts)-2]
+		}
+	}
+
+	RunWithConfig(state.GetConfigDataInstance(), exec)
 }
 
 /*
@@ -39,16 +52,15 @@ func main() {
 RunWithConfig runs with a sgeneric handler
 Param - config a ref to the config object
 */
-func RunWithConfig(configData *state.ConfigData) {
+func RunWithConfig(configData *state.ConfigData, executable string) {
 	/*
 		Open the logs. Log name is in the congig data. If not defined default to sysout
 	*/
-	logging.CreateLogWithFilenameAndAppID(state.GetConfigDataInstance().DefaultLogFileName, state.GetStatusDataExecutableName()+":"+strconv.Itoa(state.GetConfigDataInstance().Port), state.GetConfigDataInstance().LoggerLevels)
+	logging.CreateLogWithFilenameAndAppID(state.GetConfigDataInstance().DefaultLogFileName, executable+":"+strconv.Itoa(state.GetConfigDataInstance().Port), state.GetConfigDataInstance().LoggerLevels)
 	defer CloseLog()
 	/*
 		Add loggers for each module (Makes for neater logs!)
 	*/
-	logger = logging.NewLogger("BaseHandler")
 	logger = logging.NewLogger("ServerMain")
 	/*
 		Log server startup info
@@ -60,9 +72,11 @@ func RunWithConfig(configData *state.ConfigData) {
 	/*
 	   Configure and Start the server.
 	*/
-	handlerData := handlers.NewHandlerData()
+	handlerData := handlers.NewHandlerData(configData.ContentTypeCharset, executable)
+	handlerData.AddContentTypeFromMap(configData.ContentTypes)
 	handlerData.SetRedirections(state.GetConfigDataInstance().Redirections)
 	handlerData.AddFileServerDataFromMap(state.GetConfigDataStaticPathForOS())
+	
 	handlerData.AddBeforeHandler(filterBefore)
 	handlerData.AddMappedHandler("/stop", http.MethodGet, stopHandler)
 	handlerData.AddMappedHandler("/status", http.MethodGet, statusHandler)
