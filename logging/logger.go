@@ -464,11 +464,11 @@ func getLoggerWithFilename(logFileName string) (*loggerFileData, error) {
 	}
 	absFileName, err := filepath.Abs(logFileName)
 	if err != nil {
-		return nil, logError("applicationID " + logApplicationID + ". Log file " + logFileName + " is not a valid path:" + err.Error())
+		return nil, logError("applicationID " + logApplicationID + ". Log file " + logFileName + " is not a valid file path: " + err.Error())
 	}
 	f, err := os.OpenFile(absFileName, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
-		return nil, logError("applicationID " + logApplicationID + ". Log file " + logFileName + " could NOT be Created or Opened\nError:" + err.Error())
+		return nil, logError("applicationID " + logApplicationID + ". Log file " + logFileName + " could NOT be Created or Opened: " + err.Error())
 	}
 	lfd := &loggerFileData{
 		fileName: absFileName,
