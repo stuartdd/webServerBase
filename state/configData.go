@@ -10,33 +10,21 @@ import (
 )
 
 /*
-LoggerLevelData defines whicl log levels are active and their output{
-*/
-type LoggerLevelData struct {
-	Level string
-	File  string
-}
-
-/*
 ConfigData read configuration data from the JSON configuration file.
 Note any undefined values are defaulted to constants defined below
 */
 type ConfigData struct {
 	Port               int
-	LogFileName        string
+	DefaultLogFileName string
 	ConfigName         string
 	StaticPaths        map[string]map[string]string
 	Redirections       map[string]string
 	ContentTypes       map[string]string
 	ContentTypeCharset string
-	LoggerLevels       []LoggerLevelData
+	LoggerLevels       map[string]string
 }
 
 var configDataInstance *ConfigData
-
-func (p *LoggerLevelData) String() string {
-	return fmt.Sprintf("{\"level\":\"%s\", \"file\":\"%s\"}", p.Level, p.File)
-}
 
 /*
 GetConfigDataStaticPathForOS Get the static path for the OS. If not sound return the first one!
@@ -63,15 +51,15 @@ func GetConfigDataJSON() string {
 	return fmt.Sprintf("{\"configName\":\"%s\",\"port\":%d,\"logFileName\":\"%s\",\"LoggerLevel\":%s}",
 		configDataInstance.ConfigName,
 		configDataInstance.Port,
-		configDataInstance.LogFileName,
-		toStringList(configDataInstance.LoggerLevels))
+		configDataInstance.DefaultLogFileName,
+		toStringMap(configDataInstance.LoggerLevels))
 }
 
-func toStringList(list []LoggerLevelData) string {
+func toStringList(list []string) string {
 	out := "["
 	ind := len(out)
 	for _, element := range list {
-		out = out + element.String()
+		out = out + element
 		ind = len(out)
 		out = out + ", "
 	}

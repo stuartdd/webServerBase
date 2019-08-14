@@ -43,7 +43,7 @@ func RunWithConfig(configData *state.ConfigData) {
 	/*
 		Open the logs. Log name is in the congig data. If not defined default to sysout
 	*/
-	logging.CreateLogWithFilenameAndAppID(state.GetConfigDataInstance().LogFileName, state.GetStatusDataExecutableName()+":"+strconv.Itoa(state.GetConfigDataInstance().Port), state.GetConfigDataInstance().LoggerLevels)
+	logging.CreateLogWithFilenameAndAppID(state.GetConfigDataInstance().DefaultLogFileName, state.GetStatusDataExecutableName()+":"+strconv.Itoa(state.GetConfigDataInstance().Port), state.GetConfigDataInstance().LoggerLevels)
 	defer CloseLog()
 	/*
 		Add loggers for each module (Makes for neater logs!)

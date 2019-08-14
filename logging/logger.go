@@ -1,13 +1,20 @@
 package logging
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
-	"webServerBase/state"
 )
+
+const errorName = "ERROR"
+const fatalName = "FATAL"
+const systemErrName = "SYSERR"
+const systemOutName = "SYSOUT"
+const defaultName = "DEFAULT"
+const offName = "OFF"
 
 /*
 LoggerLevelType ENUM for log levels
@@ -31,9 +38,11 @@ const (
 loggerLevelData One instance per Log Level
 */
 type loggerLevelData struct {
-	active bool
-	logger *log.Logger
-	file   *loggerFileData
+	note       string
+	active     bool
+	errorLevel bool
+	logger     *log.Logger
+	file       *loggerFileData
 }
 
 type loggerFileData struct {
@@ -61,7 +70,7 @@ These values (not case sensitive) must map to the values passed to CreateLogWith
 If these values are in the list then that log level will be active.
 An empty list will mean that only ERROR and FATAL will be logged
 */
-var loggerLevelMapNames = map[string]LoggerLevelType{"INFO": InfoLevel, "DEBUG": DebugLevel, "WARN": WarnLevel, "ACCESS": AccessLevel, "ERROR": ErrorLevel, "FATAL": FatalLevel}
+var loggerLevelMapNames = map[string]LoggerLevelType{"INFO": InfoLevel, "DEBUG": DebugLevel, "WARN": WarnLevel, "ACCESS": AccessLevel, errorName: ErrorLevel, fatalName: FatalLevel}
 
 /*
 For each logger level there MAY be a file. Indexed by file name. This is so we can re-use the file with the same name for different levels
@@ -74,7 +83,7 @@ var longestModuleName int
 
 var logDataFlags int
 var logApplicationID string
-var logFileNameGlobal string
+var defaultLogFileName string
 var fallBack = true
 
 /*
@@ -82,9 +91,9 @@ CreateLogWithFilenameAndAppID should configure the logger to output somthing lik
 2019-07-16 14:47:43.993 applicationID module  [-]  INFO Starti
 2019-07-16 14:47:43.993 applicationID module  [-] DEBUG Runnin
 */
-func CreateLogWithFilenameAndAppID(logFileName string, applicationID string, config []state.LoggerLevelData) {
+func CreateLogWithFilenameAndAppID(defaultLogFileNameIn string, applicationID string, config map[string]string) error {
 	CloseLog()
-	logFileNameGlobal = logFileName
+	defaultLogFileName = defaultLogFileNameIn
 	logApplicationID = applicationID
 	logDataFlags = log.LstdFlags | log.Lmicroseconds
 	logDataModules = make(map[string]*LoggerDataReference)
@@ -94,18 +103,18 @@ func CreateLogWithFilenameAndAppID(logFileName string, applicationID string, con
 	/*
 		Validate and Activate each log level.
 	*/
-	validateAndActivateLogLevels(config)
+	if config[errorName] == "" {
+		config[errorName] = defaultName
+	}
+	if config[fatalName] == "" {
+		config[fatalName] = defaultName
+	}
+	err := validateAndActivateLogLevels(config)
+	if err != nil {
+		return err
+	}
 	fallBack = false
-}
-
-func initLoggerLevelDataList() []*loggerLevelData {
-	return []*loggerLevelData{
-		newLoggerLevelTypeData(false),
-		newLoggerLevelTypeData(false),
-		newLoggerLevelTypeData(false),
-		newLoggerLevelTypeData(false),
-		newLoggerLevelTypeData(true),
-		newLoggerLevelTypeData(true)}
+	return nil
 }
 
 /*
@@ -133,26 +142,20 @@ func GetLogLevelFileName(name string) string {
 }
 
 /*
-LogPanicToStdErrAndExit - Last resort!
-This creates a logger for System Error channel and use it to log.Fatal.
-It then exits the application with a return code of 1
-*/
-func LogPanicToStdErrAndExit(message string) {
-	log.Panic(message)
-	os.Exit(1)
-}
-
-/*
 LoggerLevelDataString return the state of a log level as a string
 */
 func LoggerLevelDataString(name string) string {
 	loggerLevelType := GetLogLevelTypeForName(name)
 	if loggerLevelType != NotFound {
 		lld := loggerLevelDataList[loggerLevelType]
+		errorLevel := "NO"
+		if lld.errorLevel {
+			errorLevel = "YES"
+		}
 		if lld.active {
-			active := name + ":Active:"
+			active := name + ":Active note[" + lld.note + "] error[" + errorLevel + "]:"
 			if lld.file == nil {
-				return active + "Out=SysOut:"
+				return active + "Out=Console:"
 			}
 			active = active + "Out=:" + filepath.Base(lld.file.fileName)
 			if lld.file.logFile == nil {
@@ -161,7 +164,7 @@ func LoggerLevelDataString(name string) string {
 			return active + ":Open"
 
 		}
-		return name + ":In-Active"
+		return name + ":In-Active note[" + lld.note + "] error[" + errorLevel + "]"
 	}
 	return name + ":Not Found"
 }
@@ -217,6 +220,20 @@ func (p *LoggerDataReference) IsInfo() bool {
 }
 
 /*
+IsError return true is the error log function is enabled
+*/
+func (p *LoggerDataReference) IsError() bool {
+	return loggerLevelDataList[ErrorLevel].active
+}
+
+/*
+IsFatal return true is the fatal log function is enabled
+*/
+func (p *LoggerDataReference) IsFatal() bool {
+	return loggerLevelDataList[FatalLevel].active
+}
+
+/*
 IsWarn return true is the info log function is enabled
 */
 func (p *LoggerDataReference) IsWarn() bool {
@@ -228,25 +245,34 @@ Fatal does the same as log.Fatal
 */
 func (p *LoggerDataReference) Fatal(err error) {
 	if fallBack {
-		fmt.Printf("FATAL: [%T] %s", err, err.Error())
+		fmt.Printf("FATAL: type[%T] %s\n", err, err.Error())
+		os.Exit(1)
 	} else {
-		loggerLevelDataList[FatalLevel].logger.Printf(p.loggerPrefix+"[%s] %T %s", loggerLevelTypeNames[FatalLevel], err, err.Error())
+		if loggerLevelDataList[FatalLevel].active {
+			loggerLevelDataList[FatalLevel].logger.Printf(p.loggerPrefix+"[%s] %T %s", loggerLevelTypeNames[FatalLevel], err, err.Error())
+			os.Exit(1)
+		} else {
+			fmt.Printf("FATAL: type[%T] %s\n", err, err.Error())
+		}
 	}
-	os.Exit(1)
 }
 
 /*
 LogErrorf delegates to log.Printf
 */
 func (p *LoggerDataReference) LogErrorf(format string, v ...interface{}) {
-	loggerLevelDataList[ErrorLevel].logger.Printf(p.loggerPrefix+loggerLevelTypeNames[ErrorLevel]+format, v...)
+	if loggerLevelDataList[ErrorLevel].active {
+		loggerLevelDataList[ErrorLevel].logger.Printf(p.loggerPrefix+loggerLevelTypeNames[ErrorLevel]+format, v...)
+	}
 }
 
 /*
 LogError delegates to log.Print
 */
-func (p *LoggerDataReference) LogError(message string) {
-	loggerLevelDataList[ErrorLevel].logger.Print(p.loggerPrefix + loggerLevelTypeNames[ErrorLevel] + message)
+func (p *LoggerDataReference) LogError(message error) {
+	if loggerLevelDataList[ErrorLevel].active {
+		loggerLevelDataList[ErrorLevel].logger.Print(p.loggerPrefix + loggerLevelTypeNames[ErrorLevel] + message.Error())
+	}
 }
 
 /*
@@ -321,46 +347,88 @@ func (p *LoggerDataReference) LogDebug(message string) {
 	}
 }
 
+func initLoggerLevelDataList() []*loggerLevelData {
+	return []*loggerLevelData{
+		newLoggerLevelTypeData(false, false),
+		newLoggerLevelTypeData(false, false),
+		newLoggerLevelTypeData(false, false),
+		newLoggerLevelTypeData(false, false),
+		newLoggerLevelTypeData(true, true),
+		newLoggerLevelTypeData(true, true)}
+}
+
+func logError(message string) error {
+	log.Panic("Logging:" + message)
+	return errors.New("Logging:" + message)
+}
+
 /*
 	Validate and Activate each log level.
 */
-func validateAndActivateLogLevels(values []state.LoggerLevelData) {
+func validateAndActivateLogLevels(values map[string]string) error {
 	/*
 		For each log level definition
 	*/
-	for _, loggerLevelData := range values {
+	for key, value := range values {
 		/*
 			check the name is valid
 		*/
-		loggerLevelType := GetLogLevelTypeForName(loggerLevelData.Level)
+		loggerLevelType := GetLogLevelTypeForName(key)
 		if loggerLevelType != NotFound {
-			filedata := getLoggerWithFilename(loggerLevelData.File)
-			loggerLevelDataList[loggerLevelType].file = filedata
-			if filedata == nil {
+			valueUC := strings.TrimSpace(strings.ToUpper(value))
+			switch valueUC {
+			case offName, "":
+				loggerLevelDataList[loggerLevelType].active = false
+				loggerLevelDataList[loggerLevelType].note = valueUC
+				break
+			case systemOutName:
 				loggerLevelDataList[loggerLevelType].logger = log.New(os.Stdout, "", logDataFlags)
-			} else {
-				loggerLevelDataList[loggerLevelType].logger = log.New(filedata.logFile, "", logDataFlags)
+				loggerLevelDataList[loggerLevelType].active = true
+				loggerLevelDataList[loggerLevelType].note = valueUC
+				break
+			case systemErrName:
+				loggerLevelDataList[loggerLevelType].logger = log.New(os.Stderr, "", logDataFlags)
+				loggerLevelDataList[loggerLevelType].active = true
+				loggerLevelDataList[loggerLevelType].note = valueUC
+				break
+			case defaultName:
+				if defaultLogFileName == "" {
+					if loggerLevelDataList[GetLogLevelTypeForName(key)].errorLevel {
+						loggerLevelDataList[loggerLevelType].logger = log.New(os.Stderr, "", logDataFlags)
+						loggerLevelDataList[loggerLevelType].note = systemErrName
+					} else {
+						if loggerLevelDataList[GetLogLevelTypeForName(key)].errorLevel {
+							loggerLevelDataList[loggerLevelType].logger = log.New(os.Stdout, "", logDataFlags)
+							loggerLevelDataList[loggerLevelType].note = systemOutName
+						}
+					}
+				} else {
+					logFileData, err := getLoggerWithFilename(defaultLogFileName)
+					if err != nil {
+						return err
+					}
+					loggerLevelDataList[loggerLevelType].file = logFileData
+					loggerLevelDataList[loggerLevelType].logger = log.New(logFileData.logFile, "", logDataFlags)
+					loggerLevelDataList[loggerLevelType].note = valueUC
+				}
+				loggerLevelDataList[loggerLevelType].active = true
+				break
+			default:
+				logFileData, err := getLoggerWithFilename(value)
+				if err != nil {
+					return err
+				}
+				loggerLevelDataList[loggerLevelType].file = logFileData
+				loggerLevelDataList[loggerLevelType].logger = log.New(logFileData.logFile, "", logDataFlags)
+				loggerLevelDataList[loggerLevelType].active = true
+				loggerLevelDataList[loggerLevelType].note = "FILE"
 			}
-			loggerLevelDataList[loggerLevelType].active = true
 		} else {
 			list := strings.Trim(strings.Join(strings.Fields(fmt.Sprint(loggerLevelTypeNames)), ", "), "[]")
-			LogPanicToStdErrAndExit("The Log level name '" + loggerLevelData.Level + "' is not a valid log level. Valid values are:" + list)
+			return logError("The Log level name '" + key + "' is not a valid log level. Valid values are:" + list)
 		}
 	}
-	if logFileNameGlobal != "" {
-		for _, lld := range loggerLevelDataList {
-			if lld.active && (lld.file == nil) {
-				filedata := getLoggerWithFilename(logFileNameGlobal)
-				lld.file = filedata
-				if filedata == nil {
-					lld.logger = log.New(os.Stdout, "", logDataFlags)
-				} else {
-					lld.logger = log.New(filedata.logFile, "", logDataFlags)
-				}
-
-			}
-		}
-	}
+	return nil
 }
 
 func updateLoggerPrefixesForAllModules() {
@@ -376,34 +444,36 @@ func updateLoggerPrefixesForAllModules() {
 	}
 }
 
-func newLoggerLevelTypeData(active bool) *loggerLevelData {
+func newLoggerLevelTypeData(active bool, isError bool) *loggerLevelData {
 	return &loggerLevelData{
-		active: active,
-		logger: nil,
-		file:   nil,
+		note:       "UNDEFINED",
+		active:     active,
+		errorLevel: isError,
+		logger:     nil,
+		file:       nil,
 	}
 }
 
-func getLoggerWithFilename(logFileName string) *loggerFileData {
+func getLoggerWithFilename(logFileName string) (*loggerFileData, error) {
 	nameUcTrim := strings.TrimSpace(strings.ToUpper(logFileName))
-	if nameUcTrim == "" {
-		return nil
-	}
 	if val, ok := loggerLevelFiles[nameUcTrim]; ok {
-		return val
+		return val, nil
+	}
+	if !strings.ContainsRune(logFileName, '.') {
+		return nil, logError("applicationID " + logApplicationID + ". Log file " + logFileName + " is invalid. File name requires a '.' extension:")
 	}
 	absFileName, err := filepath.Abs(logFileName)
 	if err != nil {
-		LogPanicToStdErrAndExit("applicationID " + logApplicationID + ". Log file " + logFileName + " is not a valid path:" + err.Error())
+		return nil, logError("applicationID " + logApplicationID + ". Log file " + logFileName + " is not a valid path:" + err.Error())
 	}
 	f, err := os.OpenFile(absFileName, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
-		LogPanicToStdErrAndExit("applicationID " + logApplicationID + ". Log file " + logFileName + " could NOT be Created or Opened\nError:" + err.Error())
+		return nil, logError("applicationID " + logApplicationID + ". Log file " + logFileName + " could NOT be Created or Opened\nError:" + err.Error())
 	}
 	lfd := &loggerFileData{
 		fileName: absFileName,
 		logFile:  f,
 	}
 	loggerLevelFiles[nameUcTrim] = lfd
-	return lfd
+	return lfd, nil
 }

@@ -1,5 +1,5 @@
 {
-  "loggerLevels" : [{"Level":"DEBUG"},{"Level":"INFO"},{"Level":"WARN"},{"Level":"ACCESS"}],
+  "loggerLevels" : {"DEBUG":"","INFO":"", "WARN":"", "ACCECS":""},
   "staticPaths"  : {
     "windows":{"static":"site\\"}, 
     "linux":{"static":"site/"}
