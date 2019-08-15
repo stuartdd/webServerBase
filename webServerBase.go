@@ -7,13 +7,13 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"webServerBase/handlers"
 	"webServerBase/logging"
+	"webServerBase/servermain"
 	"webServerBase/state"
 )
 
 var logger *logging.LoggerDataReference
-var server *handlers.HandlerFunctionData
+var serverInstance *servermain.ServerInstanceData
 
 func main() {
 	/*
@@ -69,31 +69,33 @@ func RunWithConfig(configData *state.ConfigData, executable string) {
 	/*
 	   Configure and Start the server.
 	*/
-	server = handlers.NewHandlerData(executable, configData.ContentTypeCharset)
-	server.AddContentTypeFromMap(configData.ContentTypes)
-	server.SetRedirections(state.GetConfigDataInstance().Redirections)
-	server.SetFileServerDataFromMap(state.GetConfigDataStaticPathForOS())
-	server.AddBeforeHandler(filterBefore)
-	server.AddMappedHandler("/stop", http.MethodGet, stopHandler)
-	server.AddMappedHandler("/status", http.MethodGet, statusHandler)
-	server.AddMappedHandler("/panic", http.MethodGet, panicHandler)
-	server.SetPanicResponseCode(configData.PanicResponseCode)
-	server.AddMappedHandler("/calc/?/div/?", http.MethodGet, divHandler)
-	server.AddAfterHandler(filterAfter)
-	server.ListenAndServeOnPort(configData.Port)
+	serverInstance = servermain.NewServerInstanceData(executable, configData.ContentTypeCharset)
+	serverInstance.AddContentTypeFromMap(configData.ContentTypes)
+	serverInstance.SetRedirections(state.GetConfigDataInstance().Redirections)
+	serverInstance.SetFileServerDataFromMap(state.GetConfigDataStaticPathForOS())
+	serverInstance.SetPanicResponseCode(configData.PanicResponseCode)
+
+	serverInstance.AddBeforeHandler(filterBefore)
+	serverInstance.AddMappedHandler("/stop", http.MethodGet, stopServerInstance)
+	serverInstance.AddMappedHandler("/status", http.MethodGet, statusHandler)
+	serverInstance.AddMappedHandler("/panic", http.MethodGet, panicHandler)
+	serverInstance.AddMappedHandler("/calc/?/div/?", http.MethodGet, divHandler)
+	serverInstance.AddAfterHandler(filterAfter)
+
+	serverInstance.ListenAndServeOnPort(configData.Port)
 }
 
 /************************************************
 Start of handlers section
 *************************************************/
 
-func stopHandler(r *http.Request) *handlers.Response {
-	server.StopServerLater(2)
-	return handlers.NewResponse(200, server.GetStatusDataJSON(), "application/json", nil)
+func stopServerInstance(r *http.Request) *servermain.Response {
+	serverInstance.StopServerLater(2)
+	return servermain.NewResponse(200, serverInstance.GetStatusDataJSON(), "application/json", nil)
 }
-func panicHandler(r *http.Request) *handlers.Response {
+func panicHandler(r *http.Request) *servermain.Response {
 	panic1()
-	return handlers.NewResponse(200, server.GetStatusDataJSON(), "application/json", nil)
+	return servermain.NewResponse(200, serverInstance.GetStatusDataJSON(), "application/json", nil)
 }
 
 func panic1() {
@@ -108,29 +110,29 @@ func panic3() {
 	panic("Test PANIC")
 }
 
-func divHandler(r *http.Request) *handlers.Response {
+func divHandler(r *http.Request) *servermain.Response {
 	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
 	a, err := strconv.Atoi(parts[1])
 	if err != nil {
-		return handlers.NewResponse(400, "invalid number "+parts[1], "", err)
+		return servermain.NewResponse(400, "invalid number "+parts[1], "", err)
 	}
 	b, err := strconv.Atoi(parts[3])
 	if err != nil {
-		return handlers.NewResponse(400, "invalid number "+parts[3], "", err)
+		return servermain.NewResponse(400, "invalid number "+parts[3], "", err)
 	}
-	return handlers.NewResponse(200, strconv.Itoa(a/b), "", nil)
+	return servermain.NewResponse(200, strconv.Itoa(a/b), "", nil)
 }
 
-func statusHandler(r *http.Request) *handlers.Response {
-	return handlers.NewResponse(200, server.GetStatusDataJSON(), "application/json", nil)
+func statusHandler(r *http.Request) *servermain.Response {
+	return servermain.NewResponse(200, serverInstance.GetStatusDataJSON(), "application/json", nil)
 }
 
-func filterBefore(r *http.Request, response *handlers.Response) *handlers.Response {
+func filterBefore(r *http.Request, response *servermain.Response) *servermain.Response {
 	logger.LogDebug("IN Filter Before 1")
 	return nil
 }
 
-func filterAfter(r *http.Request, response *handlers.Response) *handlers.Response {
+func filterAfter(r *http.Request, response *servermain.Response) *servermain.Response {
 	logger.LogDebug("IN Filter After 1")
 	return nil
 }

@@ -1,11 +1,10 @@
-package handlers
+package servermain
 
 import (
 	"context"
 	"fmt"
 	"net/http"
 	"path/filepath"
-
 	"strconv"
 	"strings"
 	"time"
@@ -14,14 +13,19 @@ import (
 
 const contentTypeName = "Content-Type"
 
+type vetoHandlerListData struct {
+	handlerFunc func(*http.Request, *Response) *Response
+	next        *vetoHandlerListData
+}
+
 /*
-HandlerFunctionData is the state of the server
+ServerInstanceData is the state of the server
 */
-type HandlerFunctionData struct {
+type ServerInstanceData struct {
 	before             vetoHandlerListData
 	after              vetoHandlerListData
-	errorHandler       func(http.ResponseWriter, *http.Request, *Response)
-	responseHandler    func(http.ResponseWriter, *http.Request, *Response)
+	errorHandler       func(*ResponseWriterWrapper, *http.Request, *Response)
+	responseHandler    func(*ResponseWriterWrapper, *http.Request, *Response)
 	fileServerList     *fileServerContainer
 	redirections       map[string]string
 	contentTypeCharset string
@@ -29,6 +33,7 @@ type HandlerFunctionData struct {
 	baseHandlerName    string
 	server             *http.Server
 	serverState        *statusData
+	logger             *logging.LoggerDataReference
 	panicResponseCode  int
 }
 
@@ -40,11 +45,6 @@ type statusData struct {
 	panicCounter int
 }
 
-type vetoHandlerListData struct {
-	handlerFunc func(*http.Request, *Response) *Response
-	next        *vetoHandlerListData
-}
-
 type fileServerContainer struct {
 	path string
 	root string
@@ -52,20 +52,16 @@ type fileServerContainer struct {
 	next *fileServerContainer
 }
 
-var logger *logging.LoggerDataReference
-
 /*
-NewHandlerData Create new HandlerData object
+NewServerInstanceData Create new server data object
 */
-func NewHandlerData(baseHandlerNameIn string, contentTypeCharsetIn string) *HandlerFunctionData {
-
-	logger = logging.NewLogger(baseHandlerNameIn)
+func NewServerInstanceData(baseHandlerNameIn string, contentTypeCharsetIn string) *ServerInstanceData {
 
 	if contentTypeCharsetIn == "" {
 		contentTypeCharsetIn = "utf=8"
 	}
 
-	return &HandlerFunctionData{
+	return &ServerInstanceData{
 		before: vetoHandlerListData{
 			handlerFunc: nil,
 			next:        nil,
@@ -93,6 +89,7 @@ func NewHandlerData(baseHandlerNameIn string, contentTypeCharsetIn string) *Hand
 			state:        "RUNNING",
 			panicCounter: 0,
 		},
+		logger:            logging.NewLogger(baseHandlerNameIn),
 		panicResponseCode: 500,
 	}
 }
@@ -100,26 +97,26 @@ func NewHandlerData(baseHandlerNameIn string, contentTypeCharsetIn string) *Hand
 /*
 ListenAndServeOnPort start the server on a specific port
 */
-func (p *HandlerFunctionData) ListenAndServeOnPort(port int) {
+func (p *ServerInstanceData) ListenAndServeOnPort(port int) {
 	p.server = &http.Server{Addr: ":" + strconv.Itoa(port)}
 	p.server.Handler = p
 	err := p.server.ListenAndServe()
 	if err != nil {
-		logger.LogInfo(err.Error())
+		p.logger.LogInfo(err.Error())
 	} else {
-		logger.LogInfo("http: Server closed")
+		p.logger.LogInfo("http: Server closed")
 	}
 }
 
 /*
 StopServerLater stop the server after N seconds
 */
-func (p *HandlerFunctionData) StopServerLater(waitForSeconds int) {
+func (p *ServerInstanceData) StopServerLater(waitForSeconds int) {
 	p.serverState.state = "STOPPING"
 	go p.stopServerThraed(waitForSeconds)
 }
 
-func (p *HandlerFunctionData) stopServerThraed(waitForSeconds int) {
+func (p *ServerInstanceData) stopServerThraed(waitForSeconds int) {
 	if waitForSeconds > 0 {
 		time.Sleep(time.Second * time.Duration(waitForSeconds))
 	}
@@ -132,7 +129,7 @@ func (p *HandlerFunctionData) stopServerThraed(waitForSeconds int) {
 /*
 LookupContentType for a given url return the content type based on the .ext
 */
-func (p *HandlerFunctionData) LookupContentType(url string) (string, string) {
+func (p *ServerInstanceData) LookupContentType(url string) (string, string) {
 	pos := strings.LastIndex(url, ".")
 	if pos > 0 {
 		ext := url[pos+1:]
@@ -147,7 +144,7 @@ func (p *HandlerFunctionData) LookupContentType(url string) (string, string) {
 /*
 AddContentTypeFromMap add to or update the contentType Map
 */
-func (p *HandlerFunctionData) AddContentTypeFromMap(mimeTypeMap map[string]string) {
+func (p *ServerInstanceData) AddContentTypeFromMap(mimeTypeMap map[string]string) {
 	for name, value := range mimeTypeMap {
 		p.contentTypeLookup[name] = value
 	}
@@ -156,14 +153,14 @@ func (p *HandlerFunctionData) AddContentTypeFromMap(mimeTypeMap map[string]strin
 /*
 SetErrorHandler handle an error response if one occurs
 */
-func (p *HandlerFunctionData) SetErrorHandler(errorHandler func(http.ResponseWriter, *http.Request, *Response)) {
+func (p *ServerInstanceData) SetErrorHandler(errorHandler func(*ResponseWriterWrapper, *http.Request, *Response)) {
 	p.errorHandler = errorHandler
 }
 
 /*
 SetPanicResponseCode handle an error response if one occurs
 */
-func (p *HandlerFunctionData) SetPanicResponseCode(responseCode int) {
+func (p *ServerInstanceData) SetPanicResponseCode(responseCode int) {
 	p.panicResponseCode = responseCode
 }
 
@@ -171,14 +168,14 @@ func (p *HandlerFunctionData) SetPanicResponseCode(responseCode int) {
 SetRedirections add a map of re-directions
 Example in config file: "redirections" : {"/":"/static/index.html"}
 */
-func (p *HandlerFunctionData) SetRedirections(redirections map[string]string) {
+func (p *ServerInstanceData) SetRedirections(redirections map[string]string) {
 	p.redirections = redirections
 }
 
 /*
 SetFileServerDataFromMap creates a file servers for each mapping
 */
-func (p *HandlerFunctionData) SetFileServerDataFromMap(mappings map[string]string) {
+func (p *ServerInstanceData) SetFileServerDataFromMap(mappings map[string]string) {
 	for key, value := range mappings {
 		p.AddFileServerData(key, value)
 	}
@@ -187,7 +184,7 @@ func (p *HandlerFunctionData) SetFileServerDataFromMap(mappings map[string]strin
 /*
 AddFileServerData creates a file server for a path and a root directory
 */
-func (p *HandlerFunctionData) AddFileServerData(path string, root string) {
+func (p *ServerInstanceData) AddFileServerData(path string, root string) {
 	container := p.fileServerList
 	for container.next != nil {
 		container = container.next
@@ -206,21 +203,21 @@ func (p *HandlerFunctionData) AddFileServerData(path string, root string) {
 /*
 SetResponseHandler handle a NON error response
 */
-func (p *HandlerFunctionData) SetResponseHandler(handler func(http.ResponseWriter, *http.Request, *Response)) {
+func (p *ServerInstanceData) SetResponseHandler(handler func(*ResponseWriterWrapper, *http.Request, *Response)) {
 	p.responseHandler = handler
 }
 
 /*
 AddMappedHandler creates a route to a function given a path
 */
-func (p *HandlerFunctionData) AddMappedHandler(path string, method string, handlerFunc func(*http.Request) *Response) {
+func (p *ServerInstanceData) AddMappedHandler(path string, method string, handlerFunc func(*http.Request) *Response) {
 	AddPathMappingElement(path, method, handlerFunc)
 }
 
 /*
 AddBeforeHandler adds a function called before the mapping function
 */
-func (p *HandlerFunctionData) AddBeforeHandler(beforeFunc func(*http.Request, *Response) *Response) {
+func (p *ServerInstanceData) AddBeforeHandler(beforeFunc func(*http.Request, *Response) *Response) {
 	bef := &p.before
 	for bef.next != nil {
 		bef = bef.next
@@ -235,7 +232,7 @@ func (p *HandlerFunctionData) AddBeforeHandler(beforeFunc func(*http.Request, *R
 /*
 AddAfterHandler adds a function called after the mapping function
 */
-func (p *HandlerFunctionData) AddAfterHandler(afterFunc func(*http.Request, *Response) *Response) {
+func (p *ServerInstanceData) AddAfterHandler(afterFunc func(*http.Request, *Response) *Response) {
 	aft := &p.after
 	for aft.next != nil {
 		aft = aft.next
@@ -250,8 +247,8 @@ func (p *HandlerFunctionData) AddAfterHandler(afterFunc func(*http.Request, *Res
 /*
 ServeStaticFile Read a file from a static file location and return it
 */
-func (p *HandlerFunctionData) ServeStaticFile(w http.ResponseWriter, r *http.Request, url string) bool {
-	fileServerMa pping := p.fileServerList
+func (p *ServerInstanceData) ServeStaticFile(w *ResponseWriterWrapper, r *http.Request, url string) bool {
+	fileServerMapping := p.fileServerList
 	for fileServerMapping.fs != nil {
 		if strings.HasPrefix(url, fileServerMapping.path) {
 			contentType, ext := p.LookupContentType(url)
@@ -259,9 +256,8 @@ func (p *HandlerFunctionData) ServeStaticFile(w http.ResponseWriter, r *http.Req
 				p.setContentTypeHeader(w, contentType)
 			}
 			filename := filepath.Join(fileServerMapping.root, url[len(fileServerMapping.path):])
-			responseWriterWrapper := NewResponseWriterWrapper(w)
-			http.ServeFile(responseWriterWrapper, r, filename)
-			p.logFileServerResponse(responseWriterWrapper, fileServerMapping.path, ext, contentType, filename)
+			http.ServeFile(w, r, filename)
+			p.logFileServerResponse(w, fileServerMapping.path, ext, contentType, filename)
 			return true
 		}
 		fileServerMapping = fileServerMapping.next
@@ -272,16 +268,17 @@ func (p *HandlerFunctionData) ServeStaticFile(w http.ResponseWriter, r *http.Req
 /*
 ServeHTTP handle ALL calls
 */
-func (p *HandlerFunctionData) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	defer checkPanicIsThrown(p, w, r)
+func (p *ServerInstanceData) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+	w := NewResponseWriterWrapper(rw, p)
+	defer checkPanicIsThrown(w, r)
 	var actualResponse *Response
 	var url = r.URL.Path
 
 	p.logRequest(r)
 	trans := p.redirections[url]
 	if trans != "" {
-		if logger.IsInfo() {
-			logger.LogInfof(">>> REDIRECT: %s --> %s", url, trans)
+		if p.logger.IsInfo() {
+			p.logger.LogInfof(">>> REDIRECT: %s --> %s", url, trans)
 		}
 		http.Redirect(w, r, trans, http.StatusSeeOther)
 		return
@@ -296,12 +293,9 @@ func (p *HandlerFunctionData) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		}
 		/*
 			Mapping was not found
-		*/
-		error404 := NewResponse(404, http.StatusText(404), "", nil)
-		/*
 			delegate to the current error handler to manage the error
 		*/
-		p.errorHandler(w, r, error404)
+		p.errorHandler(w, r, NewResponse(404, http.StatusText(404), "", nil))
 		return
 	}
 
@@ -309,7 +303,7 @@ func (p *HandlerFunctionData) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		We found a matching function for the request so lets check each before handler to see if we can procceed.
 		If a before handler returns a response then we abandon the request.
 	*/
-	actualResponse = p.invokeAllVetoHandlersInList(w, r, nil, &p.before)
+	actualResponse = p.invokeAllVetoHandlersInList(r, nil, &p.before)
 	if actualResponse == nil {
 		/*
 			We found a matching function for the request so lets get the response.
@@ -328,23 +322,19 @@ func (p *HandlerFunctionData) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		/*
 			If an after handler returns a response then we abandon the request AND the response even if it is valid.
 		*/
-		afterVetoHandlerError := p.invokeAllVetoHandlersInList(w, r, actualResponse, &p.after)
+		afterVetoHandlerError := p.invokeAllVetoHandlersInList(r, actualResponse, &p.after)
 		if afterVetoHandlerError != nil {
 			actualResponse = afterVetoHandlerError
-			if logger.IsWarn() {
-				logger.LogWarnf("Response was Vetoed by 'After' handler:%s", actualResponse.GetCSV())
+			if p.logger.IsWarn() {
+				p.logger.LogWarnf("Response was Vetoed by 'After' handler:%s", actualResponse.GetCSV())
 			}
 		}
 	} else {
-		if logger.IsWarn() {
-			logger.LogWarnf("Request was Vetoed by 'Before' handler:%s", actualResponse.GetCSV())
+		if p.logger.IsWarn() {
+			p.logger.LogWarnf("Request was Vetoed by 'Before' handler:%s", actualResponse.GetCSV())
 		}
 	}
-	/*
-		None pof the 'after' handlers vetoed the response so return it!
-	*/
-	p.preProcessResponse(r, actualResponse)
-	p.logResponse(actualResponse)
+
 	if actualResponse.IsNot200() {
 		p.errorHandler(w, r, actualResponse)
 	} else {
@@ -352,26 +342,21 @@ func (p *HandlerFunctionData) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
-func checkPanicIsThrown(p *HandlerFunctionData, w http.ResponseWriter, r *http.Request) {
+func checkPanicIsThrown(w *ResponseWriterWrapper, r *http.Request) {
+	server := w.GetServer()
 	rec := recover()
 	if rec != nil {
-		p.serverState.panicCounter++
-		logger.LogErrorWithStackTrace("!!!", fmt.Sprintf("REQUEST:%s MESSAGE:%s", r.URL.Path, rec))
-		s := fmt.Sprintf("%s", rec)
-		j := toErrorJSON(p.panicResponseCode, s)
-		if logger.IsAccess() {
-			logger.LogAccessf("<<< STATUS=%d: RESP=%s", p.panicResponseCode, j)
-		}
-		p.setContentTypeHeader(w, p.contentTypeLookup["json"])
-		w.WriteHeader(p.panicResponseCode)
-		fmt.Fprintf(w, j)
+		server.serverState.panicCounter++
+		text := fmt.Sprintf("REQUEST:%s MESSAGE:%s", r.URL.Path, rec)
+		server.logger.LogErrorWithStackTrace("!!!", text)
+		server.errorHandler(w, r, NewResponse(server.panicResponseCode, text, "", nil))
 	}
 }
 
 /*
 GetStatusDataJSON server status as a JSON string
 */
-func (p *HandlerFunctionData) GetStatusDataJSON() string {
+func (p *ServerInstanceData) GetStatusDataJSON() string {
 	uptime := time.Now().Unix() - p.serverState.unixTime
 	return fmt.Sprintf("{\"state\":\"%s\",\"startTime\":\"%s\",\"executable\":\"%s\",\"uptime\":%d,\"panics\":%d}",
 		p.serverState.state,
@@ -382,44 +367,34 @@ func (p *HandlerFunctionData) GetStatusDataJSON() string {
 	)
 }
 
-func (p *HandlerFunctionData) preProcessResponse(request *http.Request, response *Response) {
-	if response.GetContentType() != "" {
-		response.AddHeader(contentTypeName, []string{response.GetContentType()})
+func defaultErrorResponseHandler(w *ResponseWriterWrapper, request *http.Request, response *Response) {
+	w.GetServer().preProcessResponse(request, response)
+	w.GetServer().logResponse(response)
+	for key, value := range response.GetHeaders() {
+		w.Header()[key] = value
 	}
+	w.Header()[contentTypeName] = []string{w.GetServer().contentTypeLookup["json"]}
+	w.WriteHeader(response.GetCode())
+	fmt.Fprintf(w, toErrorJSON(response.GetCode(), response.GetResp()))
+}
 
+func defaultResponseHandler(w *ResponseWriterWrapper, request *http.Request, response *Response) {
+	w.GetServer().preProcessResponse(request, response)
+	w.GetServer().logResponse(response)
+	for key, value := range response.GetHeaders() {
+		w.Header()[key] = value
+	}
+	w.Header()[contentTypeName] = []string{response.GetContentType()}
+	w.WriteHeader(response.GetCode())
+	fmt.Fprintf(w, response.GetResp())
+}
+
+func (p *ServerInstanceData) preProcessResponse(request *http.Request, response *Response) {
 	response.AddHeader("Server", []string{p.baseHandlerName})
-
 	connection := request.Header["Connection"]
 	if len(connection) > 0 {
 		response.AddHeader("Connection", connection)
 	}
-}
-
-func defaultErrorResponseHandler(w http.ResponseWriter, r *http.Request, response *Response) {
-	j := toErrorJSON(response.GetCode(), response.GetResp())
-	if logger.IsAccess() {
-		logger.LogAccessf("<<< STATUS=%d: RESP=%s", response.GetCode(), j)
-	}
-	for key, value := range response.GetHeaders() {
-		w.Header()[key] = value
-	}
-	w.Header()[contentTypeName] = []string{"application/json"}
-	w.WriteHeader(response.GetCode())
-	fmt.Fprintf(w, j)
-}
-
-func defaultResponseHandler(w http.ResponseWriter, request *http.Request, response *Response) {
-	if logger.IsWarn() {
-		logger.LogWarn("Using default ResponseHandler")
-	}
-	for key, value := range response.GetHeaders() {
-		w.Header()[key] = value
-	}
-	if response.GetContentType() != "" {
-		w.Header()[contentTypeName] = []string{response.GetContentType()}
-	}
-	w.WriteHeader(response.GetCode())
-	fmt.Fprintf(w, response.GetResp())
 }
 
 /*
@@ -427,7 +402,7 @@ invokeAllHandlersInList
 Invoke ALL handlers in the list UNTIL a handler returns a response.
 Any response is considered an ERROR.
 */
-func (p *HandlerFunctionData) invokeAllVetoHandlersInList(w http.ResponseWriter, r *http.Request, response *Response, list *vetoHandlerListData) *Response {
+func (p *ServerInstanceData) invokeAllVetoHandlersInList(r *http.Request, response *Response, list *vetoHandlerListData) *Response {
 	for list.next != nil {
 		if list.handlerFunc != nil {
 			handlerResponse := list.handlerFunc(r, response)
@@ -440,36 +415,36 @@ func (p *HandlerFunctionData) invokeAllVetoHandlersInList(w http.ResponseWriter,
 	return nil
 }
 
-func (p *HandlerFunctionData) logResponse(response *Response) {
-	if logger.IsAccess() {
-		logger.LogAccessf("<<< STATUS=%d: RESP=%s", response.GetCode(), response.GetResp())
+func (p *ServerInstanceData) logResponse(response *Response) {
+	if p.logger.IsAccess() {
+		p.logger.LogAccessf("<<< STATUS=%d: RESP=%s", response.GetCode(), response.GetResp())
 		p.logHeaderMap(response.GetHeaders(), "<-<")
 	}
 }
 
-func (p *HandlerFunctionData) logFileServerResponse(response *ResponseWriterWrapper, path string, ext string, mime string, fileName string) {
-	if logger.IsAccess() {
-		logger.LogAccessf("<<< STATUS=%d staticPath:%s ext:%s content-type:%s file:%s", response.GetStatusCode(), path, ext, mime, fileName)
+func (p *ServerInstanceData) logFileServerResponse(response *ResponseWriterWrapper, path string, ext string, mime string, fileName string) {
+	if p.logger.IsAccess() {
+		p.logger.LogAccessf("<<< STATUS=%d staticPath:%s ext:%s content-type:%s file:%s", response.GetStatusCode(), path, ext, mime, fileName)
 		p.logHeaderMap(response.Header(), "<-<")
 	}
 }
 
-func (p *HandlerFunctionData) logRequest(r *http.Request) {
-	if logger.IsAccess() {
-		logger.LogAccessf(">>> METHOD=%s: REQUEST=%s", r.Method, r.URL.Path)
+func (p *ServerInstanceData) logRequest(r *http.Request) {
+	if p.logger.IsAccess() {
+		p.logger.LogAccessf(">>> METHOD=%s: REQUEST=%s", r.Method, r.URL.Path)
 		p.logHeaderMap(r.Header, ">->")
 	}
 }
 
-func (p *HandlerFunctionData) logHeaderMap(headers map[string][]string, dir string) {
-	if logger.IsDebug() {
+func (p *ServerInstanceData) logHeaderMap(headers map[string][]string, dir string) {
+	if p.logger.IsDebug() {
 		for k, v := range headers {
-			logger.LogDebugf("%s HEADER=%s=%s", dir, k, v)
+			p.logger.LogDebugf("%s HEADER=%s=%s", dir, k, v)
 		}
 	}
 }
 
-func (p *HandlerFunctionData) setContentTypeHeader(w http.ResponseWriter, contentType string) {
+func (p *ServerInstanceData) setContentTypeHeader(w *ResponseWriterWrapper, contentType string) {
 	w.Header()[contentTypeName] = []string{contentType + "; charset=" + p.contentTypeCharset}
 }
 

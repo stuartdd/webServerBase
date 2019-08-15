@@ -1,4 +1,4 @@
-package handlers
+package servermain
 
 import "net/http"
 
@@ -7,6 +7,7 @@ ResponseWriterWrapper replaces http.ResponseWriter
 */
 type ResponseWriterWrapper struct {
 	responseWriter http.ResponseWriter
+	server         *ServerInstanceData
 	statusCode     int
 }
 
@@ -18,17 +19,28 @@ func (p *ResponseWriterWrapper) GetStatusCode() int {
 }
 
 /*
-IsNot200 returns true is the response is NOT a 2xx
+Is2XX returns true is the response is NOT a 2xx
 */
 func (p *ResponseWriterWrapper) Is2XX() bool {
 	return (p.statusCode > 199) && (p.statusCode < 300)
 }
 
 /*
+GetServer returns the serverData instance
+*/
+func (p *ResponseWriterWrapper) GetServer() *ServerInstanceData {
+	return p.server
+}
+
+/*
 NewResponseWriterWrapper Create a new ResponseWriterWrapper so we can write throught it!
 */
-func NewResponseWriterWrapper(w http.ResponseWriter) *ResponseWriterWrapper {
-	return &ResponseWriterWrapper{w, http.StatusOK}
+func NewResponseWriterWrapper(w http.ResponseWriter, p *ServerInstanceData) *ResponseWriterWrapper {
+	return &ResponseWriterWrapper{
+		responseWriter: w,
+		server:         p,
+		statusCode:     http.StatusOK,
+	}
 }
 
 /*
@@ -50,6 +62,6 @@ func (p *ResponseWriterWrapper) Header() http.Header {
 	return p.responseWriter.Header()
 }
 
-func (p *ResponseWriterWrapper) Write(b []byte) (int, error) {
+func (p *ResponseWriterWrapper) Write(b []byte) (n int, err error) {
 	return p.responseWriter.Write(b)
 }
