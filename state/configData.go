@@ -22,6 +22,7 @@ type ConfigData struct {
 	ContentTypes       map[string]string
 	ContentTypeCharset string
 	LoggerLevels       map[string]string
+	PanicResponseCode  int
 }
 
 var configDataInstance *ConfigData

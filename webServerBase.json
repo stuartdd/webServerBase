@@ -6,5 +6,6 @@
   },
   "redirections" : {"/":"/static/index.html"},
   "contentTypes" : {"ico": "image/x-icon"},
-  "contentTypeCharset":"utf-8"
+  "contentTypeCharset":"utf-8",
+  "panicResponseCode" : 401
 }

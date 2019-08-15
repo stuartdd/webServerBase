@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 )
 
@@ -196,6 +197,21 @@ func NewLogger(moduleName string) *LoggerDataReference {
 	logDataModules[moduleName] = ldRef
 	updateLoggerPrefixesForAllModules()
 	return ldRef
+}
+
+/*
+LogWithStackTrace log a message with a stack trace
+*/
+func (p *LoggerDataReference) LogErrorWithStackTrace(prefix string, message string) {
+	if p.IsError() {
+		loggerLevelDataList[ErrorLevel].logger.Print(p.loggerPrefix + loggerLevelTypeNames[ErrorLevel] + prefix + " " + message)
+		st := string(debug.Stack())
+		for count, line := range strings.Split(strings.TrimSuffix(st, "\n"), "\n") {
+			if count > 6 && count <= 18 {
+				loggerLevelDataList[ErrorLevel].logger.Print(p.loggerPrefix + loggerLevelTypeNames[ErrorLevel] + prefix + " " + line)
+			}
+		}
+	}
 }
 
 /*

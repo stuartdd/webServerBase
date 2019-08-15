@@ -66,18 +66,19 @@ func RunWithConfig(configData *state.ConfigData, executable string) {
 	logger.LogInfof("Server will start on port %d\n", configData.Port)
 	logger.LogInfof("OS '%s'. Static path will be:%s\n", runtime.GOOS, state.GetConfigDataStaticPathForOS())
 	logger.LogInfof("To stop the server http://localhost:%d/stop\n", configData.Port)
-	logger.LogDebugf("State:%s\n", state.GetStatusDataJSON())
 	/*
 	   Configure and Start the server.
 	*/
 	server = handlers.NewHandlerData(executable, configData.ContentTypeCharset)
 	server.AddContentTypeFromMap(configData.ContentTypes)
 	server.SetRedirections(state.GetConfigDataInstance().Redirections)
-	server.AddFileServerDataFromMap(state.GetConfigDataStaticPathForOS())
+	server.SetFileServerDataFromMap(state.GetConfigDataStaticPathForOS())
 	server.AddBeforeHandler(filterBefore)
 	server.AddMappedHandler("/stop", http.MethodGet, stopHandler)
 	server.AddMappedHandler("/status", http.MethodGet, statusHandler)
-	server.AddMappedHandler("/calc/?/add/?", http.MethodGet, adderHandler)
+	server.AddMappedHandler("/panic", http.MethodGet, panicHandler)
+	server.SetPanicResponseCode(configData.PanicResponseCode)
+	server.AddMappedHandler("/calc/?/div/?", http.MethodGet, divHandler)
 	server.AddAfterHandler(filterAfter)
 	server.ListenAndServeOnPort(configData.Port)
 }
@@ -87,12 +88,27 @@ Start of handlers section
 *************************************************/
 
 func stopHandler(r *http.Request) *handlers.Response {
-	state.SetStatusDataState("STOPPING")
-	go server.StopServer(false)
-	return handlers.NewResponse(200, state.GetStatusDataJSONWithoutConfig(), "application/json", nil)
+	server.StopServerLater(2)
+	return handlers.NewResponse(200, server.GetStatusDataJSON(), "application/json", nil)
+}
+func panicHandler(r *http.Request) *handlers.Response {
+	panic1()
+	return handlers.NewResponse(200, server.GetStatusDataJSON(), "application/json", nil)
 }
 
-func adderHandler(r *http.Request) *handlers.Response {
+func panic1() {
+	panic2()
+}
+
+func panic2() {
+	panic3()
+}
+
+func panic3() {
+	panic("Test PANIC")
+}
+
+func divHandler(r *http.Request) *handlers.Response {
 	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
 	a, err := strconv.Atoi(parts[1])
 	if err != nil {
@@ -102,11 +118,11 @@ func adderHandler(r *http.Request) *handlers.Response {
 	if err != nil {
 		return handlers.NewResponse(400, "invalid number "+parts[3], "", err)
 	}
-	return handlers.NewResponse(200, strconv.Itoa(a+b), "", nil)
+	return handlers.NewResponse(200, strconv.Itoa(a/b), "", nil)
 }
 
 func statusHandler(r *http.Request) *handlers.Response {
-	return handlers.NewResponse(200, state.GetStatusDataJSON(), "application/json", nil)
+	return handlers.NewResponse(200, server.GetStatusDataJSON(), "application/json", nil)
 }
 
 func filterBefore(r *http.Request, response *handlers.Response) *handlers.Response {
@@ -117,11 +133,6 @@ func filterBefore(r *http.Request, response *handlers.Response) *handlers.Respon
 func filterAfter(r *http.Request, response *handlers.Response) *handlers.Response {
 	logger.LogDebug("IN Filter After 1")
 	return nil
-}
-
-func errorHandler(w http.ResponseWriter, r *http.Request, e *handlers.Response) {
-	logger.LogDebug("IN errorHandler")
-	http.Error(w, e.GetResp(), 400)
 }
 
 /************************************************
