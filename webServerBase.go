@@ -1,21 +1,19 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"os"
 	"runtime"
 	"strconv"
 	"strings"
-	"time"
 	"webServerBase/handlers"
 	"webServerBase/logging"
 	"webServerBase/state"
 )
 
 var logger *logging.LoggerDataReference
-var server *http.Server
+var server *handlers.HandlerFunctionData
 
 func main() {
 	/*
@@ -72,25 +70,16 @@ func RunWithConfig(configData *state.ConfigData, executable string) {
 	/*
 	   Configure and Start the server.
 	*/
-	handlerData := handlers.NewHandlerData(configData.ContentTypeCharset, executable)
-	handlerData.AddContentTypeFromMap(configData.ContentTypes)
-	handlerData.SetRedirections(state.GetConfigDataInstance().Redirections)
-	handlerData.AddFileServerDataFromMap(state.GetConfigDataStaticPathForOS())
-	
-	handlerData.AddBeforeHandler(filterBefore)
-	handlerData.AddMappedHandler("/stop", http.MethodGet, stopHandler)
-	handlerData.AddMappedHandler("/status", http.MethodGet, statusHandler)
-	handlerData.AddMappedHandler("/calc/?/add/?", http.MethodGet, adderHandler)
-	handlerData.AddAfterHandler(filterAfter)
-
-	server = &http.Server{Addr: ":" + strconv.Itoa(configData.Port)}
-	server.Handler = handlerData
-	err := server.ListenAndServe()
-	if err != nil {
-		logger.LogInfo(err.Error())
-	} else {
-		logger.LogInfo("http: Server closed")
-	}
+	server = handlers.NewHandlerData(executable, configData.ContentTypeCharset)
+	server.AddContentTypeFromMap(configData.ContentTypes)
+	server.SetRedirections(state.GetConfigDataInstance().Redirections)
+	server.AddFileServerDataFromMap(state.GetConfigDataStaticPathForOS())
+	server.AddBeforeHandler(filterBefore)
+	server.AddMappedHandler("/stop", http.MethodGet, stopHandler)
+	server.AddMappedHandler("/status", http.MethodGet, statusHandler)
+	server.AddMappedHandler("/calc/?/add/?", http.MethodGet, adderHandler)
+	server.AddAfterHandler(filterAfter)
+	server.ListenAndServeOnPort(configData.Port)
 }
 
 /************************************************
@@ -99,7 +88,7 @@ Start of handlers section
 
 func stopHandler(r *http.Request) *handlers.Response {
 	state.SetStatusDataState("STOPPING")
-	go stopServer(false)
+	go server.StopServer(false)
 	return handlers.NewResponse(200, state.GetStatusDataJSONWithoutConfig(), "application/json", nil)
 }
 
@@ -148,14 +137,4 @@ A logger os passed to enable the CloseLog function to log that fact it has been 
 */
 func CloseLog() {
 	logging.CloseLog()
-}
-
-func stopServer(immediate bool) {
-	if !immediate {
-		time.Sleep(time.Millisecond * 500)
-	}
-	err := server.Shutdown(context.TODO())
-	if err != nil {
-		panic(err)
-	}
 }

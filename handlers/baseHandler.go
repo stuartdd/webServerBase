@@ -1,10 +1,13 @@
 package handlers
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"time"
 	"webServerBase/logging"
 )
 
@@ -20,7 +23,8 @@ type HandlerFunctionData struct {
 	redirections       map[string]string
 	contentTypeCharset string
 	contentTypeLookup  map[string]string
-	handlerModuleName  string
+	baseHandlerName    string
+	server             *http.Server
 }
 
 type vetoHandlerListData struct {
@@ -40,9 +44,9 @@ var logger *logging.LoggerDataReference
 /*
 NewHandlerData Create new HandlerData object
 */
-func NewHandlerData(contentTypeCharsetIn string, moduleName string) *HandlerFunctionData {
+func NewHandlerData(baseHandlerNameIn string, contentTypeCharsetIn string) *HandlerFunctionData {
 
-	logger = logging.NewLogger(moduleName)
+	logger = logging.NewLogger(baseHandlerNameIn)
 
 	if contentTypeCharsetIn == "" {
 		contentTypeCharsetIn = "utf=8"
@@ -67,8 +71,35 @@ func NewHandlerData(contentTypeCharsetIn string, moduleName string) *HandlerFunc
 		},
 		redirections:       make(map[string]string),
 		contentTypeCharset: contentTypeCharsetIn,
-		contentTypeLookup:  populateContentTypes(),
-		handlerModuleName:  moduleName,
+		contentTypeLookup:  getContentTypesMap(),
+		baseHandlerName:    baseHandlerNameIn,
+	}
+}
+
+/*
+ListenAndServeOnPort start the server on a specific port
+*/
+func (p *HandlerFunctionData) ListenAndServeOnPort(port int) {
+	p.server = &http.Server{Addr: ":" + strconv.Itoa(port)}
+	p.server.Handler = p
+	err := p.server.ListenAndServe()
+	if err != nil {
+		logger.LogInfo(err.Error())
+	} else {
+		logger.LogInfo("http: Server closed")
+	}
+}
+
+/*
+StopServer stop the server immediatly or after 500 ms
+*/
+func (p *HandlerFunctionData) StopServer(immediate bool) {
+	if !immediate {
+		time.Sleep(time.Millisecond * 500)
+	}
+	err := p.server.Shutdown(context.TODO())
+	if err != nil {
+		panic(err)
 	}
 }
 
@@ -104,7 +135,8 @@ func (p *HandlerFunctionData) SetErrorHandler(errorHandler func(http.ResponseWri
 }
 
 /*
-SetErrorHandler handle an error response if one occurs
+SetRedirections add a map of re-directions
+Example in config file: "redirections" : {"/":"/static/index.html"}
 */
 func (p *HandlerFunctionData) SetRedirections(redirections map[string]string) {
 	p.redirections = redirections
@@ -196,7 +228,7 @@ func (p *HandlerFunctionData) ServeStaticFile(w http.ResponseWriter, r *http.Req
 			filename := filepath.Join(fileServerMapping.root, url[len(fileServerMapping.path):])
 			responseWriterWrapper := NewResponseWriterWrapper(w)
 			http.ServeFile(responseWriterWrapper, r, filename)
-			logFileServerResponse(responseWriterWrapper, fileServerMapping.path, ext, contentType, filename)
+			p.logFileServerResponse(responseWriterWrapper, fileServerMapping.path, ext, contentType, filename)
 			return true
 		}
 		fileServerMapping = fileServerMapping.next
@@ -211,7 +243,7 @@ func (p *HandlerFunctionData) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	var mappingResponse *Response
 	var url = r.URL.Path
 
-	logRequest(r)
+	p.logRequest(r)
 	trans := p.redirections[url]
 	if trans != "" {
 		if logger.IsInfo() {
@@ -232,7 +264,7 @@ func (p *HandlerFunctionData) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 			Mapping was not found
 		*/
 		error404 := NewResponse(404, http.StatusText(404), "", nil)
-		logResponse(error404)
+		p.logResponse(error404)
 		/*
 			delegate to the current error handler to manage the error
 		*/
@@ -248,7 +280,7 @@ func (p *HandlerFunctionData) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		We found a matching function for the request so lets check each before handler to see if we can procceed.
 		If a before handler returns a response then we abandon the request.
 	*/
-	mappingResponse = invokeAllVetoHandlersInList(p, w, r, nil, &p.before)
+	mappingResponse = p.invokeAllVetoHandlersInList(w, r, nil, &p.before)
 	if mappingResponse == nil {
 		/*
 			We found a matching function for the request so lets get the response.
@@ -267,7 +299,7 @@ func (p *HandlerFunctionData) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		/*
 			If an after handler returns a response then we abandon the request AND the response even if it is valid.
 		*/
-		afterVetoHandlerError := invokeAllVetoHandlersInList(p, w, r, mappingResponse, &p.after)
+		afterVetoHandlerError := p.invokeAllVetoHandlersInList(w, r, mappingResponse, &p.after)
 		if afterVetoHandlerError != nil {
 			mappingResponse = afterVetoHandlerError
 			if logger.IsWarn() {
@@ -283,7 +315,7 @@ func (p *HandlerFunctionData) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		None pof the 'after' handlers vetoed the response so return it!
 	*/
 	p.preProcessResponse(r, mappingResponse)
-	logResponse(mappingResponse)
+	p.logResponse(mappingResponse)
 	if mappingResponse.IsNot200() {
 		p.errorHandler(w, r, mappingResponse)
 	} else {
@@ -296,7 +328,7 @@ func (p *HandlerFunctionData) preProcessResponse(request *http.Request, response
 		response.AddHeader("Content-Type", []string{response.GetContentType()})
 	}
 
-	response.AddHeader("Server", []string{p.handlerModuleName})
+	response.AddHeader("Server", []string{p.baseHandlerName})
 
 	connection := request.Header["Connection"]
 	if len(connection) > 0 {
@@ -330,7 +362,7 @@ invokeAllHandlersInList
 Invoke ALL handlers in the list UNTIL a handler returns a response.
 Any response is considered an ERROR.
 */
-func invokeAllVetoHandlersInList(p *HandlerFunctionData, w http.ResponseWriter, r *http.Request, response *Response, list *vetoHandlerListData) *Response {
+func (p *HandlerFunctionData) invokeAllVetoHandlersInList(w http.ResponseWriter, r *http.Request, response *Response, list *vetoHandlerListData) *Response {
 	for list.next != nil {
 		if list.handlerFunc != nil {
 			handlerResponse := list.handlerFunc(r, response)
@@ -343,108 +375,31 @@ func invokeAllVetoHandlersInList(p *HandlerFunctionData, w http.ResponseWriter, 
 	return nil
 }
 
-func logResponse(response *Response) {
+func (p *HandlerFunctionData) logResponse(response *Response) {
 	if logger.IsAccess() {
 		logger.LogAccessf("<<< STATUS=%d: RESP=%s", response.GetCode(), response.GetResp())
-		logHeaderMap(response.GetHeaders(), "<-<")
+		p.logHeaderMap(response.GetHeaders(), "<-<")
 	}
 }
 
-func logFileServerResponse(response *ResponseWriterWrapper, path string, ext string, mime string, fileName string) {
+func (p *HandlerFunctionData) logFileServerResponse(response *ResponseWriterWrapper, path string, ext string, mime string, fileName string) {
 	if logger.IsAccess() {
 		logger.LogAccessf("<<< STATUS=%d staticPath:%s ext:%s content-type:%s file:%s", response.GetStatusCode(), path, ext, mime, fileName)
-		logHeaderMap(response.Header(), "<-<")
+		p.logHeaderMap(response.Header(), "<-<")
 	}
 }
 
-func logRequest(r *http.Request) {
+func (p *HandlerFunctionData) logRequest(r *http.Request) {
 	if logger.IsAccess() {
 		logger.LogAccessf(">>> METHOD=%s: REQUEST=%s", r.Method, r.URL.Path)
-		logHeaderMap(r.Header, ">->")
+		p.logHeaderMap(r.Header, ">->")
 	}
 }
 
-func logHeaderMap(headers map[string][]string, dir string) {
+func (p *HandlerFunctionData) logHeaderMap(headers map[string][]string, dir string) {
 	if logger.IsDebug() {
 		for k, v := range headers {
 			logger.LogDebugf("%s HEADER=%s=%s", dir, k, v)
 		}
 	}
-}
-
-/*
-from : https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Complete_list_of_MIME_types
-*/
-func populateContentTypes() map[string]string {
-	mime := make(map[string]string)
-	mime["aac"] = "audio/aac"
-	mime["abw"] = "application/x-abiword"
-	mime["arc"] = "application/x-freearc"
-	mime["avi"] = "video/x-msvideo"
-	mime["azw"] = "application/vnd.amazon.ebook"
-	mime["bin"] = "application/octet-stream"
-	mime["bmp"] = "image/bmp"
-	mime["bz"] = "application/x-bzip"
-	mime["bz2"] = "application/x-bzip2"
-	mime["csh"] = "application/x-csh"
-	mime["css"] = "text/css"
-	mime["csv"] = "text/csv"
-	mime["doc"] = "application/msword"
-	mime["docx"] = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-	mime["eot"] = "application/vnd.ms-fontobject"
-	mime["epub"] = "application/epub+zip"
-	mime["gif"] = "image/gif"
-	mime["htm"] = "text/html"
-	mime["html"] = "text/html"
-	mime["ico"] = "image/vnd.microsoft.icon" // Some browsers use image/x-icon. Add to config data to override!
-	mime["ics"] = "text/calendar"
-	mime["jar"] = "application/java-archive"
-	mime["jpeg"] = "image/jpeg"
-	mime["jpg"] = "image/jpeg"
-	mime["js"] = "text/javascript"
-	mime["json"] = "application/json"
-	mime["jsonld"] = "application/ld+json"
-	mime["mid"] = "audio/midi audio/x-midi"
-	mime["midi"] = "audio/midi audio/x-midi"
-	mime["mjs"] = "text/javascript"
-	mime["mp3"] = "audio/mpeg"
-	mime["mpeg"] = "video/mpeg"
-	mime["mpkg"] = "application/vnd.apple.installer+xml"
-	mime["odp"] = "application/vnd.oasis.opendocument.presentation"
-	mime["ods"] = "application/vnd.oasis.opendocument.spreadsheet"
-	mime["odt"] = "application/vnd.oasis.opendocument.text"
-	mime["oga"] = "audio/ogg"
-	mime["ogv"] = "video/ogg"
-	mime["ogx"] = "application/ogg"
-	mime["otf"] = "font/otf"
-	mime["png"] = "image/png"
-	mime["pdf"] = "application/pdf"
-	mime["ppt"] = "application/vnd.ms-powerpoint"
-	mime["pptx"] = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
-	mime["rar"] = "application/x-rar-compressed"
-	mime["rtf"] = "application/rtf"
-	mime["sh"] = "application/x-sh"
-	mime["svg"] = "image/svg+xml"
-	mime["swf"] = "application/x-shockwave-flash"
-	mime["tar"] = "application/x-tar"
-	mime["tif"] = "image/tiff"
-	mime["tiff"] = "image/tiff"
-	mime["ts"] = "video/mp2t"
-	mime["ttf"] = "font/ttf"
-	mime["txt"] = "text/plain"
-	mime["vsd"] = "application/vnd.visio"
-	mime["wav"] = "audio/wav"
-	mime["weba"] = "audio/webm"
-	mime["webm"] = "video/webm"
-	mime["webp"] = "image/webp"
-	mime["woff"] = "font/woff"
-	mime["woff2"] = "font/woff2"
-	mime["xhtml"] = "application/xhtml+xml"
-	mime["xls"] = "application/vnd.ms-excel"
-	mime["xlsx"] = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-	mime["xml"] = "application/xml"
-	mime["xul"] = "application/vnd.mozilla.xul+xml"
-	mime["zip"] = "application/zip"
-	mime["7z"] = "application/x-7z-compressed"
-	return mime
 }
