@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -26,7 +27,7 @@ type ServerInstanceData struct {
 	after                vetoHandlerListData
 	errorHandler         func(*ResponseWriterWrapper, *http.Request, *Response)
 	responseHandler      func(*ResponseWriterWrapper, *http.Request, *Response)
-	staticFilehandler    func(*ResponseWriterWrapper, *http.Request) bool
+	staticFilehandler    func(*ResponseWriterWrapper, *http.Request) (bool, error)
 	fileServerList       *fileServerContainer
 	redirections         map[string]string
 	contentTypeCharset   string
@@ -59,7 +60,7 @@ NewServerInstanceData Create new server data object
 func NewServerInstanceData(baseHandlerNameIn string, contentTypeCharsetIn string) *ServerInstanceData {
 
 	if contentTypeCharsetIn == "" {
-		contentTypeCharsetIn = "utf=8"
+		contentTypeCharsetIn = "utf-8"
 	}
 
 	return &ServerInstanceData{
@@ -150,14 +151,20 @@ func (p *ServerInstanceData) ServeHTTP(rw http.ResponseWriter, r *http.Request) 
 		/*
 			If the mapping was not found then try to return the a static file
 		*/
-		if p.staticFilehandler(w, r) {
+		done, err := p.staticFilehandler(w, r)
+		if done {
 			return
+		}
+		if err != nil {
+			if p.logger.IsWarn() {
+				p.logger.LogWarnf("!!! (CONTENT-NOT-FOUND): %s", err)
+			}
 		}
 		/*
 			Mapping was not found and NO static file was returned so
 			delegate to the current error handler to manage the error
 		*/
-		p.errorHandler(w, r, NewResponse(404, http.StatusText(404), "", nil))
+		p.errorHandler(w, r, NewResponse(404, url+" - "+http.StatusText(404), "", nil))
 		return
 	}
 
@@ -245,7 +252,7 @@ func (p *ServerInstanceData) SetResponseHandler(handler func(*ResponseWriterWrap
 /*
 SetStaticFileHandler handle a NON error response
 */
-func (p *ServerInstanceData) SetStaticFileHandler(handler func(*ResponseWriterWrapper, *http.Request) bool) {
+func (p *ServerInstanceData) SetStaticFileHandler(handler func(*ResponseWriterWrapper, *http.Request) (bool, error)) {
 	p.staticFilehandler = handler
 }
 
@@ -422,7 +429,7 @@ func checkForPanicAndRecover(w *ResponseWriterWrapper, r *http.Request) {
 /*
 serveStaticFile Read a file from a static file location and return it
 */
-func defaultServeStaticFile(w *ResponseWriterWrapper, r *http.Request) bool {
+func defaultServeStaticFile(w *ResponseWriterWrapper, r *http.Request) (bool, error) {
 	server := w.GetWrappedServer()
 	fileServerMapping := server.fileServerList
 	url := r.URL.Path
@@ -433,13 +440,26 @@ func defaultServeStaticFile(w *ResponseWriterWrapper, r *http.Request) bool {
 				w.Header()[contentTypeName] = []string{contentType + "; charset=" + server.contentTypeCharset}
 			}
 			filename := filepath.Join(fileServerMapping.root, url[len(fileServerMapping.path):])
-			http.ServeFile(w, r, filename)
+			err := serveContent(w, r, filename)
+			if err != nil {
+				return false, err
+			}
 			server.logFileServerResponse(w, fileServerMapping.path, ext, contentType, filename)
-			return true
+			return true, nil
 		}
 		fileServerMapping = fileServerMapping.next
 	}
-	return false
+	return false, nil
+}
+
+func serveContent(w *ResponseWriterWrapper, r *http.Request, name string) error {
+	file, err := os.Open(name)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	http.ServeContent(w, r, name, time.Now(), file)
+	return nil
 }
 
 func defaultErrorResponseHandler(w *ResponseWriterWrapper, request *http.Request, response *Response) {
