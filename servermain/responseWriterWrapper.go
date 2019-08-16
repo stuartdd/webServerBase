@@ -4,6 +4,10 @@ import "net/http"
 
 /*
 ResponseWriterWrapper replaces http.ResponseWriter
+
+Methods are inherited! from http.ResponseWriter.
+This allows us to pass ResponseWriterWrapper as a http.ResponseWriter to
+any methods expecting an object with the http.ResponseWriter interface
 */
 type ResponseWriterWrapper struct {
 	responseWriter http.ResponseWriter
@@ -19,16 +23,9 @@ func (p *ResponseWriterWrapper) GetStatusCode() int {
 }
 
 /*
-Is2XX returns true is the response is NOT a 2xx
+GetWrappedServer returns the serverData instance
 */
-func (p *ResponseWriterWrapper) Is2XX() bool {
-	return (p.statusCode > 199) && (p.statusCode < 300)
-}
-
-/*
-GetServer returns the serverData instance
-*/
-func (p *ResponseWriterWrapper) GetServer() *ServerInstanceData {
+func (p *ResponseWriterWrapper) GetWrappedServer() *ServerInstanceData {
 	return p.server
 }
 
@@ -44,9 +41,8 @@ func NewResponseWriterWrapper(w http.ResponseWriter, p *ServerInstanceData) *Res
 }
 
 /*
-WriteHeader replace the WriteHeader method.
- Store the sattus Code.
- Pass it to the ResponseWriter
+WriteHeader delegates to http.ResponseWriter.WriteHeader method.
+Additional behaviour is to Store the status Code before passing it on.
 */
 func (p *ResponseWriterWrapper) WriteHeader(code int) {
 	p.statusCode = code
@@ -54,14 +50,15 @@ func (p *ResponseWriterWrapper) WriteHeader(code int) {
 }
 
 /*
-Header replace the WriteHeader method.
- Store the sattus Code.
- Pass it to the ResponseWriter
+Header delegates to http.ResponseWriter.Header method.
 */
 func (p *ResponseWriterWrapper) Header() http.Header {
 	return p.responseWriter.Header()
 }
 
+/*
+Write delegates to http.ResponseWriter.Write method.
+*/
 func (p *ResponseWriterWrapper) Write(b []byte) (n int, err error) {
 	return p.responseWriter.Write(b)
 }

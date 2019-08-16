@@ -73,7 +73,8 @@ func RunWithConfig(configData *state.ConfigData, executable string) {
 	serverInstance.AddContentTypeFromMap(configData.ContentTypes)
 	serverInstance.SetRedirections(state.GetConfigDataInstance().Redirections)
 	serverInstance.SetFileServerDataFromMap(state.GetConfigDataStaticPathForOS())
-	serverInstance.SetPanicResponseCode(configData.PanicResponseCode)
+	serverInstance.SetPanicStatusCode(configData.PanicResponseCode)
+	serverInstance.SetNoResponseStatusCode(configData.NoResponseResponseCode)
 
 	serverInstance.AddBeforeHandler(filterBefore)
 	serverInstance.AddMappedHandler("/stop", http.MethodGet, stopServerInstance)

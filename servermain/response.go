@@ -21,8 +21,15 @@ type Response struct {
 /*
 IsNot200 returns true is the response is NOT a 2xx
 */
-func (p *Response) IsNot200() bool {
+func (p *Response) IsAnError() bool {
 	return (p.code < 200) || (p.code > 299)
+}
+
+/*
+SetContentType set the content type. E.G. application/json
+*/
+func (p *Response) SetContentType(contentType string) {
+	p.contentType = contentType
 }
 
 /*

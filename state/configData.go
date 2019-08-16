@@ -14,15 +14,16 @@ ConfigData read configuration data from the JSON configuration file.
 Note any undefined values are defaulted to constants defined below
 */
 type ConfigData struct {
-	Port               int
-	DefaultLogFileName string
-	ConfigName         string
-	StaticPaths        map[string]map[string]string
-	Redirections       map[string]string
-	ContentTypes       map[string]string
-	ContentTypeCharset string
-	LoggerLevels       map[string]string
-	PanicResponseCode  int
+	Port                   int
+	DefaultLogFileName     string
+	ConfigName             string
+	StaticPaths            map[string]map[string]string
+	Redirections           map[string]string
+	ContentTypes           map[string]string
+	ContentTypeCharset     string
+	LoggerLevels           map[string]string
+	PanicResponseCode      int
+	NoResponseResponseCode int
 }
 
 var configDataInstance *ConfigData
