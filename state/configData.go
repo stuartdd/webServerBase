@@ -29,58 +29,6 @@ type ConfigData struct {
 var configDataInstance *ConfigData
 
 /*
-GetConfigDataStaticPathForOS Get the static path for the OS. If not sound return the first one!
-*/
-func GetConfigDataStaticPathForOS() map[string]string {
-	path := GetConfigDataInstance().StaticPaths[runtime.GOOS]
-	if path == nil {
-		log.Fatalf("Unable to find staticPath in configuration file '%s' for operating system '%s'", GetConfigDataInstance().ConfigName, runtime.GOOS)
-	}
-	return path
-}
-
-/*
-GetConfigDataInstance get the confg data singleton
-*/
-func GetConfigDataInstance() *ConfigData {
-	return configDataInstance
-}
-
-/*
-GetConfigDataJSON string the configuration data as JSON. Used to record it in the logs
-*/
-func GetConfigDataJSON() string {
-	return fmt.Sprintf("{\"configName\":\"%s\",\"port\":%d,\"logFileName\":\"%s\",\"LoggerLevel\":%s}",
-		configDataInstance.ConfigName,
-		configDataInstance.Port,
-		configDataInstance.DefaultLogFileName,
-		toStringMap(configDataInstance.LoggerLevels))
-}
-
-func toStringList(list []string) string {
-	out := "["
-	ind := len(out)
-	for _, element := range list {
-		out = out + element
-		ind = len(out)
-		out = out + ", "
-	}
-	return string(out[0:ind]) + "]"
-}
-
-func toStringMap(mapIn map[string]string) string {
-	out := "{"
-	ind := len(out)
-	for key, value := range mapIn {
-		value = strings.ReplaceAll(value, "\\", "\\\\")
-		out = out + "\"" + key + "\":\"" + value + "\""
-		ind = len(out)
-		out = out + ", "
-	}
-	return string(out[0:ind]) + "}"
-}
-
-/*
 LoadConfigData method loads the config data
 */
 func LoadConfigData(configFileName string) error {
@@ -88,15 +36,6 @@ func LoadConfigData(configFileName string) error {
 	if configFileName == "" {
 		configFileName = "webServerBase.json"
 	}
-
-	// Port               int
-	// DefaultLogFileName string
-	// ConfigName         string
-	// StaticPaths        map[string]map[string]string
-	// Redirections       map[string]string
-	// ContentTypes       map[string]string
-	// ContentTypeCharset string
-	// LoggerLevels       map[string]string
 
 	configDataInstance = &ConfigData{
 		Port:               8080,
@@ -116,4 +55,45 @@ func LoadConfigData(configFileName string) error {
 
 	configDataInstance.ConfigName = configFileName
 	return nil
+}
+
+/*
+GetConfigDataStaticPathForOS Get the static path for the OS. If not found return the first one!
+*/
+func GetConfigDataStaticPathForOS() map[string]string {
+	path := GetConfigDataInstance().StaticPaths[runtime.GOOS]
+	if path == nil {
+		log.Fatalf("Unable to find staticPath in configuration file '%s' for operating system '%s'", GetConfigDataInstance().ConfigName, runtime.GOOS)
+	}
+	return path
+}
+
+/*
+GetConfigDataInstance get the confg data singleton
+*/
+func GetConfigDataInstance() *ConfigData {
+	return configDataInstance
+}
+
+/*
+GetConfigDataJSON string the 'usefull' configuration data as JSON. Used to record it in the logs
+*/
+func GetConfigDataJSON() string {
+	return fmt.Sprintf("{\"configName\":\"%s\",\"port\":%d,\"logFileName\":\"%s\",\"LoggerLevel\":%s}",
+		configDataInstance.ConfigName,
+		configDataInstance.Port,
+		configDataInstance.DefaultLogFileName,
+		toStringMap(configDataInstance.LoggerLevels))
+}
+
+func toStringMap(mapIn map[string]string) string {
+	out := "{"
+	ind := len(out)
+	for key, value := range mapIn {
+		value = strings.ReplaceAll(value, "\\", "\\\\")
+		out = out + "\"" + key + "\":\"" + value + "\""
+		ind = len(out)
+		out = out + ", "
+	}
+	return string(out[0:ind]) + "}"
 }
