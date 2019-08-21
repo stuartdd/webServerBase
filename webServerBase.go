@@ -79,7 +79,6 @@ func RunWithConfig(configData *state.ConfigData, executable string) {
 	serverInstance.AddBeforeHandler(filterBefore)
 	serverInstance.AddMappedHandler("/stop", http.MethodGet, stopServerInstance)
 	serverInstance.AddMappedHandler("/status", http.MethodGet, statusHandler)
-	serverInstance.AddMappedHandler("/panic", http.MethodGet, panicHandler)
 	serverInstance.AddMappedHandler("/calc/?/div/?", http.MethodGet, divHandler)
 	serverInstance.AddAfterHandler(filterAfter)
 
@@ -93,22 +92,6 @@ Start of handlers section
 func stopServerInstance(r *http.Request) *servermain.Response {
 	serverInstance.StopServerLater(2)
 	return servermain.NewResponse(200, serverInstance.GetStatusDataJSON(), "application/json", nil)
-}
-func panicHandler(r *http.Request) *servermain.Response {
-	panic1()
-	return servermain.NewResponse(200, serverInstance.GetStatusDataJSON(), "application/json", nil)
-}
-
-func panic1() {
-	panic2()
-}
-
-func panic2() {
-	panic3()
-}
-
-func panic3() {
-	panic("Test PANIC")
 }
 
 func divHandler(r *http.Request) *servermain.Response {

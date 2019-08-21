@@ -18,15 +18,15 @@ const defaultName = "DEFAULT"
 const offName = "OFF"
 
 /*
-LoggerLevelType ENUM for log levels
+LoggerLevelTypeIndex ENUM for log levels. Used to index in to lists
 */
-type LoggerLevelType int
+type LoggerLevelTypeIndex int
 
 /*
 InfoLevel is the finest. Nothing stops ErrorLevel of FatalLevel
 */
 const (
-	InfoLevel LoggerLevelType = iota
+	InfoLevel LoggerLevelTypeIndex = iota
 	DebugLevel
 	WarnLevel
 	AccessLevel
@@ -39,11 +39,11 @@ const (
 loggerLevelData One instance per Log Level
 */
 type loggerLevelData struct {
-	note       string
-	active     bool
-	errorLevel bool
-	logger     *log.Logger
-	file       *loggerFileData
+	note         string
+	active       bool
+	isErrorLevel bool
+	logger       *log.Logger
+	file         *loggerFileData
 }
 
 type loggerFileData struct {
@@ -71,7 +71,7 @@ These values (not case sensitive) must map to the values passed to CreateLogWith
 If these values are in the list then that log level will be active.
 An empty list will mean that only ERROR and FATAL will be logged
 */
-var loggerLevelMapNames = map[string]LoggerLevelType{"INFO": InfoLevel, "DEBUG": DebugLevel, "WARN": WarnLevel, "ACCESS": AccessLevel, errorName: ErrorLevel, fatalName: FatalLevel}
+var loggerLevelMapNames = map[string]LoggerLevelTypeIndex{"INFO": InfoLevel, "DEBUG": DebugLevel, "WARN": WarnLevel, "ACCESS": AccessLevel, errorName: ErrorLevel, fatalName: FatalLevel}
 
 /*
 For each logger level there MAY be a file. Indexed by file name. This is so we can re-use the file with the same name for different levels
@@ -88,11 +88,23 @@ var defaultLogFileName string
 var fallBack = true
 
 /*
+CreateTestLogger - creates a logger for testing
+*/
+func CreateTestLogger(id string) *LoggerDataReference {
+	levels := make(map[string]string)
+	levels["DEBUG"] = systemOutName
+	levels["INFO"] = systemOutName
+	levels["WARN"] = systemOutName
+	CreateLogWithFilenameAndAppID("", "", levels)
+	return NewLogger(id)
+}
+
+/*
 CreateLogWithFilenameAndAppID should configure the logger to output somthing like this!
 2019-07-16 14:47:43.993 applicationID module  [-]  INFO Starti
 2019-07-16 14:47:43.993 applicationID module  [-] DEBUG Runnin
 */
-func CreateLogWithFilenameAndAppID(defaultLogFileNameIn string, applicationID string, config map[string]string) error {
+func CreateLogWithFilenameAndAppID(defaultLogFileNameIn string, applicationID string, logLeveldata map[string]string) error {
 	CloseLog()
 	defaultLogFileName = defaultLogFileNameIn
 	logApplicationID = applicationID
@@ -103,14 +115,15 @@ func CreateLogWithFilenameAndAppID(defaultLogFileNameIn string, applicationID st
 	longestModuleName = 0
 	/*
 		Validate and Activate each log level.
+		We MUST activate Error and Fatal so add them if not already defined
 	*/
-	if config[errorName] == "" {
-		config[errorName] = defaultName
+	if logLeveldata[errorName] == "" {
+		logLeveldata[errorName] = defaultName
 	}
-	if config[fatalName] == "" {
-		config[fatalName] = defaultName
+	if logLeveldata[fatalName] == "" {
+		logLeveldata[fatalName] = defaultName
 	}
-	err := validateAndActivateLogLevels(config)
+	err := validateAndActivateLogLevels(logLeveldata)
 	if err != nil {
 		return err
 	}
@@ -121,7 +134,7 @@ func CreateLogWithFilenameAndAppID(defaultLogFileNameIn string, applicationID st
 /*
 GetLogLevelTypeForName get the index for the level name
 */
-func GetLogLevelTypeForName(name string) LoggerLevelType {
+func GetLogLevelTypeIndexForName(name string) LoggerLevelTypeIndex {
 	if index, ok := loggerLevelMapNames[strings.ToUpper(strings.TrimSpace(name))]; ok {
 		return index
 	}
@@ -129,12 +142,12 @@ func GetLogLevelTypeForName(name string) LoggerLevelType {
 }
 
 /*
-GetLogLevelFileName get the index for the level name
+GetLogLevelFileName get the file name for the level name
 */
 func GetLogLevelFileName(name string) string {
-	loggerLevelType := GetLogLevelTypeForName(name)
-	if loggerLevelType != NotFound {
-		typeInstance := loggerLevelDataList[loggerLevelType]
+	loggerLevelTypeIndex := GetLogLevelTypeIndexForName(name)
+	if loggerLevelTypeIndex != NotFound {
+		typeInstance := loggerLevelDataList[loggerLevelTypeIndex]
 		if typeInstance.file != nil {
 			return typeInstance.file.fileName
 		}
@@ -146,11 +159,11 @@ func GetLogLevelFileName(name string) string {
 LoggerLevelDataString return the state of a log level as a string
 */
 func LoggerLevelDataString(name string) string {
-	loggerLevelType := GetLogLevelTypeForName(name)
-	if loggerLevelType != NotFound {
-		lld := loggerLevelDataList[loggerLevelType]
+	loggerLevelTypeIndex := GetLogLevelTypeIndexForName(name)
+	if loggerLevelTypeIndex != NotFound {
+		lld := loggerLevelDataList[loggerLevelTypeIndex]
 		errorLevel := "NO"
-		if lld.errorLevel {
+		if lld.isErrorLevel {
 			errorLevel = "YES"
 		}
 		if lld.active {
@@ -187,6 +200,9 @@ NewLogger created a new logger instance for a specific module
 All log lines printed via the returned ref will contain the specific module name.
 */
 func NewLogger(moduleName string) *LoggerDataReference {
+	if logDataModules == nil {
+		logDataModules = make(map[string]*LoggerDataReference)
+	}
 	if val, ok := logDataModules[moduleName]; ok {
 		return val
 	}
@@ -197,21 +213,6 @@ func NewLogger(moduleName string) *LoggerDataReference {
 	logDataModules[moduleName] = ldRef
 	updateLoggerPrefixesForAllModules()
 	return ldRef
-}
-
-/*
-LogWithStackTrace log a message with a stack trace
-*/
-func (p *LoggerDataReference) LogErrorWithStackTrace(prefix string, message string) {
-	if p.IsError() {
-		loggerLevelDataList[ErrorLevel].logger.Print(p.loggerPrefix + loggerLevelTypeNames[ErrorLevel] + prefix + " " + message)
-		st := string(debug.Stack())
-		for count, line := range strings.Split(strings.TrimSuffix(st, "\n"), "\n") {
-			if count > 6 && count <= 18 {
-				loggerLevelDataList[ErrorLevel].logger.Print(p.loggerPrefix + loggerLevelTypeNames[ErrorLevel] + prefix + " " + line)
-			}
-		}
-	}
 }
 
 /*
@@ -288,6 +289,26 @@ LogError delegates to log.Print
 func (p *LoggerDataReference) LogError(message error) {
 	if loggerLevelDataList[ErrorLevel].active {
 		loggerLevelDataList[ErrorLevel].logger.Print(p.loggerPrefix + loggerLevelTypeNames[ErrorLevel] + message.Error())
+	}
+}
+
+/*
+LogErrorWithStackTrace log a panic message with a stack trace
+	rec := recover()
+	if rec != nil {
+		text := fmt.Sprintf("REQUEST:%s MESSAGE:%s", r.URL.Path, rec)
+		server.logger.LogErrorWithStackTrace("!!!", text)
+	}
+*/
+func (p *LoggerDataReference) LogErrorWithStackTrace(prefix string, message string) {
+	if p.IsError() {
+		loggerLevelDataList[ErrorLevel].logger.Print(p.loggerPrefix + loggerLevelTypeNames[ErrorLevel] + prefix + " " + message)
+		st := string(debug.Stack())
+		for count, line := range strings.Split(strings.TrimSuffix(st, "\n"), "\n") {
+			if count > 6 && count <= 18 {
+				loggerLevelDataList[ErrorLevel].logger.Print(p.loggerPrefix + loggerLevelTypeNames[ErrorLevel] + prefix + " " + line)
+			}
+		}
 	}
 }
 
@@ -389,33 +410,44 @@ func validateAndActivateLogLevels(values map[string]string) error {
 		/*
 			check the name is valid
 		*/
-		loggerLevelType := GetLogLevelTypeForName(key)
-		if loggerLevelType != NotFound {
+		loggerLevelTypeIndex := GetLogLevelTypeIndexForName(key)
+		if loggerLevelTypeIndex != NotFound {
+			/*
+				Configure the level according to the value in the map (case insensitive).
+				Note the value can be a file name!
+			*/
+			loggerLevelDataValue := loggerLevelDataList[loggerLevelTypeIndex]
 			valueUC := strings.TrimSpace(strings.ToUpper(value))
 			switch valueUC {
 			case offName, "":
-				loggerLevelDataList[loggerLevelType].active = false
-				loggerLevelDataList[loggerLevelType].note = valueUC
+				loggerLevelDataValue.active = false
+				loggerLevelDataValue.note = valueUC
 				break
 			case systemOutName:
-				loggerLevelDataList[loggerLevelType].logger = log.New(os.Stdout, "", logDataFlags)
-				loggerLevelDataList[loggerLevelType].active = true
-				loggerLevelDataList[loggerLevelType].note = valueUC
+				loggerLevelDataValue.logger = log.New(os.Stdout, "", logDataFlags)
+				loggerLevelDataValue.active = true
+				loggerLevelDataValue.note = valueUC
 				break
 			case systemErrName:
-				loggerLevelDataList[loggerLevelType].logger = log.New(os.Stderr, "", logDataFlags)
-				loggerLevelDataList[loggerLevelType].active = true
-				loggerLevelDataList[loggerLevelType].note = valueUC
+				loggerLevelDataValue.logger = log.New(os.Stderr, "", logDataFlags)
+				loggerLevelDataValue.active = true
+				loggerLevelDataValue.note = valueUC
 				break
 			case defaultName:
+				/*
+					For default we use the the default file name
+				*/
 				if defaultLogFileName == "" {
-					if loggerLevelDataList[GetLogLevelTypeForName(key)].errorLevel {
-						loggerLevelDataList[loggerLevelType].logger = log.New(os.Stderr, "", logDataFlags)
-						loggerLevelDataList[loggerLevelType].note = systemErrName
+					/*
+						If default file name is undefined thgen choose stderr or stdout according to isErrorLevel
+					*/
+					if loggerLevelDataList[GetLogLevelTypeIndexForName(key)].isErrorLevel {
+						loggerLevelDataValue.logger = log.New(os.Stderr, "", logDataFlags)
+						loggerLevelDataValue.note = systemErrName
 					} else {
-						if loggerLevelDataList[GetLogLevelTypeForName(key)].errorLevel {
-							loggerLevelDataList[loggerLevelType].logger = log.New(os.Stdout, "", logDataFlags)
-							loggerLevelDataList[loggerLevelType].note = systemOutName
+						if loggerLevelDataList[GetLogLevelTypeIndexForName(key)].isErrorLevel {
+							loggerLevelDataValue.logger = log.New(os.Stdout, "", logDataFlags)
+							loggerLevelDataValue.note = systemOutName
 						}
 					}
 				} else {
@@ -423,21 +455,21 @@ func validateAndActivateLogLevels(values map[string]string) error {
 					if err != nil {
 						return err
 					}
-					loggerLevelDataList[loggerLevelType].file = logFileData
-					loggerLevelDataList[loggerLevelType].logger = log.New(logFileData.logFile, "", logDataFlags)
-					loggerLevelDataList[loggerLevelType].note = valueUC
+					loggerLevelDataValue.file = logFileData
+					loggerLevelDataValue.logger = log.New(logFileData.logFile, "", logDataFlags)
+					loggerLevelDataValue.note = valueUC
 				}
-				loggerLevelDataList[loggerLevelType].active = true
+				loggerLevelDataValue.active = true
 				break
 			default:
 				logFileData, err := getLoggerWithFilename(value)
 				if err != nil {
 					return err
 				}
-				loggerLevelDataList[loggerLevelType].file = logFileData
-				loggerLevelDataList[loggerLevelType].logger = log.New(logFileData.logFile, "", logDataFlags)
-				loggerLevelDataList[loggerLevelType].active = true
-				loggerLevelDataList[loggerLevelType].note = "FILE"
+				loggerLevelDataValue.file = logFileData
+				loggerLevelDataValue.logger = log.New(logFileData.logFile, "", logDataFlags)
+				loggerLevelDataValue.active = true
+				loggerLevelDataValue.note = "FILE"
 			}
 		} else {
 			list := strings.Trim(strings.Join(strings.Fields(fmt.Sprint(loggerLevelTypeNames)), ", "), "[]")
@@ -462,11 +494,11 @@ func updateLoggerPrefixesForAllModules() {
 
 func newLoggerLevelTypeData(active bool, isError bool) *loggerLevelData {
 	return &loggerLevelData{
-		note:       "UNDEFINED",
-		active:     active,
-		errorLevel: isError,
-		logger:     nil,
-		file:       nil,
+		note:         "UNDEFINED",
+		active:       active,
+		isErrorLevel: isError,
+		logger:       nil,
+		file:         nil,
 	}
 }
 

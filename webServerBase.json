@@ -4,6 +4,10 @@
     "windows":{"static":"site\\"}, 
     "linux":{"static":"site/"}
   },
+  "templatePaths"  : {
+    "windows":"templates\\", 
+    "linux":"templates/"
+  },
   "redirections" : {"/":"/static/index.html"},
   "contentTypes" : {"ico": "image/x-icon"},
   "contentTypeCharset":"utf-8",
