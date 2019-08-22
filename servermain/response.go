@@ -3,10 +3,16 @@ package servermain
 import (
 	"fmt"
 	"net/http"
-
 	jsonconfig "github.com/stuartdd/tools_jsonconfig"
 )
 
+/*
+Context contained by the Response
+*/
+type Context struct {
+	writer      *ResponseWriterWrapper
+	server 		*ServerInstanceData
+}
 /*
 Response is the defininition of a response
 */
@@ -16,10 +22,11 @@ type Response struct {
 	contentType string
 	headers     map[string][]string
 	err         error
+	context 	*Context
 }
 
 /*
-IsNot200 returns true is the response is NOT a 2xx
+IsAnError returns true is the response is NOT a 2xx
 */
 func (p *Response) IsAnError() bool {
 	return (p.code < 200) || (p.code > 299)
@@ -83,6 +90,18 @@ func (p *Response) GetCode() int {
 }
 
 /*
+GetWrappedServer returns the ServerInstanceData wrapped in the response context
+*/
+func (p *Response) GetWrappedServer() *ServerInstanceData {
+	return p.context.server
+}
+/*
+GetWrappedWriter returns the io.Writer wrapped in the response context
+*/
+func (p *Response) GetWrappedWriter() *ResponseWriterWrapper {
+	return p.context.writer
+}
+/*
 GetCSV returns JSON string representing this object
 */
 func (p *Response) GetCSV() string {
@@ -92,7 +111,7 @@ func (p *Response) GetCSV() string {
 /*
 NewResponse create an error response
 */
-func NewResponse(statusCode int, response interface{}, contentType string, goErr error) *Response {
+func NewResponse(w *ResponseWriterWrapper, s *ServerInstanceData, statusCode int, response interface{}, contentType string, goErr error) *Response {
 	if response == "" {
 		response = http.StatusText(statusCode)
 	}
@@ -102,5 +121,9 @@ func NewResponse(statusCode int, response interface{}, contentType string, goErr
 		contentType: contentType,
 		headers:     make(map[string][]string),
 		err:         goErr,
+		context:     &Context{
+			writer: w,
+			server: s,
+		},
 	}
 }

@@ -83,11 +83,11 @@ func RunWithConfig(configData *config.ConfigData, executable string) {
 	/*
 	Add static file paths. 
 	*/
-	serverInstance.SetStaticFileDataFromMap(config.GetConfigDataStaticPathForOS())
+//	serverInstance.SetStaticFileDataFromMap(config.GetConfigDataStaticPathForOS())
 	/*
 	Add template file path (singular). 
 	*/
-	serverInstance.SetTemplatesPath(config.GetConfigDataTemplatePathForOS())
+//	serverInstance.SetTemplatesPath(config.GetConfigDataTemplatePathForOS())
 	/*
 	Set the http status code returned if a panic is thrown by any od the handlers
 	*/
