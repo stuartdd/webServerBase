@@ -5,6 +5,7 @@ import (
 	"errors"
 	"html/template"
 	"os"
+	"io"
 	"path/filepath"
 	"strings"
 	"webServerBase/logging"
@@ -75,15 +76,27 @@ func (p *Templates) HasTemplate(templateName string) bool {
 }
 
 /*
-Execute a template
+ExecuteWriter writes a template to a io.Writer object
 */
-func (p *Templates) Execute(templateName string, data interface{}) (string, error) {
+func (p *Templates) ExecuteWriter(w io.Writer, templateName string, data interface{}) (error) {
 	tmpl := p.templates[templateName]
 	if tmpl == nil {
-		return "", errors.New("Template " + templateName + " not found")
+		return errors.New("Template " + templateName + " not found")
 	}
 	var buf bytes.Buffer
 	err := tmpl.template.Execute(&buf, data)
+	if err != nil {
+		return errors.New("Template error: " + err.Error())
+	}
+	return nil
+}
+
+/*
+ExecuteString writes a template to a string using ExecuteWriter
+*/
+func (p *Templates) ExecuteString(templateName string, data interface{}) (string, error) {
+	var buf bytes.Buffer
+	err := p.ExecuteWriter(&buf,templateName, data)
 	if err != nil {
 		return "", errors.New("Template error: " + err.Error())
 	}

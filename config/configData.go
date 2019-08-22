@@ -1,4 +1,4 @@
-package state
+package config
 
 import (
 	"fmt"
@@ -18,7 +18,7 @@ type ConfigData struct {
 	DefaultLogFileName     string
 	ConfigName             string
 	StaticPaths            map[string]map[string]string
-	TemplatePaths          map[string]map[string]string
+	TemplatePaths          map[string]string
 	Redirections           map[string]string
 	ContentTypes           map[string]string
 	ContentTypeCharset     string
@@ -43,7 +43,7 @@ func LoadConfigData(configFileName string) error {
 		ContentTypeCharset: "utf-8",
 		ContentTypes:       make(map[string]string),
 		StaticPaths:        make(map[string]map[string]string),
-		TemplatePaths:      make(map[string]map[string]string),
+		TemplatePaths:      make(map[string]string),
 		Redirections:       make(map[string]string),
 		LoggerLevels:       make(map[string]string),
 	}
@@ -73,9 +73,9 @@ func GetConfigDataStaticPathForOS() map[string]string {
 /*
 GetConfigDataTemplatePathForOS Get the static path for the OS. If not found return the first one!
 */
-func GetConfigDataTemplatePathForOS() map[string]string {
+func GetConfigDataTemplatePathForOS() string {
 	path := GetConfigDataInstance().TemplatePaths[runtime.GOOS]
-	if path == nil {
+	if path == "" {
 		log.Fatalf("Unable to find templatePath in configuration file '%s' for operating system '%s'", GetConfigDataInstance().ConfigName, runtime.GOOS)
 	}
 	return path

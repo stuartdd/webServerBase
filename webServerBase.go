@@ -9,7 +9,7 @@ import (
 	"strings"
 	"webServerBase/logging"
 	"webServerBase/servermain"
-	"webServerBase/state"
+	"webServerBase/config"
 )
 
 var logger *logging.LoggerDataReference
@@ -26,7 +26,7 @@ func main() {
 			configFileName = configFileName + ".json"
 		}
 	}
-	err := state.LoadConfigData(configFileName)
+	err := config.LoadConfigData(configFileName)
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -42,7 +42,7 @@ func main() {
 		}
 	}
 
-	RunWithConfig(state.GetConfigDataInstance(), exec)
+	RunWithConfig(config.GetConfigDataInstance(), exec)
 }
 
 /*
@@ -50,11 +50,11 @@ func main() {
 RunWithConfig runs with a sgeneric handler
 Param - config a ref to the config object
 */
-func RunWithConfig(configData *state.ConfigData, executable string) {
+func RunWithConfig(configData *config.ConfigData, executable string) {
 	/*
 		Open the logs. Log name is in the congig data. If not defined default to sysout
 	*/
-	logging.CreateLogWithFilenameAndAppID(state.GetConfigDataInstance().DefaultLogFileName, executable+":"+strconv.Itoa(state.GetConfigDataInstance().Port), state.GetConfigDataInstance().LoggerLevels)
+	logging.CreateLogWithFilenameAndAppID(config.GetConfigDataInstance().DefaultLogFileName, executable+":"+strconv.Itoa(config.GetConfigDataInstance().Port), config.GetConfigDataInstance().LoggerLevels)
 	defer CloseLog()
 	/*
 		Add loggers for each module (Makes for neater logs!)
@@ -64,21 +64,43 @@ func RunWithConfig(configData *state.ConfigData, executable string) {
 		Log server startup info
 	*/
 	logger.LogInfof("Server will start on port %d\n", configData.Port)
-	logger.LogInfof("OS '%s'. Static path will be:%s\n", runtime.GOOS, state.GetConfigDataStaticPathForOS())
+	logger.LogInfof("OS '%s'. Static path will be:%s\n", runtime.GOOS, config.GetConfigDataStaticPathForOS())
 	logger.LogInfof("To stop the server http://localhost:%d/stop\n", configData.Port)
+	
+	servermain.LoadTemplates(config.GetConfigDataTemplatePathForOS())
 	/*
-	   Configure and Start the server.
+	Configure and Start the server.
 	*/
 	serverInstance = servermain.NewServerInstanceData(executable, configData.ContentTypeCharset)
+	/*
+	Add too or override the Default content types
+	*/
 	serverInstance.AddContentTypeFromMap(configData.ContentTypes)
-	serverInstance.SetRedirections(state.GetConfigDataInstance().Redirections)
-	serverInstance.SetFileServerDataFromMap(state.GetConfigDataStaticPathForOS())
+	/*
+	Add redirections from the config data
+	*/
+	serverInstance.SetRedirections(config.GetConfigDataInstance().Redirections)
+	/*
+	Add static file paths. 
+	*/
+	serverInstance.SetStaticFileDataFromMap(config.GetConfigDataStaticPathForOS())
+	/*
+	Add template file path (singular). 
+	*/
+	serverInstance.SetTemplatesPath(config.GetConfigDataTemplatePathForOS())
+	/*
+	Set the http status code returned if a panic is thrown by any od the handlers
+	*/
 	serverInstance.SetPanicStatusCode(configData.PanicResponseCode)
+	/*
+	Set the http status code returned if a handler does not return any data
+	*/
 	serverInstance.SetNoResponseStatusCode(configData.NoResponseResponseCode)
 
 	serverInstance.AddBeforeHandler(filterBefore)
 	serverInstance.AddMappedHandler("/stop", http.MethodGet, stopServerInstance)
 	serverInstance.AddMappedHandler("/status", http.MethodGet, statusHandler)
+	serverInstance.AddMappedHandler("/static/?", http.MethodGet, nil)
 	serverInstance.AddMappedHandler("/calc/?/div/?", http.MethodGet, divHandler)
 	serverInstance.AddAfterHandler(filterAfter)
 

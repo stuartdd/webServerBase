@@ -27,14 +27,16 @@ type ServerInstanceData struct {
 	after                vetoHandlerListData
 	errorHandler         func(*ResponseWriterWrapper, *http.Request, *Response)
 	responseHandler      func(*ResponseWriterWrapper, *http.Request, *Response)
-	staticFilehandler    func(*ResponseWriterWrapper, *http.Request) (bool, error)
-	fileServerList       *fileServerContainer
+	// staticFilehandler    func(*ResponseWriterWrapper, *http.Request) (bool, error)
+	// templateFilehandler  func(*ResponseWriterWrapper, *http.Request) (bool, error)
+	// fileServerList       *fileServerContainer
 	redirections         map[string]string
 	contentTypeCharset   string
 	contentTypeLookup    map[string]string
 	server               *http.Server
 	serverState          *statusData
 	logger               *logging.LoggerDataReference
+	// templates            *Templates
 	panicStatusCode      int
 	noResponseStatusCode int
 }
@@ -72,15 +74,16 @@ func NewServerInstanceData(baseHandlerNameIn string, contentTypeCharsetIn string
 			handlerFunc: nil,
 			next:        nil,
 		},
-		errorHandler:      defaultErrorResponseHandler,
-		responseHandler:   defaultResponseHandler,
-		staticFilehandler: defaultServeStaticFile,
-		fileServerList: &fileServerContainer{
-			path: "",
-			root: "",
-			fs:   nil,
-			next: nil,
-		},
+		errorHandler:        defaultErrorResponseHandler,
+		responseHandler:     defaultResponseHandler,
+		// staticFilehandler:   defaultStaticFileHandler,
+		// templateFilehandler: defaultTemplateFileHandler,
+		// fileServerList: &fileServerContainer{
+		// 	path: "",
+		// 	root: "",
+		// 	fs:   nil,
+		// 	next: nil,
+		// },
 		redirections:       make(map[string]string),
 		contentTypeCharset: contentTypeCharsetIn,
 		contentTypeLookup:  getContentTypesMap(),
@@ -92,6 +95,7 @@ func NewServerInstanceData(baseHandlerNameIn string, contentTypeCharsetIn string
 			panicCounter: 0,
 		},
 		logger:               logging.NewLogger(baseHandlerNameIn),
+		// templates:            nil,
 		panicStatusCode:      500,
 		noResponseStatusCode: 400,
 	}
@@ -109,6 +113,11 @@ func (p *ServerInstanceData) ListenAndServeOnPort(port int) {
 	} else {
 		p.logger.LogInfo("http: Server closed")
 	}
+}
+
+func buildMapData(r *http.Request, p *ServerInstanceData) interface{} {
+	data := make(map[string]interface{})
+	return data
 }
 
 /*
@@ -149,19 +158,7 @@ func (p *ServerInstanceData) ServeHTTP(rw http.ResponseWriter, r *http.Request) 
 	mapping, found := GetPathMappingElement(url, r.Method)
 	if !found {
 		/*
-			If the mapping was not found then try to return the a static file
-		*/
-		done, err := p.staticFilehandler(w, r)
-		if done {
-			return
-		}
-		if err != nil {
-			if p.logger.IsWarn() {
-				p.logger.LogWarnf("!!! (CONTENT-NOT-FOUND): %s", err)
-			}
-		}
-		/*
-			Mapping was not found and NO static file was returned so
+			Mapping not found, template not found, static file not found.
 			delegate to the current error handler to manage the error
 		*/
 		p.errorHandler(w, r, NewResponse(404, url+" - "+http.StatusText(404), "", nil))
@@ -250,11 +247,15 @@ func (p *ServerInstanceData) SetResponseHandler(handler func(*ResponseWriterWrap
 }
 
 /*
-SetStaticFileHandler handle a NON error response
+SetTemplatesPath handle an error response if one occurs
 */
-func (p *ServerInstanceData) SetStaticFileHandler(handler func(*ResponseWriterWrapper, *http.Request) (bool, error)) {
-	p.staticFilehandler = handler
-}
+// func (p *ServerInstanceData) SetTemplatesPath(path string) {
+// 	tmpl, err := LoadTemplates(path)
+// 	if err != nil {
+// 		panic("Failed to load Templates at:" + path)
+// 	}
+// 	p.templates = tmpl
+// }
 
 /*
 SetPanicStatusCode handle an error response if one occurs
@@ -293,13 +294,13 @@ func (p *ServerInstanceData) SetRedirections(redirections map[string]string) {
 }
 
 /*
-SetFileServerDataFromMap creates a file servers for each mapping
+SetStaticFileDataFromMap creates a file servers for each mapping
 */
-func (p *ServerInstanceData) SetFileServerDataFromMap(mappings map[string]string) {
-	for key, value := range mappings {
-		p.AddFileServerData(key, value)
-	}
-}
+// func (p *ServerInstanceData) SetStaticFileDataFromMap(mappings map[string]string) {
+// 	for key, value := range mappings {
+// 		p.AddFileServerData(key, value)
+// 	}
+// }
 
 /*
 AddContentTypeFromMap add to or update the contentType Map
@@ -313,21 +314,21 @@ func (p *ServerInstanceData) AddContentTypeFromMap(mimeTypeMap map[string]string
 /*
 AddFileServerData creates a file server for a path and a root directory
 */
-func (p *ServerInstanceData) AddFileServerData(path string, root string) {
-	container := p.fileServerList
-	for container.next != nil {
-		container = container.next
-	}
-	container.path = "/" + path + "/"
-	container.root = root
-	container.fs = http.FileServer(http.Dir(root))
-	container.next = &fileServerContainer{
-		path: "",
-		root: "",
-		fs:   nil,
-		next: nil,
-	}
-}
+// func (p *ServerInstanceData) AddFileServerData(path string, root string) {
+// 	container := p.fileServerList
+// 	for container.next != nil {
+// 		container = container.next
+// 	}
+// 	container.path = "/" + path + "/"
+// 	container.root = root
+// 	container.fs = http.FileServer(http.Dir(root))
+// 	container.next = &fileServerContainer{
+// 		path: "",
+// 		root: "",
+// 		fs:   nil,
+// 		next: nil,
+// 	}
+// }
 
 /*
 AddMappedHandler creates a route to a function given a path
@@ -415,6 +416,21 @@ func (p *ServerInstanceData) LogResponse(response *Response) {
 	}
 }
 
+/*
+ServeContent wraps the http.ServeContent. It opens the file first.
+If the open fails it returns an error.
+After that it delegates to http.ServeContent
+*/
+func ServeContent(w *ResponseWriterWrapper, r *http.Request, name string) error {
+	file, err := os.Open(name)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	http.ServeContent(w, r, name, time.Now(), file)
+	return nil
+}
+
 func checkForPanicAndRecover(w *ResponseWriterWrapper, r *http.Request) {
 	server := w.GetWrappedServer()
 	rec := recover()
@@ -426,10 +442,18 @@ func checkForPanicAndRecover(w *ResponseWriterWrapper, r *http.Request) {
 	}
 }
 
+func defaultTemplateFileHandler(w *ResponseWriterWrapper, r *http.Request) (bool, error) {
+	return false, nil
+}
+
+func defaultStaticFileHandler(w *ResponseWriterWrapper, r *http.Request) (bool, error) {
+	return false, nil
+}	
+
 /*
-serveStaticFile Read a file from a static file location and return it
+ReasonableStaticFileHandler Read a file from a static file location and return it
 */
-func defaultServeStaticFile(w *ResponseWriterWrapper, r *http.Request) (bool, error) {
+func ReasonableStaticFileHandler(w *ResponseWriterWrapper, r *http.Request) (bool, error) {
 	server := w.GetWrappedServer()
 	fileServerMapping := server.fileServerList
 	url := r.URL.Path
@@ -440,7 +464,7 @@ func defaultServeStaticFile(w *ResponseWriterWrapper, r *http.Request) (bool, er
 				w.Header()[contentTypeName] = []string{contentType + "; charset=" + server.contentTypeCharset}
 			}
 			filename := filepath.Join(fileServerMapping.root, url[len(fileServerMapping.path):])
-			err := serveContent(w, r, filename)
+			err := ServeContent(w, r, filename)
 			if err != nil {
 				return false, err
 			}
@@ -450,16 +474,6 @@ func defaultServeStaticFile(w *ResponseWriterWrapper, r *http.Request) (bool, er
 		fileServerMapping = fileServerMapping.next
 	}
 	return false, nil
-}
-
-func serveContent(w *ResponseWriterWrapper, r *http.Request, name string) error {
-	file, err := os.Open(name)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	http.ServeContent(w, r, name, time.Now(), file)
-	return nil
 }
 
 func defaultErrorResponseHandler(w *ResponseWriterWrapper, request *http.Request, response *Response) {
