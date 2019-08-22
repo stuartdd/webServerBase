@@ -35,7 +35,7 @@ func TestLoadTemplatesFromSite(t *testing.T) {
 
 	test.AssertFalse(t, "simpleXXX.html", templ.HasTemplate("simpleXXX.html"))
 	_, err4 := templ.Execute("simple3.html", data2)
-	test.AssertNilErrorAndContains(t, "", "can't evaluate field Type", err4)
+	test.AssertNotNilErrorAndContains(t, "", "can't evaluate field Type", err4)
 
 	test.AssertTrue(t, "", templ.HasTemplate("simple3.html"))
 	txt4, err5 := templ.Execute("simple3.html", map[string]string{"Type": "Fire", "Count": "SIX"})

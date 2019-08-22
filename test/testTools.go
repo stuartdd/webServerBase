@@ -31,16 +31,16 @@ func AssertNilError(t *testing.T, info string, err error) string {
 }
 
 /*
-AssertNilErrorAndContains - Fail if error is null. Logs error and the stack trace.
+AssertNotNilErrorAndContains - Fail if error is null. Logs error and the stack trace.
 */
-func AssertNilErrorAndContains(t *testing.T, info string, contains string, err error) string {
+func AssertNotNilErrorAndContains(t *testing.T, info string, contains string, err error) string {
 	if err != nil {
 		text := err.Error()
 		if contains != "" {
 			if strings.Contains(text, contains) {
 				return text
 			}
-			logStackTraceAndFail(t, fmt.Sprintf("TEST FAILED: Error text [%s] did NOT contain [%s]", text, contains), info, debug.Stack())
+			logStackTraceAndFail(t, fmt.Sprintf("TEST FAILED: Error text [%s] does NOT contain [%s]", text, contains), info, debug.Stack())
 			return ""
 		}
 		return text
