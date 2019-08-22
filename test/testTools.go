@@ -3,9 +3,45 @@ package test
 import (
 	"io/ioutil"
 	"os"
+	"runtime/debug"
 	"strings"
 	"testing"
 )
+
+/*
+FailIfError - Fail if error is not null. Logs error and the stack trace.
+*/
+func FailIfError(t *testing.T, info string, err error) {
+	if err == nil {
+		return
+	}
+	t.Logf("TEST FAILED: Error[%s] %s", err.Error(), info)
+	st := string(debug.Stack())
+	for count, line := range strings.Split(strings.TrimSuffix(st, "\n"), "\n") {
+		if count > 2 && count <= 10 {
+			t.Logf("TEST FAILED:%s", line)
+		}
+	}
+	t.Fail()
+}
+
+/*
+FailIfNilError - Fail if error is null. Logs error and the stack trace.
+*/
+func FailIfNilError(t *testing.T, info string, err error) string {
+	if err != nil {
+		return err.Error()
+	}
+	t.Logf("TEST FAILED: Error was nil: %s", info)
+	st := string(debug.Stack())
+	for count, line := range strings.Split(strings.TrimSuffix(st, "\n"), "\n") {
+		if count > 2 && count <= 10 {
+			t.Logf("TEST FAILED:%s :%s", info, line)
+		}
+	}
+	t.Fail()
+	return ""
+}
 
 /*
 AssertEqualInt assert ints are equal

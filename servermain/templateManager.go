@@ -43,13 +43,15 @@ func LoadTemplates(templatePath string) (*Templates, error) {
 			if filePathErr == nil {
 				_, tname := filepath.Split(fullPath)
 				fname := strings.Replace(tname, ".template", "", 1)
-				tmpl := template.Must(template.New(fname).ParseFiles(fullPath))
+				tmpl, err := template.ParseFiles(fullPath)
+				if err != nil {
+					return err
+				}
 				templateList.templates[fname] = &templateData{
 					name:     fname,
 					file:     fullPath,
 					template: tmpl,
 				}
-
 				logger.LogInfof("Loading: FILE:%s NAME:%s PATH:%s", tname, fname, fullPath)
 			}
 			return filePathErr
