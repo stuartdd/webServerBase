@@ -132,7 +132,7 @@ func CreateLogWithFilenameAndAppID(defaultLogFileNameIn string, applicationID st
 }
 
 /*
-GetLogLevelTypeForName get the index for the level name
+GetLogLevelTypeIndexForName get the index for the level name
 */
 func GetLogLevelTypeIndexForName(name string) LoggerLevelTypeIndex {
 	if index, ok := loggerLevelMapNames[strings.ToUpper(strings.TrimSpace(name))]; ok {
@@ -293,12 +293,7 @@ func (p *LoggerDataReference) LogError(message error) {
 }
 
 /*
-LogErrorWithStackTrace log a panic message with a stack trace
-	rec := recover()
-	if rec != nil {
-		text := fmt.Sprintf("REQUEST:%s MESSAGE:%s", r.URL.Path, rec)
-		server.logger.LogErrorWithStackTrace("!!!", text)
-	}
+LogErrorWithStackTrace - Log an error and a stack trace
 */
 func (p *LoggerDataReference) LogErrorWithStackTrace(prefix string, message string) {
 	if p.IsError() {

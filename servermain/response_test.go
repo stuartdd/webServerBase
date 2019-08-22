@@ -27,7 +27,7 @@ func TestRespAsInt(t *testing.T) {
 	test.AssertTrue(t, "", resp.IsAnError())
 	test.AssertEqualString(t, "GetContentType()", "Int", resp.GetContentType())
 	test.AssertNotNil(t, "", resp.GetError())
-	test.AssertErrorString(t, "", resp.GetError(), "MeError")
+	test.AssertErrorString(t, "", "MeError", resp.GetError())
 }
 
 func TestRespAsStructWithHeader(t *testing.T) {

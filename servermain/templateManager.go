@@ -65,6 +65,16 @@ func LoadTemplates(templatePath string) (*Templates, error) {
 }
 
 /*
+HasTemplate - return true is the template is loaded and available
+*/
+func (p *Templates) HasTemplate(templateName string) bool {
+	if p.templates[templateName] == nil {
+		return false
+	}
+	return true
+}
+
+/*
 Execute a template
 */
 func (p *Templates) Execute(templateName string, data interface{}) (string, error) {

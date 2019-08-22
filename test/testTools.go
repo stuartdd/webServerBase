@@ -1,6 +1,7 @@
 package test
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"runtime/debug"
@@ -9,191 +10,169 @@ import (
 )
 
 /*
-FailIfError - Fail if error is not null. Logs error and the stack trace.
+AssertError - Fail if error is not null. Logs error and the stack trace.
 */
-func FailIfError(t *testing.T, info string, err error) {
+func AssertError(t *testing.T, info string, err error) {
 	if err == nil {
 		return
 	}
-	t.Logf("TEST FAILED: Error[%s] %s", err.Error(), info)
-	st := string(debug.Stack())
-	for count, line := range strings.Split(strings.TrimSuffix(st, "\n"), "\n") {
-		if count > 2 && count <= 10 {
-			t.Logf("TEST FAILED:%s", line)
-		}
-	}
-	t.Fail()
+	logStackTraceAndFail(t, fmt.Sprintf("TEST FAILED: Error[%s]", err.Error()), info, debug.Stack())
 }
 
 /*
-FailIfNilError - Fail if error is null. Logs error and the stack trace.
+AssertNilError - Fail if error is null. Logs error and the stack trace.
 */
-func FailIfNilErrorAndContains(t *testing.T, info string, contains string, err error) string {
+func AssertNilError(t *testing.T, info string, err error) string {
+	if err != nil {
+		return err.Error()
+	}
+	logStackTraceAndFail(t, "TEST FAILED: Error was nil:", info, debug.Stack())
+	return ""
+}
+
+/*
+AssertNilErrorAndContains - Fail if error is null. Logs error and the stack trace.
+*/
+func AssertNilErrorAndContains(t *testing.T, info string, contains string, err error) string {
 	if err != nil {
 		text := err.Error()
 		if contains != "" {
 			if strings.Contains(text, contains) {
 				return text
 			}
-			t.Logf("TEST FAILED: Error text [%s] did NOT contain [%s]: %s", text, contains, info)
-			t.Fail()
-			return text		
+			logStackTraceAndFail(t, fmt.Sprintf("TEST FAILED: Error text [%s] did NOT contain [%s]", text, contains), info, debug.Stack())
+			return ""
 		}
 		return text
 	}
-	t.Logf("TEST FAILED: Error was nil: %s", info)
-	st := string(debug.Stack())
-	for count, line := range strings.Split(strings.TrimSuffix(st, "\n"), "\n") {
-		if count > 2 && count <= 10 {
-			t.Logf("TEST FAILED:%s :%s", info, line)
-		}
-	}
-	t.Fail()
-	return ""
-}
-
-/*
-FailIfNilError - Fail if error is null. Logs error and the stack trace.
-*/
-func FailIfNilError(t *testing.T, info string, err error) string {
-	if err != nil {
-		return err.Error()
-	}
-	t.Logf("TEST FAILED: Error was nil: %s", info)
-	st := string(debug.Stack())
-	for count, line := range strings.Split(strings.TrimSuffix(st, "\n"), "\n") {
-		if count > 2 && count <= 10 {
-			t.Logf("TEST FAILED:%s :%s", info, line)
-		}
-	}
-	t.Fail()
+	logStackTraceAndFail(t, "TEST FAILED: Error was nil", info, debug.Stack())
 	return ""
 }
 
 /*
 AssertEqualInt assert ints are equal
 */
-func AssertEqualInt(t *testing.T, message string, expected int, actual int) {
+func AssertEqualInt(t *testing.T, info string, expected int, actual int) {
 	if expected != actual {
-		t.Fatalf("Failed: Expected %d actual %d - %s", expected, actual, message)
+		logStackTraceAndFail(t, fmt.Sprintf("Expected %d actual %d", expected, actual), info, debug.Stack())
 	}
 }
 
 /*
-AssertEqualInt assert ints are equal
+AssertNotEqualInt assert ints are NOT equal
 */
-func AssertNotEqualInt(t *testing.T, message string, expected int, actual int) {
+func AssertNotEqualInt(t *testing.T, info string, expected int, actual int) {
 	if expected == actual {
-		t.Fatalf("Failed: Actual value %d should NOT equal %d - %s", actual, expected, message)
+		logStackTraceAndFail(t, fmt.Sprintf("Expected %d NOT actual %d", expected, actual), info, debug.Stack())
 	}
 }
 
 /*
 AssertNil assert object is (null) nil
 */
-func AssertNil(t *testing.T, message string, expected interface{}) {
+func AssertNil(t *testing.T, info string, expected interface{}) {
 	if expected != nil {
-		t.Fatalf("Failed: Expected (%T) should be nil %s", expected, message)
+		logStackTraceAndFail(t, fmt.Sprintf("Failed: Expected (%T) should be nil", expected), info, debug.Stack())
 	}
 }
 
 /*
-AssertNotNil assert object is NOT (null) nil
+AssertNotNil assert object is NOT nil
 */
-func AssertNotNil(t *testing.T, message string, expected interface{}) {
+func AssertNotNil(t *testing.T, info string, expected interface{}) {
 	if expected == nil {
-		t.Fatalf("Failed: Expected value should NOT be nil %s", message)
+		logStackTraceAndFail(t, "Expected value should NOT be nil", info, debug.Stack())
 	}
 }
 
 /*
 AssertEmptyString assert string has a value ""
 */
-func AssertEmptyString(t *testing.T, message string, expected string) {
-	if expected != "" {
-		t.Fatalf("Failed: Expected should be \"\" %s", message)
+func AssertEmptyString(t *testing.T, info string, expected string) {
+	if strings.TrimSpace(expected) != "" {
+		logStackTraceAndFail(t, fmt.Sprintf("Expected should be empty. Not: %s", expected), info, debug.Stack())
 	}
 }
 
 /*
 AssertNotEmptyString assert string has a value, NOT ""
 */
-func AssertNotEmptyString(t *testing.T, message string, expected string) {
-	if expected != "" {
-		t.Fatalf("Failed: Expected should be \"\" %s", message)
+func AssertNotEmptyString(t *testing.T, info string, expected string) {
+	if strings.TrimSpace(expected) != "" {
+		logStackTraceAndFail(t, "Expected string should NOT be empty", info, debug.Stack())
 	}
 }
 
 /*
 AssertTrue assert value is true
 */
-func AssertTrue(t *testing.T, message string, actual bool) {
+func AssertTrue(t *testing.T, info string, actual bool) {
 	if !actual {
-		t.Fatalf("Failed: Expected true actual %t - %s", actual, message)
+		logStackTraceAndFail(t, fmt.Sprintf("Expected true actual %t", actual), info, debug.Stack())
 	}
 }
 
 /*
 AssertFalse assert value is true
 */
-func AssertFalse(t *testing.T, message string, actual bool) {
+func AssertFalse(t *testing.T, info string, actual bool) {
 	if actual {
-		t.Fatalf("Failed: Expected false actual %t - %s", actual, message)
+		logStackTraceAndFail(t, fmt.Sprintf("Expected false actual %t", actual), info, debug.Stack())
 	}
 }
 
 /*
 AssertEqualString assert strings are equal
 */
-func AssertEqualString(t *testing.T, message string, expected string, actual string) {
+func AssertEqualString(t *testing.T, info string, expected string, actual string) {
 	if expected != actual {
-		t.Fatalf("Failed: Expected '%s' actual '%s' - %s", expected, actual, message)
+		logStackTraceAndFail(t, fmt.Sprintf("Expected '%s' actual '%s'", expected, actual), info, debug.Stack())
 	}
 }
 
 /*
 AssertErrorString assert strings are equal
 */
-func AssertErrorString(t *testing.T, message string, expected error, actual string) {
-	if expected == nil {
-		t.Fatalf("Failed: Expected error value should NOT be nil %s", message)
+func AssertErrorString(t *testing.T, info string, expected string, actual error) {
+	if actual == nil {
+		logStackTraceAndFail(t, "Expected error value should NOT be nil", info, debug.Stack())
 	}
-	if expected.Error() != actual {
-		t.Fatalf("Failed: Error message. Expected '%s' actual '%s' - %s", expected.Error(), actual, message)
+	if actual.Error() != expected {
+		logStackTraceAndFail(t, fmt.Sprintf("Expected Error message '%s' actual Error message '%s'", expected, actual.Error()), info, debug.Stack())
 	}
 }
 
 /*
 AssertEndsWithString assert strings are equal
 */
-func AssertEndsWithString(t *testing.T, message string, value string, endsWithThis string) {
+func AssertEndsWithString(t *testing.T, info string, value string, endsWithThis string) {
 	if !strings.HasSuffix(value, endsWithThis) {
-		t.Fatalf("Failed: '%s' does not end with '%s' - %s", value, endsWithThis, message)
+		logStackTraceAndFail(t, fmt.Sprintf("String '%s' does not end with '%s'", value, endsWithThis), info, debug.Stack())
 	}
 }
 
 /*
 RemoveFile assert strings are equal
 */
-func RemoveFile(t *testing.T, message string, path string) {
+func RemoveFile(t *testing.T, info string, path string) {
 	var err = os.Remove(path)
 	if err != nil {
-		t.Fatalf("Failed: file %s could not be deleted - %s Error:%s", path, message, err.Error())
+		logStackTraceAndFail(t, fmt.Sprintf("File %s could not be deleted. Error:%s", path, err.Error()), info, debug.Stack())
 	}
 }
 
 /*
 AssertFileContains read a file ans see if any if the strings are contained in it
 */
-func AssertFileContains(t *testing.T, message string, fileName string, contains []string) {
+func AssertFileContains(t *testing.T, info string, fileName string, contains []string) {
 	b, err := ioutil.ReadFile(fileName)
 	if err != nil {
-		t.Fatalf("Failed: file %s could not be read - %s Error:%s", fileName, message, err.Error())
+		logStackTraceAndFail(t, fmt.Sprintf("File %s could not read. Error:%s", fileName, err.Error()), info, debug.Stack())
 	}
 	str := string(b)
 	for _, val := range contains {
 		if !strings.Contains(str, val) {
-			t.Fatalf("Failed: file %s does not contain '%s' - %s", fileName, val, message)
+			logStackTraceAndFail(t, fmt.Sprintf("File %s does not contain '%s'", fileName, val), info, debug.Stack())
 		}
 	}
 }
@@ -201,15 +180,25 @@ func AssertFileContains(t *testing.T, message string, fileName string, contains 
 /*
 AssertFileDoesNotContain read a file ans see if any if the strings are contained in it
 */
-func AssertFileDoesNotContain(t *testing.T, message string, fileName string, contains []string) {
+func AssertFileDoesNotContain(t *testing.T, info string, fileName string, contains []string) {
 	b, err := ioutil.ReadFile(fileName)
 	if err != nil {
-		t.Fatalf("Failed: file %s could not be read - %s Error:%s", fileName, message, err.Error())
+		logStackTraceAndFail(t, fmt.Sprintf("File %s could not read. Error:%s", fileName, err.Error()), info, debug.Stack())
 	}
 	str := string(b)
 	for _, val := range contains {
 		if strings.Contains(str, val) {
-			t.Fatalf("Failed: file %s contains '%s' - %s", fileName, val, message)
+			logStackTraceAndFail(t, fmt.Sprintf("File %s contains '%s'", fileName, val), info, debug.Stack())
 		}
 	}
+}
+
+func logStackTraceAndFail(t *testing.T, desc string, info string, bytes []byte) {
+	t.Logf("FAILED:%s :%s", info, desc)
+	for count, line := range strings.Split(strings.TrimSuffix(string(bytes), "\n"), "\n") {
+		if count > 2 && count <= 10 {
+			t.Logf("FAILED:%s :%s", info, line)
+		}
+	}
+	t.Fail()
 }
