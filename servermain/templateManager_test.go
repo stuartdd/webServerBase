@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"html/template"
 	"testing"
-	"webServerBase/logging"
 	"webServerBase/test"
 )
 
@@ -13,7 +12,7 @@ type Data struct {
 	Material string
 }
 
-func TestLoadTemplatesSite(t *testing.T) {
+func TestLoadTemplatesFromSite(t *testing.T) {
 	templ, err1 := LoadTemplates("../site")
 	test.FailIfError(t, "", err1)
 	data1 := Data{
@@ -24,16 +23,28 @@ func TestLoadTemplatesSite(t *testing.T) {
 		Count:    4,
 		Material: "Zinc",
 	}
-
 	txt1, err2 := templ.Execute("simple1.html", data1)
 	test.FailIfError(t, "", err2)
-	logging.CreateTestLogger("data1").LogInfof("RESULT:[%s]", txt1)
 	test.AssertEqualString(t, "Template result data1", "Count is 2 Material is Metal", txt1)
 
 	txt2, err3 := templ.Execute("simple2.html", data2)
 	test.FailIfError(t, "", err3)
-	logging.CreateTestLogger("data1").LogInfof("RESULT:[%s]", txt2)
 	test.AssertEqualString(t, "Template result data2", "Material is Zinc Count is 4", txt2)
+
+	_, err4 := templ.Execute("simple3.html", data2)
+	test.FailIfNilErrorAndContains(t, "", "can't evaluate field Type", err4)
+
+	txt4, err5 := templ.Execute("simple3.html", map[string]string{"Type": "Fire", "Count": "SIX"})
+	test.FailIfError(t, "", err5)
+	test.AssertEqualString(t, "Template result mapped", "Material is Fire Count is SIX", txt4)
+
+	mapData := make(map[string]string)
+	mapData["Type"] = "Water"
+	mapData["Count"] = "4"
+	mapData["Extra"] = "More"
+	txt5, err6 := templ.Execute("simple3.html", mapData)
+	test.FailIfError(t, "", err6)
+	test.AssertEqualString(t, "Template result mapped", "Material is Water Count is 4", txt5)
 }
 
 func TestStaticTemplates(t *testing.T) {

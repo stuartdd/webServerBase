@@ -28,6 +28,33 @@ func FailIfError(t *testing.T, info string, err error) {
 /*
 FailIfNilError - Fail if error is null. Logs error and the stack trace.
 */
+func FailIfNilErrorAndContains(t *testing.T, info string, contains string, err error) string {
+	if err != nil {
+		text := err.Error()
+		if contains != "" {
+			if strings.Contains(text, contains) {
+				return text
+			}
+			t.Logf("TEST FAILED: Error text [%s] did NOT contain [%s]: %s", text, contains, info)
+			t.Fail()
+			return text		
+		}
+		return text
+	}
+	t.Logf("TEST FAILED: Error was nil: %s", info)
+	st := string(debug.Stack())
+	for count, line := range strings.Split(strings.TrimSuffix(st, "\n"), "\n") {
+		if count > 2 && count <= 10 {
+			t.Logf("TEST FAILED:%s :%s", info, line)
+		}
+	}
+	t.Fail()
+	return ""
+}
+
+/*
+FailIfNilError - Fail if error is null. Logs error and the stack trace.
+*/
 func FailIfNilError(t *testing.T, info string, err error) string {
 	if err != nil {
 		return err.Error()
