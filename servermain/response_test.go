@@ -14,7 +14,7 @@ type testStruct struct {
 }
 
 func TestRespAsString(t *testing.T) {
-	resp := NewResponse(200, "String", "String", nil)
+	resp := NewResponse(nil, nil).ChangeResponse(200, "String", "String", nil)
 	test.AssertEqualString(t, "Response should be String", "String", resp.GetResp())
 	test.AssertFalse(t, "", resp.IsAnError())
 	test.AssertEqualString(t, "Response ContentType should be String", "String", resp.GetResp())
@@ -22,7 +22,7 @@ func TestRespAsString(t *testing.T) {
 }
 
 func TestRespAsInt(t *testing.T) {
-	resp := NewResponse(300, 90, "Int", errors.New("MeError"))
+	resp := NewResponse(nil, nil).ChangeResponse(300, 90, "Int", errors.New("MeError"))
 	test.AssertEqualString(t, "GetResp()", "90", resp.GetResp())
 	test.AssertTrue(t, "", resp.IsAnError())
 	test.AssertEqualString(t, "GetContentType()", "Int", resp.GetContentType())
@@ -31,7 +31,7 @@ func TestRespAsInt(t *testing.T) {
 }
 
 func TestRespAsStructWithHeader(t *testing.T) {
-	resp := NewResponse(299, testStruct{
+	resp := NewResponse(nil, nil).ChangeResponse(299, testStruct{
 		A: "A",
 		B: true,
 		C: 72.8,

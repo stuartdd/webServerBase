@@ -14,7 +14,7 @@ import (
 const contentTypeName = "Content-Type"
 
 type vetoHandlerListData struct {
-	handlerFunc func(*http.Request, *Response) 
+	handlerFunc func(*http.Request, *Response)
 	next        *vetoHandlerListData
 }
 
@@ -22,18 +22,17 @@ type vetoHandlerListData struct {
 ServerInstanceData is the state of the server
 */
 type ServerInstanceData struct {
-	before               vetoHandlerListData
-	after                vetoHandlerListData
-	errorHandler         func(*http.Request, *Response)
-	responseHandler      func(*http.Request, *Response)
-	redirections         map[string]string
-	contentTypeCharset   string
-	contentTypeLookup    map[string]string
-	server               *http.Server
-	serverState          *statusData
-	logger               *logging.LoggerDataReference
-	panicStatusCode      int
-	noResponseStatusCode int
+	before             vetoHandlerListData
+	after              vetoHandlerListData
+	errorHandler       func(*http.Request, *Response)
+	responseHandler    func(*http.Request, *Response)
+	redirections       map[string]string
+	contentTypeCharset string
+	contentTypeLookup  map[string]string
+	server             *http.Server
+	serverState        *statusData
+	logger             *logging.LoggerDataReference
+	panicStatusCode    int
 }
 
 type statusData struct {
@@ -69,8 +68,8 @@ func NewServerInstanceData(baseHandlerNameIn string, contentTypeCharsetIn string
 			handlerFunc: nil,
 			next:        nil,
 		},
-		errorHandler:        defaultErrorResponseHandler,
-		responseHandler:     defaultResponseHandler,
+		errorHandler:    defaultErrorResponseHandler,
+		responseHandler: defaultResponseHandler,
 		// staticFilehandler:   defaultStaticFileHandler,
 		// templateFilehandler: defaultTemplateFileHandler,
 		// fileServerList: &fileServerContainer{
@@ -89,10 +88,9 @@ func NewServerInstanceData(baseHandlerNameIn string, contentTypeCharsetIn string
 			state:        "RUNNING",
 			panicCounter: 0,
 		},
-		logger:               logging.NewLogger(baseHandlerNameIn),
+		logger: logging.NewLogger(baseHandlerNameIn),
 		// templates:            nil,
-		panicStatusCode:      500,
-		noResponseStatusCode: 400,
+		panicStatusCode: 500,
 	}
 }
 
@@ -118,24 +116,24 @@ func buildMapData(r *http.Request, p *ServerInstanceData) interface{} {
 /*
 ServeHTTP handle ALL calls
 */
-func (p *ServerInstanceData) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	var actualResponse *Response
-	var url = r.URL.Path
+func (p *ServerInstanceData) ServeHTTP(rw http.ResponseWriter, httpRequest *http.Request) {
 	/*
 		Wrap the http.ResponseWriter so we can check statusCode. We also pass in a ref to the server
 		so that the handlers can access the server data (ServerInstanceData)
 	*/
-	w := NewResponseWriterWrapper(rw, p)
+	var w = NewResponseWriterWrapper(rw)
+	var actualResponse = NewResponse(w, p)
+	var url = httpRequest.URL.Path
 	/*
 		If a panic is thrown by ANY handler this defered method will clean up and LOG the event correctly.
 	*/
-	defer checkForPanicAndRecover(w, r)
+	defer checkForPanicAndRecover(httpRequest, actualResponse)
 	/*
 		Log the request.
 		Define ACCESS logging to see the request in the logs
 		Define DEBUG and ACCESS to see the request and headers in the logs
 	*/
-	p.logRequest(r)
+	p.logRequest(httpRequest)
 	/*
 		Check for a matching url in the redirections map and redirect if found
 	*/
@@ -144,63 +142,57 @@ func (p *ServerInstanceData) ServeHTTP(rw http.ResponseWriter, r *http.Request) 
 		if p.logger.IsInfo() {
 			p.logger.LogInfof(">>> REDIRECT: %s --> %s", url, trans)
 		}
-		http.Redirect(w, r, trans, http.StatusSeeOther)
+		http.Redirect(w, httpRequest, trans, http.StatusSeeOther)
 		return
 	}
 	/*
 		Find the mapping for the url (ReST style)
 	*/
-	mapping, found := GetPathMappingElement(url, r.Method)
+	mapping, found := GetPathMappingElement(url, httpRequest.Method)
 	if !found {
 		/*
 			Mapping not found, template not found, static file not found.
 			delegate to the current error handler to manage the error
 		*/
-		p.errorHandler(r, NewResponse(w,p,404, url+" - "+http.StatusText(404), "", nil))
+		p.errorHandler(httpRequest, actualResponse.ChangeResponse(404, url+" - "+http.StatusText(404), "", nil))
 		return
 	}
 
 	/*
 		We found a matching function for the request so lets check each before handler to see if we can procceed.
-		If a before handler returns a response then we abandon the request and return it's response.
+		If a before handler changes the response to an error then we abandon the request and return it's response.
 	*/
-	actualResponse = p.invokeAllVetoHandlersInList(r, nil, &p.before)
-	if actualResponse == nil {
+	p.invokeAllVetoHandlersInList(httpRequest, actualResponse, &p.before)
+	if actualResponse.IsAnError() {
+		if p.logger.IsWarn() {
+			p.logger.LogWarnf("Request was Vetoed by 'Before' handler:%s", actualResponse.GetCSV())
+		}
+	} else {
 		/*
 			We found a matching function for the request so lets get the response.
 			Do not return it immediatly as the after handlers may want to veto the response!
 		*/
-		actualResponse = mapping.HandlerFunc(r)
-		if actualResponse == nil {
-			/*
-				If the handler returned nil then something went wrong so return an error response.
-				Note the return status code can be set by calling SetNoResponseResponseCode. Default is 400.
-			*/
-			actualResponse = NewResponse(w, p, p.noResponseStatusCode, http.StatusText(p.noResponseStatusCode), "", nil)
-		}
-
+		mapping.HandlerFunc(httpRequest, actualResponse)
 		/*
-			If an after handler returns a response then we abandon the request AND the response even if it is valid.
+			If the handler changes the response to an error then we return it's response
+			Otherwisw we see if an after handler wants to veto
 		*/
-		afterVetoHandlerError := p.invokeAllVetoHandlersInList(r, actualResponse, &p.after)
-		if afterVetoHandlerError != nil {
-			actualResponse = afterVetoHandlerError
-			if p.logger.IsWarn() {
-				p.logger.LogWarnf("Response was Vetoed by 'After' handler:%s", actualResponse.GetCSV())
+		if actualResponse.IsNotAnError() {
+			p.invokeAllVetoHandlersInList(httpRequest, actualResponse, &p.after)
+			if actualResponse.IsAnError() {
+				if p.logger.IsWarn() {
+					p.logger.LogWarnf("Response was Vetoed by 'After' handler:%s", actualResponse.GetCSV())
+				}
 			}
-		}
-	} else {
-		if p.logger.IsWarn() {
-			p.logger.LogWarnf("Request was Vetoed by 'Before' handler:%s", actualResponse.GetCSV())
 		}
 	}
 	/*
 		If the response is not a 2xx status code then this is an error
 	*/
 	if actualResponse.IsAnError() {
-		p.errorHandler(r, actualResponse)
+		p.errorHandler(httpRequest, actualResponse)
 	} else {
-		p.responseHandler(r, actualResponse)
+		p.responseHandler(httpRequest, actualResponse)
 	}
 }
 
@@ -257,13 +249,6 @@ SetPanicStatusCode handle an error response if one occurs
 */
 func (p *ServerInstanceData) SetPanicStatusCode(statusCode int) {
 	p.panicStatusCode = statusCode
-}
-
-/*
-SetNoResponseStatusCode handle an error response if one occurs
-*/
-func (p *ServerInstanceData) SetNoResponseStatusCode(statusCode int) {
-	p.noResponseStatusCode = statusCode
 }
 
 /*
@@ -328,14 +313,14 @@ AddFileServerData creates a file server for a path and a root directory
 /*
 AddMappedHandler creates a route to a function given a path
 */
-func (p *ServerInstanceData) AddMappedHandler(path string, method string, handlerFunc func(*http.Request) *Response) {
+func (p *ServerInstanceData) AddMappedHandler(path string, method string, handlerFunc func(*http.Request, *Response)) {
 	AddPathMappingElement(path, method, handlerFunc)
 }
 
 /*
 AddBeforeHandler adds a function called before the mapping function
 */
-func (p *ServerInstanceData) AddBeforeHandler(beforeFunc func(*http.Request, *Response) ) {
+func (p *ServerInstanceData) AddBeforeHandler(beforeFunc func(*http.Request, *Response)) {
 	bef := &p.before
 	for bef.next != nil {
 		bef = bef.next
@@ -350,7 +335,7 @@ func (p *ServerInstanceData) AddBeforeHandler(beforeFunc func(*http.Request, *Re
 /*
 AddAfterHandler adds a function called after the mapping function
 */
-func (p *ServerInstanceData) AddAfterHandler(afterFunc func(*http.Request, *Response) ) {
+func (p *ServerInstanceData) AddAfterHandler(afterFunc func(*http.Request, *Response)) {
 	aft := &p.after
 	for aft.next != nil {
 		aft = aft.next
@@ -426,14 +411,14 @@ func ServeContent(w *ResponseWriterWrapper, r *http.Request, name string) error 
 	return nil
 }
 
-func checkForPanicAndRecover(w *ResponseWriterWrapper, r *http.Request) {
-	server := w.GetWrappedServer()
+func checkForPanicAndRecover(r *http.Request, response *Response) {
+	server := response.GetWrappedServer()
 	rec := recover()
 	if rec != nil {
 		server.serverState.panicCounter++
 		text := fmt.Sprintf("REQUEST:%s MESSAGE:%s", r.URL.Path, rec)
 		server.logger.LogErrorWithStackTrace("!!!", text)
-		server.errorHandler(r, NewResponse(w, w.GetWrappedServer(), server.panicStatusCode, text, "", nil))
+		server.errorHandler(r, response.ChangeResponse(server.panicStatusCode, text, "", nil))
 	}
 }
 
@@ -443,7 +428,7 @@ func defaultTemplateFileHandler(w *ResponseWriterWrapper, r *http.Request) (bool
 
 func defaultStaticFileHandler(w *ResponseWriterWrapper, r *http.Request) (bool, error) {
 	return false, nil
-}	
+}
 
 /*
 ReasonableStaticFileHandler Read a file from a static file location and return it
@@ -501,17 +486,16 @@ invokeAllHandlersInList
 Invoke ALL handlers in the list UNTIL a handler returns a response.
 Any response is considered an ERROR and will veto the normal response.
 */
-func (p *ServerInstanceData) invokeAllVetoHandlersInList(r *http.Request, response *Response, list *vetoHandlerListData) {
+func (p *ServerInstanceData) invokeAllVetoHandlersInList(httpRequest *http.Request, response *Response, list *vetoHandlerListData) {
 	for list.next != nil {
 		if list.handlerFunc != nil {
-			handlerResponse := list.handlerFunc(r, response)
-			if handlerResponse != nil {
-				return 
+			list.handlerFunc(httpRequest, response)
+			if response.IsAnError() {
+				return
 			}
 		}
 		list = list.next
 	}
-	return nil
 }
 
 func (p *ServerInstanceData) logFileServerResponse(response *ResponseWriterWrapper, path string, ext string, mime string, fileName string) {

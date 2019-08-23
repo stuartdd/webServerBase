@@ -7,9 +7,9 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"webServerBase/config"
 	"webServerBase/logging"
 	"webServerBase/servermain"
-	"webServerBase/config"
 )
 
 var logger *logging.LoggerDataReference
@@ -66,36 +66,32 @@ func RunWithConfig(configData *config.ConfigData, executable string) {
 	logger.LogInfof("Server will start on port %d\n", configData.Port)
 	logger.LogInfof("OS '%s'. Static path will be:%s\n", runtime.GOOS, config.GetConfigDataStaticPathForOS())
 	logger.LogInfof("To stop the server http://localhost:%d/stop\n", configData.Port)
-	
+
 	servermain.LoadTemplates(config.GetConfigDataTemplatePathForOS())
 	/*
-	Configure and Start the server.
+		Configure and Start the server.
 	*/
 	serverInstance = servermain.NewServerInstanceData(executable, configData.ContentTypeCharset)
 	/*
-	Add too or override the Default content types
+		Add too or override the Default content types
 	*/
 	serverInstance.AddContentTypeFromMap(configData.ContentTypes)
 	/*
-	Add redirections from the config data
+		Add redirections from the config data
 	*/
 	serverInstance.SetRedirections(config.GetConfigDataInstance().Redirections)
 	/*
-	Add static file paths. 
+		Add static file paths.
 	*/
-//	serverInstance.SetStaticFileDataFromMap(config.GetConfigDataStaticPathForOS())
+	//	serverInstance.SetStaticFileDataFromMap(config.GetConfigDataStaticPathForOS())
 	/*
-	Add template file path (singular). 
+		Add template file path (singular).
 	*/
-//	serverInstance.SetTemplatesPath(config.GetConfigDataTemplatePathForOS())
+	//	serverInstance.SetTemplatesPath(config.GetConfigDataTemplatePathForOS())
 	/*
-	Set the http status code returned if a panic is thrown by any od the handlers
+		Set the http status code returned if a panic is thrown by any od the handlers
 	*/
 	serverInstance.SetPanicStatusCode(configData.PanicResponseCode)
-	/*
-	Set the http status code returned if a handler does not return any data
-	*/
-	serverInstance.SetNoResponseStatusCode(configData.NoResponseResponseCode)
 
 	serverInstance.AddBeforeHandler(filterBefore)
 	serverInstance.AddMappedHandler("/stop", http.MethodGet, stopServerInstance)
@@ -111,36 +107,34 @@ func RunWithConfig(configData *config.ConfigData, executable string) {
 Start of handlers section
 *************************************************/
 
-func stopServerInstance(r *http.Request) *servermain.Response {
+func stopServerInstance(r *http.Request, response *servermain.Response) {
 	serverInstance.StopServerLater(2)
-	return servermain.NewResponse(200, serverInstance.GetStatusDataJSON(), "application/json", nil)
+	response.ChangeResponse(200, serverInstance.GetStatusDataJSON(), "application/json", nil)
 }
 
-func divHandler(r *http.Request) *servermain.Response {
+func divHandler(r *http.Request, response *servermain.Response) {
 	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
 	a, err := strconv.Atoi(parts[1])
 	if err != nil {
-		return servermain.NewResponse(400, "invalid number "+parts[1], "", err)
+		response.ChangeResponse(400, "invalid number "+parts[1], "", err)
 	}
 	b, err := strconv.Atoi(parts[3])
 	if err != nil {
-		return servermain.NewResponse(400, "invalid number "+parts[3], "", err)
+		response.ChangeResponse(400, "invalid number "+parts[3], "", err)
 	}
-	return servermain.NewResponse(200, strconv.Itoa(a/b), "", nil)
+	response.ChangeResponse(200, strconv.Itoa(a/b), "", nil)
 }
 
-func statusHandler(r *http.Request) *servermain.Response {
-	return servermain.NewResponse(200, serverInstance.GetStatusDataJSON(), "application/json", nil)
+func statusHandler(r *http.Request, response *servermain.Response) {
+	response.ChangeResponse(200, serverInstance.GetStatusDataJSON(), "application/json", nil)
 }
 
-func filterBefore(r *http.Request, response *servermain.Response) *servermain.Response {
+func filterBefore(r *http.Request, response *servermain.Response) {
 	logger.LogDebug("IN Filter Before 1")
-	return nil
 }
 
-func filterAfter(r *http.Request, response *servermain.Response) *servermain.Response {
+func filterAfter(r *http.Request, response *servermain.Response) {
 	logger.LogDebug("IN Filter After 1")
-	return nil
 }
 
 /************************************************

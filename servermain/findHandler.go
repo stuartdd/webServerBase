@@ -14,7 +14,7 @@ MappingElements searchable tree
 */
 type MappingElements struct {
 	elements      map[string]*MappingElements
-	HandlerFunc   func(*http.Request) *Response
+	HandlerFunc   func(*http.Request, *Response)
 	RequestMethod string
 }
 
@@ -28,7 +28,7 @@ func ResetMappingElementTree() {
 /*
 AddPathMappingElement Add a path to the mapping
 */
-func AddPathMappingElement(url string, method string, handlerFunc func(*http.Request) *Response) {
+func AddPathMappingElement(url string, method string, handlerFunc func(*http.Request, *Response)) {
 	var me *MappingElements
 	var found bool
 	parts := strings.Split(strings.Trim(url, "/"), "/")

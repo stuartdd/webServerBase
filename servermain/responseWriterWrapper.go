@@ -11,7 +11,6 @@ any methods expecting an object with the http.ResponseWriter interface
 */
 type ResponseWriterWrapper struct {
 	responseWriter http.ResponseWriter
-	server         *ServerInstanceData
 	statusCode     int
 }
 
@@ -23,19 +22,11 @@ func (p *ResponseWriterWrapper) GetStatusCode() int {
 }
 
 /*
-GetWrappedServer returns the serverData instance
-*/
-func (p *ResponseWriterWrapper) GetWrappedServer() *ServerInstanceData {
-	return p.server
-}
-
-/*
 NewResponseWriterWrapper Create a new ResponseWriterWrapper so we can write throught it!
 */
-func NewResponseWriterWrapper(w http.ResponseWriter, p *ServerInstanceData) *ResponseWriterWrapper {
+func NewResponseWriterWrapper(w http.ResponseWriter) *ResponseWriterWrapper {
 	return &ResponseWriterWrapper{
 		responseWriter: w,
-		server:         p,
 		statusCode:     http.StatusOK,
 	}
 }

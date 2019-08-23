@@ -92,6 +92,6 @@ func assertNotFound(t *testing.T, url string, method string) {
 	}
 }
 
-func statusHandler(r *http.Request) *Response {
-	return NewResponse(400, "", "", nil)
+func statusHandler(request *http.Request, response *Response) {
+	response.ChangeResponse(400, "", "", nil)
 }
