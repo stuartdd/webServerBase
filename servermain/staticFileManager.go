@@ -21,7 +21,7 @@ type StaticFileServerData struct {
 }
 
 /*
-NewStaticFileServer create a NEW static file server
+NewStaticFileServer create a NEW static file server given a list of URL prefixs and root directories
 */
 func NewStaticFileServer(mappings map[string]string) *StaticFileServerData {
 
@@ -33,21 +33,21 @@ func NewStaticFileServer(mappings map[string]string) *StaticFileServerData {
 			next: nil,
 		},
 	}
-	for key, value := range mappings {
-		sfs.AddFileServerData(key, value)
+	for urlPrefix, root := range mappings {
+		sfs.AddFileServerData(urlPrefix, root)
 	}
 	return sfs
 }
 
 /*
-AddFileServerData creates a file server for a path and a root directory
+AddFileServerData appends a URL prefix and a root directory
 */
-func (p *StaticFileServerData) AddFileServerData(path string, root string) {
+func (p *StaticFileServerData) AddFileServerData(urlPrefix string, root string) {
 	container := p.FileServerList
 	for container.next != nil {
 		container = container.next
 	}
-	container.path = "/" + path + "/"
+	container.path = "/" + urlPrefix + "/"
 	container.root = root
 	container.fs = http.FileServer(http.Dir(root))
 	container.next = &fileServerContainer{
