@@ -2,6 +2,7 @@ package servermain
 
 import (
 	"fmt"
+	"net/http"
 
 	jsonconfig "github.com/stuartdd/tools_jsonconfig"
 )
@@ -22,6 +23,7 @@ type responseState struct {
 	resp        interface{}
 	contentType string
 	err         error
+	closed      bool
 }
 
 /*
@@ -126,6 +128,22 @@ func (p *Response) GetCSV() string {
 }
 
 /*
+Close - A closed response wil NOT write anything to the response stream. So if
+the response is written then close so no further data is sent.
+*/
+func (p *Response) Close() {
+	p.response.closed = true
+}
+
+/*
+IsClosed - A closed response wil NOT write anything to the response stream. So if
+the response is written then close so no further data is sent.
+*/
+func (p *Response) IsClosed() bool {
+	return p.response.closed
+}
+
+/*
 NewResponse create an error response
 */
 func NewResponse(w *ResponseWriterWrapper, s *ServerInstanceData) *Response {
@@ -139,7 +157,21 @@ func NewResponse(w *ResponseWriterWrapper, s *ServerInstanceData) *Response {
 }
 
 /*
-UpdateResponse create an error response
+SetError404 create an error response
+*/
+func (p *Response) SetError404(url string) *Response {
+	p.response = &responseState{
+		code:        404,
+		resp:        url + " - " + http.StatusText(404),
+		contentType: "",
+		err:         nil,
+		closed:      false,
+	}
+	return p
+}
+
+/*
+ChangeResponse create an error response
 */
 func (p *Response) ChangeResponse(statusCode int, response interface{}, contentType string, goErr error) *Response {
 	p.response = &responseState{
@@ -147,6 +179,7 @@ func (p *Response) ChangeResponse(statusCode int, response interface{}, contentT
 		resp:        response,
 		contentType: contentType,
 		err:         goErr,
+		closed:      false,
 	}
 	return p
 }

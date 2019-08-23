@@ -24,21 +24,21 @@ func TestLoadTemplatesFromSite(t *testing.T) {
 		Material: "Zinc",
 	}
 	test.AssertTrue(t, "", templ.HasTemplate("simple1.html"))
-	txt1, err2 := templ.Execute("simple1.html", data1)
+	txt1, err2 := templ.ExecuteString("simple1.html", data1)
 	test.AssertError(t, "", err2)
 	test.AssertEqualString(t, "Template result data1", "Count is 2 Material is Metal", txt1)
 
 	test.AssertTrue(t, "", templ.HasTemplate("simple2.html"))
-	txt2, err3 := templ.Execute("simple2.html", data2)
+	txt2, err3 := templ.ExecuteString("simple2.html", data2)
 	test.AssertError(t, "", err3)
 	test.AssertEqualString(t, "Template result data2", "Material is Zinc Count is 4", txt2)
 
 	test.AssertFalse(t, "simpleXXX.html", templ.HasTemplate("simpleXXX.html"))
-	_, err4 := templ.Execute("simple3.html", data2)
+	_, err4 := templ.ExecuteString("simple3.html", data2)
 	test.AssertNotNilErrorAndContains(t, "", "can't evaluate field Type", err4)
 
 	test.AssertTrue(t, "", templ.HasTemplate("simple3.html"))
-	txt4, err5 := templ.Execute("simple3.html", map[string]string{"Type": "Fire", "Count": "SIX"})
+	txt4, err5 := templ.ExecuteString("simple3.html", map[string]string{"Type": "Fire", "Count": "SIX"})
 	test.AssertError(t, "", err5)
 	test.AssertEqualString(t, "Template result mapped", "Material is Fire Count is SIX", txt4)
 
@@ -46,7 +46,7 @@ func TestLoadTemplatesFromSite(t *testing.T) {
 	mapData["Type"] = "Water"
 	mapData["Count"] = "4"
 	mapData["Extra"] = "More"
-	txt5, err6 := templ.Execute("simple3.html", mapData)
+	txt5, err6 := templ.ExecuteString("simple3.html", mapData)
 	test.AssertError(t, "", err6)
 	test.AssertEqualString(t, "Template result mapped", "Material is Water Count is 4", txt5)
 }

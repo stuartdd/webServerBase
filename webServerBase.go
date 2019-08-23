@@ -14,6 +14,7 @@ import (
 
 var logger *logging.LoggerDataReference
 var serverInstance *servermain.ServerInstanceData
+var staticFileServer *servermain.StaticFileServer
 
 func main() {
 	/*
@@ -64,14 +65,14 @@ func RunWithConfig(configData *config.ConfigData, executable string) {
 		Log server startup info
 	*/
 	logger.LogInfof("Server will start on port %d\n", configData.Port)
-	logger.LogInfof("OS '%s'. Static path will be:%s\n", runtime.GOOS, config.GetConfigDataStaticPathForOS())
+	logger.LogInfof("OS '%s'. Static path will be:%s\n", runtime.GOOS, configData.GetConfigDataStaticFilePathForOS())
 	logger.LogInfof("To stop the server http://localhost:%d/stop\n", configData.Port)
 
-	servermain.LoadTemplates(config.GetConfigDataTemplatePathForOS())
 	/*
 		Configure and Start the server.
 	*/
 	serverInstance = servermain.NewServerInstanceData(executable, configData.ContentTypeCharset)
+	staticFileServer = servermain.NewStaticFileServer(configData.GetConfigDataStaticFilePathForOS(), serverInstance)
 	/*
 		Add too or override the Default content types
 	*/
@@ -96,7 +97,7 @@ func RunWithConfig(configData *config.ConfigData, executable string) {
 	serverInstance.AddBeforeHandler(filterBefore)
 	serverInstance.AddMappedHandler("/stop", http.MethodGet, stopServerInstance)
 	serverInstance.AddMappedHandler("/status", http.MethodGet, statusHandler)
-	serverInstance.AddMappedHandler("/static/?", http.MethodGet, nil)
+	serverInstance.AddMappedHandler("/static/?", http.MethodGet, servermain.ReasonableStaticFileHandler)
 	serverInstance.AddMappedHandler("/calc/?/div/?", http.MethodGet, divHandler)
 	serverInstance.AddAfterHandler(filterAfter)
 

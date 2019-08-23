@@ -61,8 +61,8 @@ func LoadConfigData(configFileName string) error {
 /*
 GetConfigDataStaticPathForOS Get the static path for the OS. If not found return the first one!
 */
-func GetConfigDataStaticPathForOS() map[string]string {
-	path := GetConfigDataInstance().StaticPaths[runtime.GOOS]
+func (p *ConfigData) GetConfigDataStaticFilePathForOS() map[string]string {
+	path := p.StaticPaths[runtime.GOOS]
 	if path == nil {
 		log.Fatalf("Unable to find staticPath in configuration file '%s' for operating system '%s'", GetConfigDataInstance().ConfigName, runtime.GOOS)
 	}
@@ -72,8 +72,8 @@ func GetConfigDataStaticPathForOS() map[string]string {
 /*
 GetConfigDataTemplatePathForOS Get the static path for the OS. If not found return the first one!
 */
-func GetConfigDataTemplatePathForOS() string {
-	path := GetConfigDataInstance().TemplatePaths[runtime.GOOS]
+func (p *ConfigData) GetConfigDataTemplateFilePathForOS() string {
+	path := p.TemplatePaths[runtime.GOOS]
 	if path == "" {
 		log.Fatalf("Unable to find templatePath in configuration file '%s' for operating system '%s'", GetConfigDataInstance().ConfigName, runtime.GOOS)
 	}
