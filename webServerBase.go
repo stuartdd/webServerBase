@@ -14,7 +14,7 @@ import (
 
 var logger *logging.LoggerDataReference
 var serverInstance *servermain.ServerInstanceData
-var staticFileServer *servermain.StaticFileServer
+var staticFileServer *servermain.StaticFileServerData
 
 func main() {
 	/*
@@ -51,7 +51,7 @@ func main() {
 RunWithConfig runs with a sgeneric handler
 Param - config a ref to the config object
 */
-func RunWithConfig(configData *config.ConfigData, executable string) {
+func RunWithConfig(configData *config.Data, executable string) {
 	/*
 		Open the logs. Log name is in the congig data. If not defined default to sysout
 	*/
@@ -72,7 +72,10 @@ func RunWithConfig(configData *config.ConfigData, executable string) {
 		Configure and Start the server.
 	*/
 	serverInstance = servermain.NewServerInstanceData(executable, configData.ContentTypeCharset)
-	staticFileServer = servermain.NewStaticFileServer(configData.GetConfigDataStaticFilePathForOS(), serverInstance)
+	/*
+		Set the static file data paths for the given OS. When this is done we can add the handler.
+	*/
+	serverInstance.SetStaticFileServerData(configData.GetConfigDataStaticFilePathForOS())
 	/*
 		Add too or override the Default content types
 	*/

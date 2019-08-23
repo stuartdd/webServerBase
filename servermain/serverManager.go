@@ -33,7 +33,7 @@ type ServerInstanceData struct {
 	serverState        *statusData
 	logger             *logging.LoggerDataReference
 	panicStatusCode    int
-	staticFileServer   *StaticFileServer
+	staticFileServerData   *StaticFileServerData
 }
 
 type statusData struct {
@@ -78,8 +78,7 @@ func NewServerInstanceData(baseHandlerNameIn string, contentTypeCharsetIn string
 		logger: logging.NewLogger(baseHandlerNameIn),
 		// templates:            nil,
 		panicStatusCode: 500,
-
-		staticFileServer: nil,
+		staticFileServerData: nil,
 	}
 }
 
@@ -106,17 +105,12 @@ func buildMapData(r *http.Request, p *ServerInstanceData) interface{} {
 ServeHTTP handle ALL calls
 */
 func (p *ServerInstanceData) ServeHTTP(rw http.ResponseWriter, httpRequest *http.Request) {
+	url := httpRequest.URL.Path
 	/*
 		Wrap the http.ResponseWriter so we can check statusCode. We also pass in a ref to the server
 		so that the handlers can access the server data (ServerInstanceData)
 	*/
-	var w = NewResponseWriterWrapper(rw)
-	var actualResponse = NewResponse(w, p)
-	var url = httpRequest.URL.Path
-	/*
-		If a panic is thrown by ANY handler this defered method will clean up and LOG the event correctly.
-	*/
-	defer checkForPanicAndRecover(httpRequest, actualResponse)
+	w := NewResponseWriterWrapper(rw)
 	/*
 		Log the request.
 		Define ACCESS logging to see the request in the logs
@@ -126,14 +120,22 @@ func (p *ServerInstanceData) ServeHTTP(rw http.ResponseWriter, httpRequest *http
 	/*
 		Check for a matching url in the redirections map and redirect if found
 	*/
-	trans := p.redirections[url]
-	if trans != "" {
+	redirect := p.redirections[url]
+	if redirect != "" {
 		if p.logger.IsInfo() {
-			p.logger.LogInfof(">>> REDIRECT: %s --> %s", url, trans)
+			p.logger.LogInfof(">>> REDIRECT: %s --> %s", url, redirect)
 		}
-		http.Redirect(w, httpRequest, trans, http.StatusSeeOther)
+		http.Redirect(w, httpRequest, redirect, http.StatusSeeOther)
 		return
 	}
+	/*
+	Create the response object so we can pass it to the handlers
+	*/
+	actualResponse := NewResponse(w, p)
+	/*
+		If a panic is thrown by ANY handler this defered method will clean up and LOG the event correctly.
+	*/
+	defer checkForPanicAndRecover(httpRequest, actualResponse)
 	/*
 		Find the mapping for the url (ReST style)
 	*/
@@ -176,6 +178,12 @@ func (p *ServerInstanceData) ServeHTTP(rw http.ResponseWriter, httpRequest *http
 		}
 	}
 	/*
+	If the data is already sent there is nothing to do.
+	*/
+	if (actualResponse.IsClosed()) {
+		return
+	}
+	/*
 		If the response is not a 2xx status code then this is an error
 	*/
 	if actualResponse.IsAnError() {
@@ -209,10 +217,10 @@ func (p *ServerInstanceData) LookupContentType(url string) (string, string) {
 }
 
 /*
-SetErrorHandler handle an error response if one occurs
+SetStaticFileServerData handle an error response if one occurs
 */
-func (p *ServerInstanceData) SetStaticFileServer(server *StaticFileServer) {
-	p.staticFileServer = server
+func (p *ServerInstanceData) SetStaticFileServerData(fileServerData map[string]string) {
+	p.staticFileServerData = NewStaticFileServer(fileServerData)
 }
 
 /*

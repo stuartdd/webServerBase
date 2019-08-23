@@ -14,21 +14,19 @@ type fileServerContainer struct {
 }
 
 /*
-StaticFileServer contains a list of fileServerContainer's
+StaticFileServerData contains a list of fileServerContainer's
 */
-type StaticFileServer struct {
-	serverInstance *ServerInstanceData
-	fileServerList *fileServerContainer
+type StaticFileServerData struct {
+	FileServerList *fileServerContainer
 }
 
 /*
-NewStaticFileManager create a NEW static file server
+NewStaticFileServer create a NEW static file server
 */
-func NewStaticFileServer(mappings map[string]string, server *ServerInstanceData) *StaticFileServer {
+func NewStaticFileServer(mappings map[string]string) *StaticFileServerData {
 
-	sfs := &StaticFileServer{
-		serverInstance: server,
-		fileServerList: &fileServerContainer{
+	sfs := &StaticFileServerData{
+		FileServerList: &fileServerContainer{
 			path: "",
 			root: "",
 			fs:   nil,
@@ -44,8 +42,8 @@ func NewStaticFileServer(mappings map[string]string, server *ServerInstanceData)
 /*
 AddFileServerData creates a file server for a path and a root directory
 */
-func (p *StaticFileServer) AddFileServerData(path string, root string) {
-	container := p.fileServerList
+func (p *StaticFileServerData) AddFileServerData(path string, root string) {
+	container := p.FileServerList
 	for container.next != nil {
 		container = container.next
 	}
@@ -66,33 +64,56 @@ ReasonableStaticFileHandler Read a file from a static file location and return i
 func ReasonableStaticFileHandler(request *http.Request, response *Response) {
 	url := request.URL.Path
 	server := response.GetWrappedServer()
-	fileServer := server.staticFileServer
-	if fileServer == nil {
+	fileServerData := server.staticFileServerData
+	/*
+	If an there is no file server data then change the response to Not Found and return
+	*/
+	if fileServerData == nil {
 		response.SetError404(url)
 		return
 	}
-	fileServerList := fileServer.fileServerList
-	if fileServer == nil {
+	/*
+	If an there is no file server list then change the response to Not Found and return
+	*/
+	fileServerList := fileServerData.FileServerList
+	if fileServerList == nil {
 		response.SetError404(url)
 		return
 	}
 
 	for fileServerList.fs != nil {
 		if strings.HasPrefix(url, fileServerList.path) {
+			/*
+			Work out the content type from the file name extension
+			*/
 			contentType, _ := server.LookupContentType(url)
 			if contentType != "" {
 				response.GetHeaders()[contentTypeName] = []string{contentType + "; charset=" + server.contentTypeCharset}
 			}
+			/*
+			derive the file name from the url and the path in the fileServerList
+			*/
 			filename := filepath.Join(fileServerList.root, url[len(fileServerList.path):])
 			err := ServeContent(response.GetWrappedWriter(), request, filename)
 			if err != nil {
+				/*
+				If an error occured change the response to an error and return
+				*/
 				response.ChangeResponse(400, "ServeContent", "", err)
 				return
 			}
+			/*
+			The file is being written to the response writer.
+
+			Close the response to prevent further writes to the response writer
+			*/
 			response.Close()
 			return
 		}
 		fileServerList = fileServerList.next
 	}
+	/*
+	If not matching file was found then change the response to Not Found and return
+	*/
 	response.SetError404(url)
 }
