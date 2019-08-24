@@ -148,11 +148,18 @@ NewResponse create an error response
 */
 func NewResponse(w *ResponseWriterWrapper, s *ServerInstanceData) *Response {
 	return &Response{
-		response: nil,
+		response:  &responseState{
+			code:        200,
+			resp:        "",
+			contentType: "",
+			err:         nil,
+			closed:      false,
+		},
 		context: &responseContext{
 			writer: w,
 			server: s,
 		},
+		headers: make(map[string][]string),
 	}
 }
 

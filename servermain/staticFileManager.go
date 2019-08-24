@@ -16,16 +16,16 @@ type fileServerContainer struct {
 /*
 StaticFileServerData contains a list of fileServerContainer's
 */
-type StaticFileServerData struct {
+type FileServerData struct {
 	FileServerList *fileServerContainer
 }
 
 /*
 NewStaticFileServer create a NEW static file server given a list of URL prefixs and root directories
 */
-func NewStaticFileServer(mappings map[string]string) *StaticFileServerData {
+func NewStaticFileServer(mappings map[string]string) *FileServerData {
 
-	sfs := &StaticFileServerData{
+	sfs := &FileServerData{
 		FileServerList: &fileServerContainer{
 			path: "",
 			root: "",
@@ -42,7 +42,7 @@ func NewStaticFileServer(mappings map[string]string) *StaticFileServerData {
 /*
 AddFileServerData appends a URL prefix and a root directory
 */
-func (p *StaticFileServerData) AddFileServerData(urlPrefix string, root string) {
+func (p *FileServerData) AddFileServerData(urlPrefix string, root string) {
 	container := p.FileServerList
 	for container.next != nil {
 		container = container.next
@@ -64,7 +64,7 @@ ReasonableStaticFileHandler Read a file from a static file location and return i
 func ReasonableStaticFileHandler(request *http.Request, response *Response) {
 	url := request.URL.Path
 	server := response.GetWrappedServer()
-	fileServerData := server.staticFileServerData
+	fileServerData := server.fileServerData
 	/*
 	If an there is no file server data then change the response to Not Found and return
 	*/

@@ -21,6 +21,21 @@ func TestRespAsString(t *testing.T) {
 	test.AssertNil(t, "", resp.GetError())
 }
 
+func TestCanAddHeaders(t *testing.T) {
+	resp := NewResponse(nil, nil)
+	resp.AddHeader("H1", []string{"a","b"})
+	test.AssertEqualInt(t, "", 2, len(resp.GetHeaders()["H1"]))
+	test.AssertEqualString(t, "", "a", resp.GetHeaders()["H1"][0])
+	test.AssertEqualString(t, "", "b", resp.GetHeaders()["H1"][1])
+}
+
+func TestIsError(t *testing.T) {
+	resp := NewResponse(nil, nil)
+	test.AssertFalse(t, "", resp.IsAnError())
+	test.AssertFalse(t, "", resp.IsClosed())
+	test.AssertEqualInt(t,"",200,resp.GetCode())
+}
+
 func TestRespAsInt(t *testing.T) {
 	resp := NewResponse(nil, nil).ChangeResponse(300, 90, "Int", errors.New("MeError"))
 	test.AssertEqualString(t, "GetResp()", "90", resp.GetResp())

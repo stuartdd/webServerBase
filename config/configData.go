@@ -22,8 +22,8 @@ type Data struct {
 	ContentTypeCharset string
 	LoggerLevels       map[string]string
 	PanicResponseCode  int
-	staticPaths        map[string]map[string]string
-	templatePaths      map[string]string
+	StaticPaths        map[string]map[string]string
+	TemplatePaths      map[string]string
 }
 
 var configDataInstance *Data
@@ -41,8 +41,8 @@ func LoadConfigData(configFileName string) error {
 		Port:               8080,
 		ContentTypeCharset: "utf-8",
 		ContentTypes:       make(map[string]string),
-		staticPaths:        make(map[string]map[string]string),
-		templatePaths:      make(map[string]string),
+		StaticPaths:        make(map[string]map[string]string),
+		TemplatePaths:      make(map[string]string),
 		Redirections:       make(map[string]string),
 		LoggerLevels:       make(map[string]string),
 	}
@@ -62,7 +62,7 @@ func LoadConfigData(configFileName string) error {
 GetConfigDataStaticFilePathForOS Get the static path for the OS. If not found return the first one!
 */
 func (p *Data) GetConfigDataStaticFilePathForOS() map[string]string {
-	path := p.staticPaths[runtime.GOOS]
+	path := p.StaticPaths[runtime.GOOS]
 	if path == nil {
 		log.Fatalf("Unable to find staticPath in configuration file '%s' for operating system '%s'", GetConfigDataInstance().ConfigName, runtime.GOOS)
 	}
@@ -73,7 +73,7 @@ func (p *Data) GetConfigDataStaticFilePathForOS() map[string]string {
 GetConfigDataTemplateFilePathForOS Get the static path for the OS. If not found return the first one!
 */
 func (p *Data) GetConfigDataTemplateFilePathForOS() string {
-	path := p.templatePaths[runtime.GOOS]
+	path := p.TemplatePaths[runtime.GOOS]
 	if path == "" {
 		log.Fatalf("Unable to find templatePath in configuration file '%s' for operating system '%s'", GetConfigDataInstance().ConfigName, runtime.GOOS)
 	}

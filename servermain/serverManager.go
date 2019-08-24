@@ -33,7 +33,7 @@ type ServerInstanceData struct {
 	serverState        *statusData
 	logger             *logging.LoggerDataReference
 	panicStatusCode    int
-	staticFileServerData   *StaticFileServerData
+	fileServerData   *FileServerData
 }
 
 type statusData struct {
@@ -78,7 +78,7 @@ func NewServerInstanceData(baseHandlerNameIn string, contentTypeCharsetIn string
 		logger: logging.NewLogger(baseHandlerNameIn),
 		// templates:            nil,
 		panicStatusCode: 500,
-		staticFileServerData: nil,
+		fileServerData: nil,
 	}
 }
 
@@ -220,7 +220,7 @@ func (p *ServerInstanceData) LookupContentType(url string) (string, string) {
 SetStaticFileServerData handle an error response if one occurs
 */
 func (p *ServerInstanceData) SetStaticFileServerData(fileServerData map[string]string) {
-	p.staticFileServerData = NewStaticFileServer(fileServerData)
+	p.fileServerData = NewStaticFileServer(fileServerData)
 }
 
 /*

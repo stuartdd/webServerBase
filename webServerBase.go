@@ -14,7 +14,7 @@ import (
 
 var logger *logging.LoggerDataReference
 var serverInstance *servermain.ServerInstanceData
-var staticFileServer *servermain.StaticFileServerData
+var staticFileServer *servermain.FileServerData
 
 func main() {
 	/*
