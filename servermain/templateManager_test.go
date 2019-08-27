@@ -1,6 +1,7 @@
 package servermain
 
 import (
+	"webServerBase/logging"
 	"bytes"
 	"html/template"
 	"testing"
@@ -12,8 +13,10 @@ type Data struct {
 	Material string
 }
 
-func TestLoadTemplatesFromSite(t *testing.T) {
+func TestLoadTemplatesFromPath(t *testing.T) {
+	logger := logging.CreateTestLogger("Templates")
 	templ, err1 := LoadTemplates("../site")
+	
 	test.AssertError(t, "", err1)
 	data1 := Data{
 		Count:    2,

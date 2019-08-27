@@ -117,6 +117,7 @@ func stopServerInstance(r *http.Request, response *servermain.Response) {
 }
 
 func divHandler(r *http.Request, response *servermain.Response) {
+	r.ParseForm()
 	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
 	a, err := strconv.Atoi(parts[1])
 	if err != nil {
