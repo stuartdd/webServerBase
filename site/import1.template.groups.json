@@ -1,0 +1,16 @@
+[
+    {
+        "name": "import1.html",
+        "templates": [
+            "import2.template.html",
+            "simple2.template.html"
+        ]
+    },
+    {
+        "name": "import2.html",
+        "templates": [
+            "import2.template.html",
+            "simple2.template.html"
+        ]
+    }
+]

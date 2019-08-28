@@ -1,10 +1,10 @@
 package servermain
 
 import (
-	"webServerBase/logging"
 	"bytes"
 	"html/template"
 	"testing"
+	"webServerBase/logging"
 	"webServerBase/test"
 )
 
@@ -13,11 +13,33 @@ type Data struct {
 	Material string
 }
 
+var templ *Templates
+var err1 error
+
+func TestLoadTemplatesNested(t *testing.T) {
+	if templ == nil {
+		templ, err1 = LoadTemplates("../site")
+	}
+	mapData := make(map[string]string)
+	mapData["Type"] = "Water"
+	mapData["Count"] = "4"
+	mapData["Extra"] = "More"
+	mapData["Materials"] = "More"
+	test.AssertTrue(t, "", templ.HasTemplate("import1.html"))
+	test.AssertTrue(t, "", templ.HasTemplate("import2.html"))
+	test.AssertTrue(t, "", templ.HasTemplate("simple1.html"))
+	test.AssertTrue(t, "", templ.HasTemplate("simple2.html"))
+	txt1, err := templ.ExecuteString("import1.html", mapData)
+	test.AssertNotError(t, "", err)
+	logging.CreateTestLogger("NESTED:").LogDebugf("Content:[%s]", txt1)
+}
+
 func TestLoadTemplatesFromPath(t *testing.T) {
-	logger := logging.CreateTestLogger("Templates")
-	templ, err1 := LoadTemplates("../site")
-	
-	test.AssertError(t, "", err1)
+	if templ == nil {
+		templ, err1 = LoadTemplates("../site")
+	}
+
+	test.AssertNotError(t, "", err1)
 	data1 := Data{
 		Count:    2,
 		Material: "Metal",
@@ -28,13 +50,13 @@ func TestLoadTemplatesFromPath(t *testing.T) {
 	}
 	test.AssertTrue(t, "", templ.HasTemplate("simple1.html"))
 	txt1, err2 := templ.ExecuteString("simple1.html", data1)
-	test.AssertError(t, "", err2)
-	test.AssertEqualString(t, "Template result data1", "Count is 2 Material is Metal", txt1)
+	test.AssertNotError(t, "", err2)
+	test.AssertEqualString(t, "Template result data1", "S1 - Count is 2 Material is Metal", txt1)
 
 	test.AssertTrue(t, "", templ.HasTemplate("simple2.html"))
 	txt2, err3 := templ.ExecuteString("simple2.html", data2)
-	test.AssertError(t, "", err3)
-	test.AssertEqualString(t, "Template result data2", "Material is Zinc Count is 4", txt2)
+	test.AssertNotError(t, "", err3)
+	test.AssertEqualString(t, "Template result data2", "S2 - Material is Zinc Count is 4", txt2)
 
 	test.AssertFalse(t, "simpleXXX.html", templ.HasTemplate("simpleXXX.html"))
 	_, err4 := templ.ExecuteString("simple3.html", data2)
@@ -42,21 +64,21 @@ func TestLoadTemplatesFromPath(t *testing.T) {
 
 	test.AssertTrue(t, "", templ.HasTemplate("simple3.html"))
 	txt4, err5 := templ.ExecuteString("simple3.html", map[string]string{"Type": "Fire", "Count": "SIX"})
-	test.AssertError(t, "", err5)
-	test.AssertEqualString(t, "Template result mapped", "Material is Fire Count is SIX", txt4)
+	test.AssertNotError(t, "", err5)
+	test.AssertEqualString(t, "S3 - Template result mapped", "S3 - Material is Fire Count is SIX", txt4)
 
 	mapData := make(map[string]string)
 	mapData["Type"] = "Water"
 	mapData["Count"] = "4"
 	mapData["Extra"] = "More"
 	txt5, err6 := templ.ExecuteString("simple3.html", mapData)
-	test.AssertError(t, "", err6)
-	test.AssertEqualString(t, "Template result mapped", "Material is Water Count is 4", txt5)
+	test.AssertNotError(t, "", err6)
+	test.AssertEqualString(t, "S3 - Template result mapped", "S3 - Material is Water Count is 4", txt5)
 }
 
 func TestStaticTemplates(t *testing.T) {
 	tmpl, err := template.New("helloWorld").Parse("Count is {{ .Count }} Material is {{ .Material }}")
-	test.AssertError(t, "", err)
+	test.AssertNotError(t, "", err)
 	buf := new(bytes.Buffer)
 	data1 := Data{
 		Count:    7,
@@ -67,23 +89,23 @@ func TestStaticTemplates(t *testing.T) {
 		Material: "Wool",
 	}
 	err1 := tmpl.Execute(buf, data1)
-	test.AssertError(t, "", err1)
+	test.AssertNotError(t, "", err1)
 	test.AssertEqualString(t, "Template result data1", "Count is 7 Material is Silk", buf.String())
 
 	buf.Reset()
 	err2 := tmpl.Execute(buf, data2)
-	test.AssertError(t, "", err2)
+	test.AssertNotError(t, "", err2)
 	test.AssertEqualString(t, "Template result data2", "Count is 9 Material is Wool", buf.String())
 }
 
 func TestFileTemplateNotFound(t *testing.T) {
 	_, err := template.ParseFiles("../site/simple1.template.html.x")
-	test.AssertNilError(t, "File should NOT be found", err)
+	test.AssertIsError(t, "File should NOT be found", err)
 }
 
 func TestFileTemplates(t *testing.T) {
 	tmpl, err := template.ParseFiles("../site/simple1.template.html")
-	test.AssertError(t, "", err)
+	test.AssertNotError(t, "", err)
 	buf := new(bytes.Buffer)
 	data1 := Data{
 		Count:    7,
@@ -94,11 +116,11 @@ func TestFileTemplates(t *testing.T) {
 		Material: "Wool",
 	}
 	err1 := tmpl.Execute(buf, data1)
-	test.AssertError(t, "", err1)
-	test.AssertEqualString(t, "Template result data1", "Count is 7 Material is Silk", buf.String())
+	test.AssertNotError(t, "", err1)
+	test.AssertEqualString(t, "Template result data1", "S1 - Count is 7 Material is Silk", buf.String())
 
 	buf.Reset()
 	err2 := tmpl.Execute(buf, data2)
-	test.AssertError(t, "", err2)
-	test.AssertEqualString(t, "Template result data2", "Count is 9 Material is Wool", buf.String())
+	test.AssertNotError(t, "", err2)
+	test.AssertEqualString(t, "Template result data2", "S1 - Count is 9 Material is Wool", buf.String())
 }

@@ -9,7 +9,7 @@
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "${fileDirname}/webServerBase.go",
+            "program": "${fileDirname}\\webServerBase.go",
             "env": {},
             "args": []
         }

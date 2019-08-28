@@ -10,19 +10,26 @@ import (
 )
 
 /*
-AssertError - Fail if error is not null. Logs error and the stack trace.
+Fail - Fail with a message and a StackTrace
 */
-func AssertError(t *testing.T, info string, err error) {
-	if err == nil {
-		return
-	}
-	logStackTraceAndFail(t, fmt.Sprintf("TEST FAILED: Error[%s]", err.Error()), info, debug.Stack())
+func Fail(t *testing.T, info string, message string) {
+	logStackTraceAndFail(t, fmt.Sprintf("TEST FAILED: Error[%s]", message), info, debug.Stack())
 }
 
 /*
-AssertNilError - Fail if error is null. Logs error and the stack trace.
+AssertNotError - Fail if error is not null. Logs error and the stack trace.
 */
-func AssertNilError(t *testing.T, info string, err error) string {
+func AssertNotError(t *testing.T, info string, err error) {
+	if err == nil {
+		return
+	}
+	logStackTraceAndFail(t, fmt.Sprintf("TEST FAILED: Error must be nil. Error[%s]", err.Error()), info, debug.Stack())
+}
+
+/*
+AssertIsError - Fail if error is null. Logs error and the stack trace.
+*/
+func AssertIsError(t *testing.T, info string, err error) string {
 	if err != nil {
 		return err.Error()
 	}

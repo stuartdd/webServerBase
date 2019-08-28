@@ -9,7 +9,16 @@ import (
 	"path/filepath"
 	"strings"
 	"webServerBase/logging"
+
+	jsonconfig "github.com/stuartdd/tools_jsonconfig"
 )
+
+type templateGroup struct {
+	Name      string
+	Templates []string
+}
+
+var groupList []templateGroup
 
 type templateData struct {
 	name     string
@@ -39,23 +48,11 @@ func LoadTemplates(templatePath string) (*Templates, error) {
 		templates: make(map[string]*templateData),
 	}
 	walkError := filepath.Walk(templatePath, func(path string, info os.FileInfo, errIn error) error {
+		if strings.Contains(path, ".template.groups.") {
+			return loadGroupOfTemplates(path, templateList)
+		}
 		if strings.Contains(path, ".template.") {
-			fullPath, filePathErr := filepath.Abs(path)
-			if filePathErr == nil {
-				_, tname := filepath.Split(fullPath)
-				fname := strings.Replace(tname, ".template", "", 1)
-				tmpl, err := template.ParseFiles(fullPath)
-				if err != nil {
-					return err
-				}
-				templateList.templates[fname] = &templateData{
-					name:     fname,
-					file:     fullPath,
-					template: tmpl,
-				}
-				logger.LogInfof("Loading: FILE:%s NAME:%s PATH:%s", tname, fname, fullPath)
-			}
-			return filePathErr
+			return loadSingletemplate(path, templateList)
 		}
 		return errIn
 	})
@@ -63,6 +60,57 @@ func LoadTemplates(templatePath string) (*Templates, error) {
 		return nil, walkError
 	}
 	return templateList, nil
+}
+func loadGroupOfTemplates(path string, templateList *Templates) error {
+	fullPath, filePathErr := filepath.Abs(path)
+	if filePathErr != nil {
+		if filePathErr != nil {
+			return filePathErr
+		}
+		err := jsonconfig.LoadJson(fullPath, &groupList)
+		if err != nil {
+			return err
+		}
+		for _, group := range groupList {
+			tmpl, err := template.ParseFiles(group.Templates...)
+			if err != nil {
+				return err
+			}
+			templateList.templates[group.Name] = &templateData{
+				name:     group.Name,
+				file:     fullPath,
+				template: tmpl,
+			}
+		}
+	}
+	return filePathErr
+}
+
+func loadSingletemplate(path string, templateList *Templates) error {
+	fullPath, filePathErr := filepath.Abs(path)
+	if filePathErr == nil {
+		_, tname := filepath.Split(fullPath)
+		fname := strings.Replace(tname, ".template", "", 1)
+		var tmpl *template.Template
+		var err error
+		if fname == "import1.html" {
+			// tmpl, err = template.ParseFiles(fullPath, "C:\\Users\\802996013\\go\\src\\webServerBase\\site\\import2.template.html", "C:\\Users\\802996013\\go\\src\\webServerBase\\site\\simple2.template.html")
+			tmpl, err = template.ParseFiles(fullPath)
+		} else {
+			tmpl, err = template.ParseFiles(fullPath)
+		}
+		if err != nil {
+			return err
+		}
+		templateList.templates[fname] = &templateData{
+			name:     fname,
+			file:     fullPath,
+			template: tmpl,
+		}
+		logger.LogInfof("Loading: FILE:%s NAME:%s PATH:%s", tname, fname, fullPath)
+	}
+	return filePathErr
+
 }
 
 /*
