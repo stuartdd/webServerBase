@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"webServerBase/logging"
@@ -48,8 +49,8 @@ func LoadTemplates(templatePath string) (*Templates, error) {
 		templates: make(map[string]*templateData),
 	}
 	walkError := filepath.Walk(templatePath, func(path string, info os.FileInfo, errIn error) error {
-		if strings.Contains(path, ".template.groups.") {
-			return loadGroupOfTemplates(path, templateList)
+		if strings.Contains(path, ".template.groups.json") {
+			return loadGroupOfTemplates(templatePath, path, templateList)
 		}
 		if strings.Contains(path, ".template.") {
 			return loadSingletemplate(path, templateList)
@@ -61,9 +62,10 @@ func LoadTemplates(templatePath string) (*Templates, error) {
 	}
 	return templateList, nil
 }
-func loadGroupOfTemplates(path string, templateList *Templates) error {
-	fullPath, filePathErr := filepath.Abs(path)
-	if filePathErr != nil {
+
+func loadGroupOfTemplates(templatePath string, groupFile string, templateList *Templates) error {
+	fullPath, filePathErr := filepath.Abs(groupFile)
+	if filePathErr == nil {
 		if filePathErr != nil {
 			return filePathErr
 		}
@@ -71,7 +73,16 @@ func loadGroupOfTemplates(path string, templateList *Templates) error {
 		if err != nil {
 			return err
 		}
+
 		for _, group := range groupList {
+			
+			for index := range group.Templates {
+				pathTotemplate, err := filepath.Abs(path.Join(templatePath, group.Templates[index]))
+				if err != nil {
+					return err
+				}
+				group.Templates[index] = pathTotemplate
+			}
 			tmpl, err := template.ParseFiles(group.Templates...)
 			if err != nil {
 				return err

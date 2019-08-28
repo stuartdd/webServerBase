@@ -1,16 +1,10 @@
 [
     {
-        "name": "import1.html",
+        "name": "composite1.html",
         "templates": [
-            "import2.template.html",
-            "simple2.template.html"
-        ]
-    },
-    {
-        "name": "import2.html",
-        "templates": [
-            "import2.template.html",
-            "simple2.template.html"
+            "import1.html",
+            "part1.html",
+            "part2.html"
         ]
     }
 ]

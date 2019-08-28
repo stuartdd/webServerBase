@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"html/template"
 	"testing"
-	"webServerBase/logging"
 	"webServerBase/test"
 )
 
@@ -19,19 +18,38 @@ var err1 error
 func TestLoadTemplatesNested(t *testing.T) {
 	if templ == nil {
 		templ, err1 = LoadTemplates("../site")
+		test.AssertNotError(t, "", err1)
 	}
 	mapData := make(map[string]string)
 	mapData["Type"] = "Water"
 	mapData["Count"] = "4"
 	mapData["Extra"] = "More"
-	mapData["Materials"] = "More"
-	test.AssertTrue(t, "", templ.HasTemplate("import1.html"))
-	test.AssertTrue(t, "", templ.HasTemplate("import2.html"))
+	mapData["Material"] = "Silk"
+	test.AssertFalse(t, "", templ.HasTemplate("import1.html"))
+	test.AssertFalse(t, "", templ.HasTemplate("part1.html"))
+	test.AssertFalse(t, "", templ.HasTemplate("part2.html"))
+	test.AssertTrue(t, "", templ.HasTemplate("composite1.html"))
 	test.AssertTrue(t, "", templ.HasTemplate("simple1.html"))
 	test.AssertTrue(t, "", templ.HasTemplate("simple2.html"))
-	txt1, err := templ.ExecuteString("import1.html", mapData)
+	txt1, err := templ.ExecuteString("composite1.html", mapData)
 	test.AssertNotError(t, "", err)
-	logging.CreateTestLogger("NESTED:").LogDebugf("Content:[%s]", txt1)
+	test.AssertEqualString(t, "Template result data1", "Imp 1.0 - Count is 4 Material is More Silk --PART 1 Silk-- --PART 2 is 4 of Silk -- --PART 3 wants More--", txt1)
+
+}
+
+func TestFileGroupTemplates(t *testing.T) {
+	tmpl, err := template.ParseFiles("../site/import1.html", "../site/part1.html", "../site/part2.html")
+	test.AssertNotError(t, "", err)
+	buf := new(bytes.Buffer)
+	mapData := make(map[string]string)
+	mapData["Type"] = "Water"
+	mapData["Count"] = "4"
+	mapData["Extra"] = "More"
+	mapData["Material"] = "Silk"
+	err1 := tmpl.Execute(buf, mapData)
+	test.AssertNotError(t, "", err1)
+	test.AssertEqualString(t, "Template result data1", "Imp 1.0 - Count is 4 Material is More Silk --PART 1 Silk-- --PART 2 is 4 of Silk -- --PART 3 wants More--", buf.String())
+
 }
 
 func TestLoadTemplatesFromPath(t *testing.T) {
