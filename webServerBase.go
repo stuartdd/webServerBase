@@ -76,6 +76,7 @@ func RunWithConfig(configData *config.Data, executable string) {
 		Set the static file data paths for the given OS. When this is done we can add the handler.
 	*/
 	serverInstance.SetStaticFileServerData(configData.GetConfigDataStaticFilePathForOS())
+	serverInstance.SetPathToTemplates(configData.GetConfigDataTemplateFilePathForOS())
 	/*
 		Add too or override the Default content types
 	*/

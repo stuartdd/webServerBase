@@ -33,7 +33,8 @@ type ServerInstanceData struct {
 	serverState        *statusData
 	logger             *logging.LoggerDataReference
 	panicStatusCode    int
-	fileServerData   *FileServerData
+	fileServerData     *FileServerData
+	templates          *Templates
 }
 
 type statusData struct {
@@ -75,10 +76,10 @@ func NewServerInstanceData(baseHandlerNameIn string, contentTypeCharsetIn string
 			state:        "RUNNING",
 			panicCounter: 0,
 		},
-		logger: logging.NewLogger(baseHandlerNameIn),
-		// templates:            nil,
+		logger:          logging.NewLogger(baseHandlerNameIn),
 		panicStatusCode: 500,
-		fileServerData: nil,
+		fileServerData:  nil,
+		templates:       nil,
 	}
 }
 
@@ -129,7 +130,7 @@ func (p *ServerInstanceData) ServeHTTP(rw http.ResponseWriter, httpRequest *http
 		return
 	}
 	/*
-	Create the response object so we can pass it to the handlers
+		Create the response object so we can pass it to the handlers
 	*/
 	actualResponse := NewResponse(w, p)
 	/*
@@ -142,7 +143,7 @@ func (p *ServerInstanceData) ServeHTTP(rw http.ResponseWriter, httpRequest *http
 	mapping, found := GetPathMappingElement(url, httpRequest.Method)
 	if !found {
 		/*
-			Mapping not found, template not found, static file not found.
+			Mapping not found,
 			delegate to the current error handler to manage the error
 		*/
 		p.errorHandler(httpRequest, actualResponse.SetError404(url))
@@ -178,9 +179,9 @@ func (p *ServerInstanceData) ServeHTTP(rw http.ResponseWriter, httpRequest *http
 		}
 	}
 	/*
-	If the data is already sent there is nothing to do.
+		If the data is already sent there is nothing to do.
 	*/
-	if (actualResponse.IsClosed()) {
+	if actualResponse.IsClosed() {
 		return
 	}
 	/*
@@ -219,8 +220,22 @@ func (p *ServerInstanceData) LookupContentType(url string) (string, string) {
 /*
 SetStaticFileServerData handle an error response if one occurs
 */
-func (p *ServerInstanceData) SetStaticFileServerData(fileServerData map[string]string) {
-	p.fileServerData = NewStaticFileServer(fileServerData)
+func (p *ServerInstanceData) SetStaticFileServerData(fileServerDataMap map[string]string) {
+	p.fileServerData = NewStaticFileServer(fileServerDataMap)
+}
+
+/*
+SetPathToTemplates initialise the template system
+*/
+func (p *ServerInstanceData) SetPathToTemplates(pathToTemplates string) {
+	templ, err := LoadTemplates("../site")
+	if err != nil {
+		panic(err)
+	}
+	if templ.HasAnyTemplates() {
+		p.templates = templ
+	}
+	panic("SetPathToTemplates did NOT ")
 }
 
 /*
@@ -274,25 +289,6 @@ func (p *ServerInstanceData) AddContentTypeFromMap(mimeTypeMap map[string]string
 		p.contentTypeLookup[name] = value
 	}
 }
-
-/*
-AddFileServerData creates a file server for a path and a root directory
-*/
-// func (p *ServerInstanceData) AddFileServerData(path string, root string) {
-// 	container := p.fileServerList
-// 	for container.next != nil {
-// 		container = container.next
-// 	}
-// 	container.path = "/" + path + "/"
-// 	container.root = root
-// 	container.fs = http.FileServer(http.Dir(root))
-// 	container.next = &fileServerContainer{
-// 		path: "",
-// 		root: "",
-// 		fs:   nil,
-// 		next: nil,
-// 	}
-// }
 
 /*
 AddMappedHandler creates a route to a function given a path
