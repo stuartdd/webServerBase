@@ -34,7 +34,7 @@ type Templates struct {
 	templates map[string]*templateData
 }
 
-var logger = logging.NewLogger("templates")
+var logger *logging.LoggerDataReference
 
 /*
 LoadTemplates - Load the templates given the template paths. For example
@@ -45,6 +45,7 @@ Templates should be named *.template.* in order to be parsed!
 The resulting template name is the name with '.template' removed
 */
 func LoadTemplates(templatePath string) (*Templates, error) {
+	logger = logging.NewLogger("Template")
 	templateList := &Templates{
 		templates: make(map[string]*templateData),
 	}
@@ -92,6 +93,7 @@ func loadGroupOfTemplates(templatePath string, groupFile string, templateList *T
 				file:     fullPath,
 				template: tmpl,
 			}
+			logger.LogDebugf("Loading: Template Group defined in file:%s", fullPath)
 		}
 	}
 	return filePathErr
@@ -105,7 +107,6 @@ func loadSingletemplate(path string, templateList *Templates) error {
 		var tmpl *template.Template
 		var err error
 		if fname == "import1.html" {
-			// tmpl, err = template.ParseFiles(fullPath, "C:\\Users\\802996013\\go\\src\\webServerBase\\site\\import2.template.html", "C:\\Users\\802996013\\go\\src\\webServerBase\\site\\simple2.template.html")
 			tmpl, err = template.ParseFiles(fullPath)
 		} else {
 			tmpl, err = template.ParseFiles(fullPath)
@@ -118,7 +119,7 @@ func loadSingletemplate(path string, templateList *Templates) error {
 			file:     fullPath,
 			template: tmpl,
 		}
-		logger.LogInfof("Loading: FILE:%s NAME:%s PATH:%s", tname, fname, fullPath)
+		logger.LogDebugf("Loading: FILE:%s NAME:%s PATH:%s", tname, fname, fullPath)
 	}
 	return filePathErr
 
@@ -132,6 +133,31 @@ func (p *Templates) HasTemplate(templateName string) bool {
 		return false
 	}
 	return true
+}
+
+/*
+HasAnyTemplates - return true is there are any templates
+*/
+func (p *Templates) HasAnyTemplates() bool {
+	if len(p.templates) == 0 {
+		return false
+	}
+	return true
+}
+
+/*
+ListTemplateNames list template names
+*/
+func ListTemplateNames(delim string, t map[string]*templateData) string {
+	var b bytes.Buffer
+	mark := 0
+	for key := range t {
+		b.WriteString(key)
+		mark = b.Len()
+		b.WriteString(delim)
+	}
+	b.Truncate(mark)
+	return b.String()
 }
 
 /*

@@ -35,6 +35,8 @@ type ServerInstanceData struct {
 	panicStatusCode    int
 	fileServerData     *FileServerData
 	templates          *Templates
+	osExitCode         int
+	serverClosedOk	bool
 }
 
 type statusData struct {
@@ -80,6 +82,8 @@ func NewServerInstanceData(baseHandlerNameIn string, contentTypeCharsetIn string
 		panicStatusCode: 500,
 		fileServerData:  nil,
 		templates:       nil,
+		osExitCode:      0,
+		serverClosedOk: false,
 	}
 }
 
@@ -90,10 +94,15 @@ func (p *ServerInstanceData) ListenAndServeOnPort(port int) {
 	p.server = &http.Server{Addr: ":" + strconv.Itoa(port)}
 	p.server.Handler = p
 	err := p.server.ListenAndServe()
-	if err != nil {
-		p.logger.LogInfo(err.Error())
+	if (p.GetServerClosedOK()) {
+		p.logger.LogInfo("http: Server closed ok")
 	} else {
-		p.logger.LogInfo("http: Server closed")
+		if (err != nil) {
+			p.logger.LogErrorWithStackTrace("FAILED:", err.Error())
+			p.osExitCode = 1
+		} else {
+			p.logger.LogInfo("http: Server closed")
+		}	
 	}
 }
 
@@ -228,14 +237,25 @@ func (p *ServerInstanceData) SetStaticFileServerData(fileServerDataMap map[strin
 SetPathToTemplates initialise the template system
 */
 func (p *ServerInstanceData) SetPathToTemplates(pathToTemplates string) {
-	templ, err := LoadTemplates("../site")
+	templ, err := LoadTemplates(pathToTemplates)
 	if err != nil {
 		panic(err)
 	}
 	if templ.HasAnyTemplates() {
 		p.templates = templ
+		return
 	}
-	panic("SetPathToTemplates did NOT ")
+	panic("SetPathToTemplates: [" + pathToTemplates + "] did NOT contain any templates")
+}
+
+/*
+ListTemplateNames list template names
+*/
+func (p *ServerInstanceData) ListTemplateNames(delim string) string {
+	if p.templates != nil {
+		return ListTemplateNames(", ", p.templates.templates)
+	}
+	return ""
 }
 
 /*
@@ -257,6 +277,20 @@ SetPanicStatusCode handle an error response if one occurs
 */
 func (p *ServerInstanceData) SetPanicStatusCode(statusCode int) {
 	p.panicStatusCode = statusCode
+}
+
+/*
+GetOsExitCode handle an error response if one occurs
+*/
+func (p *ServerInstanceData) GetOsExitCode() int {
+	return p.osExitCode
+}
+
+/*
+GetServerClosedOK handle an error response if one occurs
+*/
+func (p *ServerInstanceData) GetServerClosedOK() bool {
+	return p.serverClosedOk
 }
 
 /*
@@ -426,11 +460,13 @@ func defaultResponseHandler(request *http.Request, response *Response) {
 }
 
 func (p *ServerInstanceData) stopServerThraed(waitForSeconds int) {
+	p.serverClosedOk = true;
 	if waitForSeconds > 0 {
 		time.Sleep(time.Second * time.Duration(waitForSeconds))
 	}
 	err := p.server.Shutdown(context.TODO())
 	if err != nil {
+		p.serverClosedOk = false;
 		panic(err)
 	}
 }

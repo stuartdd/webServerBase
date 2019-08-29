@@ -56,6 +56,10 @@ func RunWithConfig(configData *config.Data, executable string) {
 		Open the logs. Log name is in the congig data. If not defined default to sysout
 	*/
 	logging.CreateLogWithFilenameAndAppID(config.GetConfigDataInstance().DefaultLogFileName, executable+":"+strconv.Itoa(config.GetConfigDataInstance().Port), config.GetConfigDataInstance().LoggerLevels)
+	/*
+		Stack the defered processes (Last in First out)
+	*/
+	defer ExitApplication()
 	defer CloseLog()
 	/*
 		Add loggers for each module (Makes for neater logs!)
@@ -77,6 +81,7 @@ func RunWithConfig(configData *config.Data, executable string) {
 	*/
 	serverInstance.SetStaticFileServerData(configData.GetConfigDataStaticFilePathForOS())
 	serverInstance.SetPathToTemplates(configData.GetConfigDataTemplateFilePathForOS())
+	logger.LogInfof("Availiable Templates: %s\n", serverInstance.ListTemplateNames(", "))
 	/*
 		Add too or override the Default content types
 	*/
@@ -155,5 +160,22 @@ CloseLog closes the logger file if it exists
 A logger os passed to enable the CloseLog function to log that fact it has been closed!
 */
 func CloseLog() {
+	code := serverInstance.GetOsExitCode()
+	if (code != 0) {
+		logger.LogErrorf("EXIT: Logs Closed. Exit code %d",code)
+	} else {
+		logger.LogInfo("EXIT: Logs Closed. Exit code 0")
+	}
 	logging.CloseLog()
 }
+
+/*
+ExitApplication closes the application. Make sure it happens last
+*/
+func ExitApplication() {
+	code := serverInstance.GetOsExitCode()
+	if (code != 0) {
+		os.Exit(code)
+	}	
+}
+ 
