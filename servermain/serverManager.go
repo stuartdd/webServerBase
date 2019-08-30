@@ -122,6 +122,10 @@ func (p *ServerInstanceData) ServeHTTP(rw http.ResponseWriter, httpRequest *http
 	*/
 	w := NewResponseWriterWrapper(rw)
 	/*
+		Create the response object so we can pass it to the handlers
+	*/
+	actualResponse := NewResponse(w, p)
+	/*
 		Log the request.
 		Define ACCESS logging to see the request in the logs
 		Define DEBUG and ACCESS to see the request and headers in the logs
@@ -138,10 +142,6 @@ func (p *ServerInstanceData) ServeHTTP(rw http.ResponseWriter, httpRequest *http
 		http.Redirect(w, httpRequest, redirect, http.StatusSeeOther)
 		return
 	}
-	/*
-		Create the response object so we can pass it to the handlers
-	*/
-	actualResponse := NewResponse(w, p)
 	/*
 		If a panic is thrown by ANY handler this defered method will clean up and LOG the event correctly.
 	*/
