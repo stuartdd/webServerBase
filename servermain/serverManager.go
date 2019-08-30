@@ -35,8 +35,8 @@ type ServerInstanceData struct {
 	panicStatusCode    int
 	fileServerData     *FileServerData
 	templates          *Templates
-	osExitCode         int
-	serverClosedOk	bool
+	serverReturnCode   int
+	serverClosedReason string
 }
 
 type statusData struct {
@@ -82,8 +82,8 @@ func NewServerInstanceData(baseHandlerNameIn string, contentTypeCharsetIn string
 		panicStatusCode: 500,
 		fileServerData:  nil,
 		templates:       nil,
-		osExitCode:      0,
-		serverClosedOk: false,
+		serverReturnCode: 1,
+		serverClosedReason: "",
 	}
 }
 
@@ -94,14 +94,19 @@ func (p *ServerInstanceData) ListenAndServeOnPort(port int) {
 	p.server = &http.Server{Addr: ":" + strconv.Itoa(port)}
 	p.server.Handler = p
 	err := p.server.ListenAndServe()
-	if (p.GetServerClosedOK()) {
-		p.logger.LogInfo("http: Server closed ok")
+	if (p.GetServerClosedReason()!="") {
+		p.logger.LogInfof("Server Halted: %s",p.GetServerClosedReason())
+		if (err != nil) {
+			p.logger.LogInfof("Server Response: %s", err.Error())
+		}
+		p.serverReturnCode = 0;
 	} else {
 		if (err != nil) {
-			p.logger.LogErrorWithStackTrace("FAILED:", err.Error())
-			p.osExitCode = 1
+			p.logger.LogErrorWithStackTrace("FAILED: Server terminated. Error: %s", err.Error())
+			p.serverReturnCode = 1
 		} else {
-			p.logger.LogInfo("http: Server closed")
+			p.logger.LogInfo("Server Halted.")
+			p.serverReturnCode = 2
 		}	
 	}
 }
@@ -206,9 +211,11 @@ func (p *ServerInstanceData) ServeHTTP(rw http.ResponseWriter, httpRequest *http
 /*
 StopServerLater stop the server after N seconds
 */
-func (p *ServerInstanceData) StopServerLater(waitForSeconds int) {
+func (p *ServerInstanceData) StopServerLater(waitForSeconds int, reason string) {
 	p.serverState.state = "STOPPING"
-	go p.stopServerThraed(waitForSeconds)
+	p.serverClosedReason = reason;
+	p.serverReturnCode = 0;
+	go p.stopServerThread(waitForSeconds)
 }
 
 /*
@@ -280,17 +287,16 @@ func (p *ServerInstanceData) SetPanicStatusCode(statusCode int) {
 }
 
 /*
-GetOsExitCode handle an error response if one occurs
+GetServerReturnCode handle an error response if one occurs
 */
-func (p *ServerInstanceData) GetOsExitCode() int {
-	return p.osExitCode
+func (p *ServerInstanceData) GetServerReturnCode() int {
+	return p.serverReturnCode
 }
-
 /*
-GetServerClosedOK handle an error response if one occurs
+GetServerClosedReason handle an error response if one occurs
 */
-func (p *ServerInstanceData) GetServerClosedOK() bool {
-	return p.serverClosedOk
+func (p *ServerInstanceData) GetServerClosedReason() string {
+	return p.serverClosedReason
 }
 
 /*
@@ -459,14 +465,12 @@ func defaultResponseHandler(request *http.Request, response *Response) {
 	fmt.Fprintf(response.GetWrappedWriter(), response.GetResp())
 }
 
-func (p *ServerInstanceData) stopServerThraed(waitForSeconds int) {
-	p.serverClosedOk = true;
+func (p *ServerInstanceData) stopServerThread(waitForSeconds int) {
 	if waitForSeconds > 0 {
 		time.Sleep(time.Second * time.Duration(waitForSeconds))
 	}
 	err := p.server.Shutdown(context.TODO())
 	if err != nil {
-		p.serverClosedOk = false;
 		panic(err)
 	}
 }

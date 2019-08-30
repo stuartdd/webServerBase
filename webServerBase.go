@@ -108,7 +108,8 @@ func RunWithConfig(configData *config.Data, executable string) {
 	serverInstance.AddMappedHandler("/status", http.MethodGet, statusHandler)
 	serverInstance.AddMappedHandler("/static/?", http.MethodGet, servermain.ReasonableStaticFileHandler)
 	serverInstance.AddMappedHandler("/calc/?/div/?", http.MethodGet, divHandler)
-	serverInstance.AddAfterHandler(filterAfter)
+	serverInstance.AddAfterHandler(filterAfter)	"net/http"
+
 
 	serverInstance.ListenAndServeOnPort(configData.Port)
 }
@@ -118,7 +119,7 @@ Start of handlers section
 *************************************************/
 
 func stopServerInstance(r *http.Request, response *servermain.Response) {
-	serverInstance.StopServerLater(2)
+	serverInstance.StopServerLater(2, "stopped by request")
 	response.ChangeResponse(200, serverInstance.GetStatusDataJSON(), "application/json", nil)
 }
 
@@ -160,7 +161,7 @@ CloseLog closes the logger file if it exists
 A logger os passed to enable the CloseLog function to log that fact it has been closed!
 */
 func CloseLog() {
-	code := serverInstance.GetOsExitCode()
+	code := serverInstance.GetServerReturnCode()
 	if (code != 0) {
 		logger.LogErrorf("EXIT: Logs Closed. Exit code %d",code)
 	} else {
@@ -171,9 +172,11 @@ func CloseLog() {
 
 /*
 ExitApplication closes the application. Make sure it happens last
+
+Cannot use logger here as it has been closed, hopefully!
 */
 func ExitApplication() {
-	code := serverInstance.GetOsExitCode()
+	code := serverInstance.GetServerReturnCode()
 	if (code != 0) {
 		os.Exit(code)
 	}	
