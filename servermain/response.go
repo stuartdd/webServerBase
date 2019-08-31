@@ -100,6 +100,16 @@ func (p *Response) GetError() error {
 }
 
 /*
+GetError returns the go error
+*/
+func (p *Response) GetErrorString() string {
+	if (p.response.err == nil) {
+		return ""
+	}
+	return p.response.err.Error()
+}
+
+/*
 GetCode returns the http status code
 */
 func (p *Response) GetCode() int {

@@ -2,6 +2,7 @@ package servermain
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -78,11 +79,11 @@ func NewServerInstanceData(baseHandlerNameIn string, contentTypeCharsetIn string
 			state:        "RUNNING",
 			panicCounter: 0,
 		},
-		logger:          logging.NewLogger(baseHandlerNameIn),
-		panicStatusCode: 500,
-		fileServerData:  nil,
-		templates:       nil,
-		serverReturnCode: 1,
+		logger:             logging.NewLogger(baseHandlerNameIn),
+		panicStatusCode:    500,
+		fileServerData:     nil,
+		templates:          nil,
+		serverReturnCode:   1,
 		serverClosedReason: "",
 	}
 }
@@ -94,20 +95,20 @@ func (p *ServerInstanceData) ListenAndServeOnPort(port int) {
 	p.server = &http.Server{Addr: ":" + strconv.Itoa(port)}
 	p.server.Handler = p
 	err := p.server.ListenAndServe()
-	if (p.GetServerClosedReason()!="") {
-		p.logger.LogInfof("Server Halted: %s",p.GetServerClosedReason())
-		if (err != nil) {
+	if p.GetServerClosedReason() != "" {
+		p.logger.LogInfof("Server Halted: %s", p.GetServerClosedReason())
+		if err != nil {
 			p.logger.LogInfof("Server Response: %s", err.Error())
 		}
-		p.serverReturnCode = 0;
+		p.serverReturnCode = 0
 	} else {
-		if (err != nil) {
+		if err != nil {
 			p.logger.LogErrorWithStackTrace("FAILED: Server terminated. Error: %s", err.Error())
 			p.serverReturnCode = 1
 		} else {
 			p.logger.LogInfo("Server Halted.")
 			p.serverReturnCode = 2
-		}	
+		}
 	}
 }
 
@@ -213,8 +214,8 @@ StopServerLater stop the server after N seconds
 */
 func (p *ServerInstanceData) StopServerLater(waitForSeconds int, reason string) {
 	p.serverState.state = "STOPPING"
-	p.serverClosedReason = reason;
-	p.serverReturnCode = 0;
+	p.serverClosedReason = reason
+	p.serverReturnCode = 0
 	go p.stopServerThread(waitForSeconds)
 }
 
@@ -292,6 +293,7 @@ GetServerReturnCode handle an error response if one occurs
 func (p *ServerInstanceData) GetServerReturnCode() int {
 	return p.serverReturnCode
 }
+
 /*
 GetServerClosedReason handle an error response if one occurs
 */
@@ -455,7 +457,7 @@ func defaultErrorResponseHandler(request *http.Request, response *Response) {
 	response.SetContentType(server.contentTypeLookup["json"])
 	server.PreProcessResponse(request, response)
 	server.LogResponse(response)
-	fmt.Fprintf(response.GetWrappedWriter(), toErrorJSON(response.GetCode(), response.GetResp()))
+	fmt.Fprintf(response.GetWrappedWriter(), toErrorJSON(response.GetCode(), response.GetResp(), response.GetErrorString()))
 }
 
 func defaultResponseHandler(request *http.Request, response *Response) {
@@ -519,6 +521,24 @@ func (p *ServerInstanceData) logHeaderMap(headers map[string][]string, dir strin
 	}
 }
 
-func toErrorJSON(code int, desc string) string {
-	return fmt.Sprintf("{\"Code\":%d, \"Message\":\"%s\"}", code, desc)
+func toErrorJSON(code int, desc string, err string) string {
+	m := make(map[string]interface{})
+	m["Code"] = code
+	m["Message"] = desc
+	if err != "" {
+		m["Error"] = err
+	}
+	s, errm := toJSONMap(m)
+	if errm != nil {
+		return fmt.Sprintf("{\"Code\":%d\"Message\":\"%s\"}", code, desc)
+	}
+	return s
+}
+
+func toJSONMap(m map[string]interface{}) (string, error) {
+	v, err := json.Marshal(m)
+	if err != nil {
+		return "", err
+	}
+	return string(v), nil
 }

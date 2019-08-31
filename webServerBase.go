@@ -105,11 +105,11 @@ func RunWithConfig(configData *config.Data, executable string) {
 
 	serverInstance.AddBeforeHandler(filterBefore)
 	serverInstance.AddMappedHandler("/stop", http.MethodGet, stopServerInstance)
+	serverInstance.AddMappedHandler("/stop/?", http.MethodGet, stopServerInstance)
 	serverInstance.AddMappedHandler("/status", http.MethodGet, statusHandler)
 	serverInstance.AddMappedHandler("/static/?", http.MethodGet, servermain.ReasonableStaticFileHandler)
 	serverInstance.AddMappedHandler("/calc/?/div/?", http.MethodGet, divHandler)
-	serverInstance.AddAfterHandler(filterAfter)	"net/http"
-
+	serverInstance.AddAfterHandler(filterAfter)
 
 	serverInstance.ListenAndServeOnPort(configData.Port)
 }
@@ -119,22 +119,29 @@ Start of handlers section
 *************************************************/
 
 func stopServerInstance(r *http.Request, response *servermain.Response) {
-	serverInstance.StopServerLater(2, "stopped by request")
-	response.ChangeResponse(200, serverInstance.GetStatusDataJSON(), "application/json", nil)
+	d := servermain.NewURLDetails(r)
+	count, err := strconv.Atoi(d.GetNamedPart("stop","2"))
+	if err != nil {
+		response.ChangeResponse(400, "Invalid stop period", "Ha", err)
+	} else {
+		serverInstance.StopServerLater(count, fmt.Sprintf("Stopped by request. Delay %d seconds", count))
+		response.ChangeResponse(200, serverInstance.GetStatusDataJSON(), "application/json", nil)	
+	}
 }
 
 func divHandler(r *http.Request, response *servermain.Response) {
-	r.ParseForm()
-	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
-	a, err := strconv.Atoi(parts[1])
+	d := servermain.NewURLDetails(r)
+	p1 := d.GetNamedPart("calc","undefined")
+	p2 := d.GetNamedPart("div","undefined")
+	a1, err := strconv.Atoi(p1)
 	if err != nil {
-		response.ChangeResponse(400, "invalid number "+parts[1], "", err)
+		response.ChangeResponse(400, "invalid number "+p1, "", err)
 	}
-	b, err := strconv.Atoi(parts[3])
+	a2, err := strconv.Atoi(p2)
 	if err != nil {
-		response.ChangeResponse(400, "invalid number "+parts[3], "", err)
+		response.ChangeResponse(400, "invalid number "+p2, "", err)
 	}
-	response.ChangeResponse(200, strconv.Itoa(a/b), "", nil)
+	response.ChangeResponse(200, strconv.Itoa(a1/a2), "", nil)
 }
 
 func statusHandler(r *http.Request, response *servermain.Response) {
@@ -162,8 +169,8 @@ A logger os passed to enable the CloseLog function to log that fact it has been 
 */
 func CloseLog() {
 	code := serverInstance.GetServerReturnCode()
-	if (code != 0) {
-		logger.LogErrorf("EXIT: Logs Closed. Exit code %d",code)
+	if code != 0 {
+		logger.LogErrorf("EXIT: Logs Closed. Exit code %d", code)
 	} else {
 		logger.LogInfo("EXIT: Logs Closed. Exit code 0")
 	}
@@ -177,8 +184,7 @@ Cannot use logger here as it has been closed, hopefully!
 */
 func ExitApplication() {
 	code := serverInstance.GetServerReturnCode()
-	if (code != 0) {
+	if code != 0 {
 		os.Exit(code)
-	}	
+	}
 }
- 
