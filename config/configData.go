@@ -26,12 +26,15 @@ type Data struct {
 	TemplatePaths      map[string]string
 }
 
+/*
+There should only ever be ONE of these
+*/
 var configDataInstance *Data
 
 /*
 LoadConfigData method loads the config data
 */
-func LoadConfigData(configFileName string) error {
+func LoadConfigData(configFileName string) (error) {
 
 	if configFileName == "" {
 		configFileName = "webServerBase.json"

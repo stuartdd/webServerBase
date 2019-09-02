@@ -12,9 +12,9 @@ import (
 	"webServerBase/servermain"
 )
 
-var logger *logging.LoggerDataReference
+
+var log *logging.LoggerDataReference
 var serverInstance *servermain.ServerInstanceData
-var staticFileServer *servermain.FileServerData
 
 func main() {
 	/*
@@ -29,7 +29,7 @@ func main() {
 	}
 	err := config.LoadConfigData(configFileName)
 	if err != nil {
-		logger.Fatal(err)
+		log.Fatal(err)
 	}
 
 	exec, err := os.Executable()
@@ -43,6 +43,17 @@ func main() {
 		}
 	}
 
+	configData := config.GetConfigDataInstance()
+	/*
+		Initialiase the logs. Log name is in the config data. If not defined default to sysout
+	*/
+	logging.CreateLogWithFilenameAndAppID(configData.DefaultLogFileName, exec+":"+strconv.Itoa(configData.Port), configData.LoggerLevels)
+	/*
+		Stack the defered processes (Last in First out)
+	*/
+	defer ExitApplication()
+	defer CloseLog()
+
 	RunWithConfig(config.GetConfigDataInstance(), exec)
 }
 
@@ -53,25 +64,15 @@ Param - config a ref to the config object
 */
 func RunWithConfig(configData *config.Data, executable string) {
 	/*
-		Open the logs. Log name is in the congig data. If not defined default to sysout
-	*/
-	logging.CreateLogWithFilenameAndAppID(config.GetConfigDataInstance().DefaultLogFileName, executable+":"+strconv.Itoa(config.GetConfigDataInstance().Port), config.GetConfigDataInstance().LoggerLevels)
-	/*
-		Stack the defered processes (Last in First out)
-	*/
-	defer ExitApplication()
-	defer CloseLog()
-	/*
 		Add loggers for each module (Makes for neater logs!)
 	*/
-	logger = logging.NewLogger("ServerMain")
+	log = logging.NewLogger("ServerMain")
 	/*
 		Log server startup info
 	*/
-	logger.LogInfof("Server will start on port %d\n", configData.Port)
-	logger.LogInfof("OS '%s'. Static path will be:%s\n", runtime.GOOS, configData.GetConfigDataStaticFilePathForOS())
-	logger.LogInfof("To stop the server http://localhost:%d/stop\n", configData.Port)
-
+	log.LogInfof("Server will start on port %d\n", configData.Port)
+	log.LogInfof("OS '%s'. Static path will be:%s\n", runtime.GOOS, configData.GetConfigDataStaticFilePathForOS())
+	log.LogInfof("To stop the server http://localhost:%d/stop\n", configData.Port)
 	/*
 		Configure and Start the server.
 	*/
@@ -81,7 +82,7 @@ func RunWithConfig(configData *config.Data, executable string) {
 	*/
 	serverInstance.SetStaticFileServerData(configData.GetConfigDataStaticFilePathForOS())
 	serverInstance.SetPathToTemplates(configData.GetConfigDataTemplateFilePathForOS())
-	logger.LogInfof("Availiable Templates: %s\n", serverInstance.ListTemplateNames(", "))
+	log.LogInfof("Availiable Templates: %s\n", serverInstance.ListTemplateNames(", "))
 	/*
 		Add too or override the Default content types
 	*/
@@ -149,11 +150,11 @@ func statusHandler(r *http.Request, response *servermain.Response) {
 }
 
 func filterBefore(r *http.Request, response *servermain.Response) {
-	logger.LogDebug("IN Filter Before 1")
+	log.LogDebug("IN Filter Before 1")
 }
 
 func filterAfter(r *http.Request, response *servermain.Response) {
-	logger.LogDebug("IN Filter After 1")
+	log.LogDebug("IN Filter After 1")
 }
 
 /************************************************
@@ -170,9 +171,9 @@ A logger os passed to enable the CloseLog function to log that fact it has been 
 func CloseLog() {
 	code := serverInstance.GetServerReturnCode()
 	if code != 0 {
-		logger.LogErrorf("EXIT: Logs Closed. Exit code %d", code)
+		log.LogErrorf("EXIT: Logs Closed. Exit code %d", code)
 	} else {
-		logger.LogInfo("EXIT: Logs Closed. Exit code 0")
+		log.LogInfo("EXIT: Logs Closed. Exit code 0")
 	}
 	logging.CloseLog()
 }

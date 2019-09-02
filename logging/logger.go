@@ -92,10 +92,10 @@ CreateTestLogger - creates a logger for testing
 */
 func CreateTestLogger(id string) *LoggerDataReference {
 	levels := make(map[string]string)
-	levels["DEBUG"] = systemOutName
-	levels["INFO"] = systemOutName
-	levels["WARN"] = systemOutName
-	CreateLogWithFilenameAndAppID("", "", levels)
+	for logName :=range loggerLevelMapNames {
+		levels[logName] = systemOutName
+	}
+	CreateLogWithFilenameAndAppID("", "TestLogger", levels)
 	return NewLogger(id)
 }
 

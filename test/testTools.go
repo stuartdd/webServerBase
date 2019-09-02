@@ -169,17 +169,23 @@ func RemoveFile(t *testing.T, info string, path string) {
 }
 
 /*
-AssertFileContains read a file ans see if any if the strings are contained in it
+AssertFileContains see if all the strings are contained in the file
 */
 func AssertFileContains(t *testing.T, info string, fileName string, contains []string) {
 	b, err := ioutil.ReadFile(fileName)
 	if err != nil {
 		logStackTraceAndFail(t, fmt.Sprintf("File %s could not read. Error:%s", fileName, err.Error()), info, debug.Stack())
 	}
-	str := string(b)
+	AssertStringContains(t, info, string(b), contains)
+}
+
+/*
+AssertStringContains see if all the strings are contained in the string
+*/
+func AssertStringContains(t *testing.T, info string, content string, contains []string) {
 	for _, val := range contains {
-		if !strings.Contains(str, val) {
-			logStackTraceAndFail(t, fmt.Sprintf("File %s does not contain '%s'", fileName, val), info, debug.Stack())
+		if !strings.Contains(content, val) {
+			logStackTraceAndFail(t, fmt.Sprintf("String '%s' does not contain '%s'",content, val), info, debug.Stack())
 		}
 	}
 }

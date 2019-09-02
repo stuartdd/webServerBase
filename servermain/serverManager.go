@@ -32,7 +32,7 @@ type ServerInstanceData struct {
 	contentTypeLookup  map[string]string
 	server             *http.Server
 	serverState        *statusData
-	logger             *logging.LoggerDataReference
+	logger            *logging.LoggerDataReference
 	panicStatusCode    int
 	fileServerData     *FileServerData
 	templates          *Templates
