@@ -3,6 +3,7 @@ package servermain
 import (
 	"net/url"
 	"net/http"
+	"io/ioutil"
 	"strings"
 )
 
@@ -30,6 +31,18 @@ func NewURLDetails(r *http.Request) *URLDetails {
 		urlPartsCount: 0,
 		queries: nil,
 	}
+}
+
+/*
+GetBody read the body from the request. This can only be done ONCE!
+*/
+func (p *URLDetails) GetBody() ([]byte, error) {
+	bodyText, err := ioutil.ReadAll(p.request.Body)
+	defer p.request.Body.Close()
+	if err != nil {
+		return nil , err
+	}
+	return bodyText, nil
 }
 
 /*

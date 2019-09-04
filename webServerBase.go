@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"io/ioutil"
 	"runtime"
 	"strconv"
 	"strings"
@@ -110,6 +111,8 @@ func RunWithConfig(configData *config.Data, executable string) {
 	serverInstance.AddMappedHandler("/status", http.MethodGet, statusHandler)
 	serverInstance.AddMappedHandler("/static/?", http.MethodGet, servermain.ReasonableStaticFileHandler)
 	serverInstance.AddMappedHandler("/calc/?/div/?", http.MethodGet, divHandler)
+	serverInstance.AddMappedHandler("/path/?/file/?", http.MethodPost, fileSaveHandler)
+	
 	serverInstance.AddAfterHandler(filterAfter)
 
 	serverInstance.ListenAndServeOnPort(configData.Port)
@@ -118,6 +121,35 @@ func RunWithConfig(configData *config.Data, executable string) {
 /************************************************
 Start of handlers section
 *************************************************/
+func fileSaveHandler(r *http.Request, response *servermain.Response) {
+	d := servermain.NewURLDetails(r)
+	fileName := d.GetNamedPart("file","")
+	pathName := d.GetNamedPart("path","")
+	staticPath := config.GetConfigDataInstance().GetConfigDataStaticFilePathForOS()[pathName]
+	if (staticPath == "") {
+		if log.IsWarn() {
+			log.LogWarnf("fileSaveHandler: staticPaths: The path '%s' for %s OS was not found",pathName,config.GetOS())
+		}
+		response.SetError404(d.GetURL())
+		return
+	}
+	bodyText, err := d.GetBody()
+	if err != nil {
+		log.LogErrorWithStackTrace(fmt.Sprintf("fileSaveHandler: static path [%s], file [%s] could not read request body",pathName, fileName),err.Error())
+		response.ChangeResponse(400, "Error reading message body", "",err)
+		return
+	}
+	fullFIle := staticPath+fileName+".txt"
+	err = ioutil.WriteFile(fullFIle, bodyText, 0644)
+	if err != nil {
+		log.LogErrorWithStackTrace(fmt.Sprintf("fileSaveHandler: static path [%s], file [%s] could not write file",pathName, fileName),err.Error())
+		response.ChangeResponse(400, "Error writing message "+fullFIle, "",err)
+		return
+	}
+	response.ChangeResponse(201, "{\"Created\":\"OK\"}", "application/json", nil)
+}
+
+
 
 func stopServerInstance(r *http.Request, response *servermain.Response) {
 	d := servermain.NewURLDetails(r)
@@ -137,10 +169,12 @@ func divHandler(r *http.Request, response *servermain.Response) {
 	a1, err := strconv.Atoi(p1)
 	if err != nil {
 		response.ChangeResponse(400, "invalid number "+p1, "", err)
+		return
 	}
 	a2, err := strconv.Atoi(p2)
 	if err != nil {
 		response.ChangeResponse(400, "invalid number "+p2, "", err)
+		return
 	}
 	response.ChangeResponse(200, strconv.Itoa(a1/a2), "", nil)
 }

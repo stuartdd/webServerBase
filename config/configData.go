@@ -62,6 +62,14 @@ func LoadConfigData(configFileName string) (error) {
 }
 
 /*
+GetOS returns the name of the operating system. Used to look up os
+specific paths in config data staticPaths and templatePaths.
+Use this in error messages to indicate a path is not found for the OS 
+*/
+func GetOS() string { 
+	return runtime.GOOS
+}
+/*
 GetConfigDataStaticFilePathForOS Get the static path for the OS. If not found return the first one!
 */
 func (p *Data) GetConfigDataStaticFilePathForOS() map[string]string {
