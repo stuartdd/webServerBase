@@ -127,11 +127,7 @@ func fileSaveHandler(r *http.Request, response *servermain.Response) {
 	pathName := d.GetNamedPart("path","")
 	staticPath := config.GetConfigDataInstance().GetConfigDataStaticFilePathForOS()[pathName]
 	if (staticPath == "") {
-		if log.IsWarn() {
-			log.LogWarnf("fileSaveHandler: staticPaths: The path '%s' for %s OS was not found",pathName,config.GetOS())
-		}
-		response.SetError404(d.GetURL())
-		return
+		servermain.ThrowPanic("W",404,fmt.Sprintf("Parameter %s Not Found",pathName),fmt.Sprintf("fileSaveHandler: staticPaths: The path '%s' for %s OS was not found",pathName,config.GetOS()))
 	}
 	bodyText, err := d.GetBody()
 	if err != nil {

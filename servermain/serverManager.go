@@ -419,6 +419,24 @@ func (p *ServerInstanceData) LogResponse(response *Response) {
 }
 
 /*
+ThrowPanic - Throw a PANIC that is handled by the checkForPanicAndRecover method.
+This results in the panic being 'recovered' and down graded to an error response.
+Parameter level:
+ I for log at INFO level
+ W for log at WARN level
+ Anything else is ERROR level
+ 
+ Note ALL data is logged.
+ StatusCode, errorMessage are returned to the client as Code and Error. For example;
+ {"Code":404,"Message":"Not Found","Error":"Parameter XXX Not Found"}
+ The Message is derived from the statusCode standard messages (404==Not Found)
+
+ Equivilent to panic("Level|statusCode|Error|info)
+*/
+func ThrowPanic(level string, statusCode int, errorMessage string, info string) {
+	panic(fmt.Sprintf("%s|%d|%s|%s", level, statusCode, errorMessage, info))
+}
+/*
 ServeContent wraps the http.ServeContent. It opens the file first.
 If the open fails it returns an error.
 After that it delegates to http.ServeContent
@@ -437,10 +455,36 @@ func checkForPanicAndRecover(r *http.Request, response *Response) {
 	server := response.GetWrappedServer()
 	rec := recover()
 	if rec != nil {
+		recStr := fmt.Sprintf("%s",rec)
+		parts := strings.Split(recStr,"|")
+		if (len(parts)>1) {
+			rc, err := strconv.Atoi(parts[1])
+			if (err == nil) {
+				switch strings.ToUpper(parts[0]) {
+				case "I":
+					if (server.logger.IsInfo()) {
+						server.logger.LogInfo("--- "+recStr)
+					}
+					break
+				case "W":
+					if (server.logger.IsWarn()) {
+						server.logger.LogWarn("--- "+recStr)
+					}
+					break
+				default:
+					if (server.logger.IsError()) {
+						server.logger.LogError(fmt.Errorf("--- %s",recStr))
+					}
+					break
+				}
+				server.errorHandler(r, response.ChangeResponse(rc, http.StatusText(rc), "", fmt.Errorf("%s", parts[2])))
+				return
+			} 
+		} 
 		server.serverState.panicCounter++
-		text := fmt.Sprintf("REQUEST:%s MESSAGE:%s", r.URL.Path, rec)
+		text := fmt.Sprintf("REQUEST:%s MESSAGE:%s", r.URL.Path, recStr)
 		server.logger.LogErrorWithStackTrace("!!!", text)
-		server.errorHandler(r, response.ChangeResponse(server.panicStatusCode, text, "", nil))
+		server.errorHandler(r, response.ChangeResponse(server.panicStatusCode, text, "", nil))		
 	}
 }
 

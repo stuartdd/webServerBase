@@ -176,6 +176,11 @@ func AssertFileContains(t *testing.T, info string, fileName string, contains []s
 	if err != nil {
 		logStackTraceAndFail(t, fmt.Sprintf("File %s could not read. Error:%s", fileName, err.Error()), info, debug.Stack())
 	}
+	for _, val := range contains {
+		if !strings.Contains(string(b), val) {
+			logStackTraceAndFail(t, fmt.Sprintf("File '%s' does not contain the string '%s'",fileName, val), info, debug.Stack())
+		}
+	}
 	AssertStringContains(t, info, string(b), contains)
 }
 

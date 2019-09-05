@@ -7,6 +7,7 @@ import (
 	"strings"
 	"net/http"
 	"time"
+	"os"
 	"io/ioutil"
 	"webServerBase/test"
 	"webServerBase/config"
@@ -21,8 +22,14 @@ func TestGetStatus(t *testing.T) {
 	startServer(t)
 	prc := configData.PanicResponseCode
 
+	testFile := configData.GetConfigDataStaticFilePathForOS()["static"]+string(os.PathSeparator)+"testFile.txt"
+	defer deleteFile(t, testFile)
+
+	test.AssertStringContains(t, "", sendPost(t, 404, "path/god/file/testFile", "Hello"),  []string{"Not Found", "Parameter god Not Found"})
+	test.AssertStringContains(t, "", sendPost(t, 404, "status", "Hello"),  []string{"Not Found"})
+
 	test.AssertStringContains(t, "", sendPost(t, 201, "path/static/file/testFile", "Hello"),[]string{"\"Created\":\"OK\""})
-	test.AssertStringContains(t, "", sendPost(t, 404, "path/god/file/testFile", "Hello"),  []string{"\"Code\":404"})
+	test.AssertFileContains(t,"",testFile, []string {"Hello"})
 
 	test.AssertStringContains(t, "", sendGet(t, 200, "status"), []string{"\"state\":\"RUNNING\"", "\"executable\":\"TestExe\"", "\"panics\":0"})
 	test.AssertStringContains(t, "", sendGet(t, 404, "not-fo"), []string{"\"Code\":404"})
@@ -36,12 +43,22 @@ func TestGetStatus(t *testing.T) {
 	test.AssertStringContains(t, "", sendGet(t, 400, "calc/five/div/ten"), []string{"\"Code\":400","invalid number five"})		
 	test.AssertStringContains(t, "", sendGet(t, prc, "calc/10/div/0"), []string{"\"Code\":"+strconv.Itoa(prc), "integer divide by zero", "MESSAGE:runtime error"})
 
-	
 	stopServer(t)
 }
 
 func stopServer(t *testing.T) {
 	test.AssertStringContains(t, "", sendGet(t, 200, "stop"), []string{"\"state\":\"STOPPING\"", "\"executable\":\"TestExe\"", "\"panics\":1"})
+}
+
+func deleteFile(t *testing.T, name string) {
+	err := os.Remove(name)
+	if (err != nil) {
+		if (os.IsNotExist(err)) {
+			test.Fail(t, "", "Failed. File "+name+" was not created")
+		} else {
+			test.Fail(t, "", "Failed to remove file "+name+". "+err.Error())
+		}
+	}
 }
 
 func startServer(t *testing.T) {
