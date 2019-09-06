@@ -122,7 +122,7 @@ func RunWithConfig(configData *config.Data, executable string) {
 Start of handlers section
 *************************************************/
 func fileSaveHandler(r *http.Request, response *servermain.Response) {
-	d := servermain.NewURLDetails(r)
+	d := servermain.NewRequestTools(r)
 	fileName := d.GetNamedPart("file","")
 	pathName := d.GetNamedPart("path","")
 	staticPath := config.GetConfigDataInstance().GetConfigDataStaticFilePathForOS()[pathName]
@@ -148,7 +148,7 @@ func fileSaveHandler(r *http.Request, response *servermain.Response) {
 
 
 func stopServerInstance(r *http.Request, response *servermain.Response) {
-	d := servermain.NewURLDetails(r)
+	d := servermain.NewRequestTools(r)
 	count, err := strconv.Atoi(d.GetNamedPart("stop","2"))
 	if err != nil {
 		response.ChangeResponse(400, "Invalid stop period", "Ha", err)
@@ -159,7 +159,7 @@ func stopServerInstance(r *http.Request, response *servermain.Response) {
 }
 
 func divHandler(r *http.Request, response *servermain.Response) {
-	d := servermain.NewURLDetails(r)
+	d := servermain.NewRequestTools(r)
 	p1 := d.GetNamedPart("calc","undefined")
 	p2 := d.GetNamedPart("div","undefined")
 	a1, err := strconv.Atoi(p1)

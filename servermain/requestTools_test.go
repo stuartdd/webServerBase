@@ -33,7 +33,7 @@ func TestWithBodyJsonObject(t *testing.T) {
 	if (err != nil) {
 		test.Fail(t, "", err.Error())
 	}
-	d := NewURLDetails(req)
+	d := NewRequestTools(req)
 
 	testStruct := &TestStruct{}
 	err = d.GetJSONBodyAsObject(testStruct)
@@ -46,7 +46,7 @@ func TestWithBodyJsonObject(t *testing.T) {
 	test.AssertEqualInt(t, "", 3, len(testStruct.Types))
 	test.AssertEqualString(t, "", "Apple", testStruct.Types[0])
 	test.AssertEqualString(t, "", "Banana", testStruct.Types[1])
-	test.AssertEqualString(t, "", "Orenge", testStruct.Types[2])
+	test.AssertEqualString(t, "", "Orange", testStruct.Types[2])
 	test.AssertEqualString(t, "", "2018-04-09T23:00:00", testStruct.Created.Format("2006-01-02T15:04:05"))
 }
 
@@ -56,7 +56,7 @@ func TestWithBodyJsonList(t *testing.T) {
 	if (err != nil) {
 		test.Fail(t, "", err.Error())
 	}
-	d := NewURLDetails(req)
+	d := NewRequestTools(req)
 	aList, err := d.GetJSONBodyAsList()
 	if (err != nil) {
 		test.Fail(t, "", "Could not read body!")
@@ -72,7 +72,7 @@ func TestWithBodyJsonMap(t *testing.T) {
 	if (err != nil) {
 		test.Fail(t, "", err.Error())
 	}
-	d := NewURLDetails(req)
+	d := NewRequestTools(req)
 	aMap, err := d.GetJSONBodyAsMap()
 	if (err != nil) {
 		test.Fail(t, "", "Could not read body!")
@@ -87,7 +87,7 @@ func TestWithBodyText(t *testing.T) {
 	if (err != nil) {
 		test.Fail(t, "", err.Error())
 	}
-	d := NewURLDetails(req)
+	d := NewRequestTools(req)
 	text, err := d.GetBodyString()
 	if (err != nil) {
 		test.Fail(t, "", "Could not read body!")
@@ -100,7 +100,7 @@ func TestWithUrl(t *testing.T) {
 	if (err != nil) {
 		test.Fail(t, "", err.Error())
 	}
-	d := NewURLDetails(req)
+	d := NewRequestTools(req)
 	test.AssertEqualString(t, "", "data1/1/data2/2", d.GetURL())
 	test.AssertEqualString(t, "", "data1", d.GetURLPart(0, ""))
 	test.AssertEqualString(t, "", "1", d.GetURLPart(1, ""))
@@ -124,7 +124,7 @@ func TestWithUrl(t *testing.T) {
 
 	test.AssertEqualInt(t, "", 4, d.GetPartsCount())
 
-	d2 := NewURLDetails(req)
+	d2 := NewRequestTools(req)
 	test.AssertEqualInt(t, "", 4, d2.GetPartsCount())
 
 	
