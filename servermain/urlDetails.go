@@ -46,6 +46,17 @@ func (p *URLDetails) GetBody() ([]byte, error) {
 }
 
 /*
+GetBodyString read the body from the request. This can only be done ONCE!
+*/
+func (p *URLDetails) GetBodyString() (string, error) {
+	bytes, err := p.GetBody()
+	if err != nil {
+		return "" , err
+	}
+	return string(bytes), nil
+}
+
+/*
 GetURL returns the URL
 */
 func (p *URLDetails) GetURL() string {

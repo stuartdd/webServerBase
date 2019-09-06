@@ -3,8 +3,21 @@ package servermain
 import (
 	"webServerBase/test"
 	"testing"
+	"strings"
 	"net/http"
 )
+func TestWithBodyText(t *testing.T) {
+	req, err := http.NewRequest("GET","http://abc:8080/data1/1/data2/2?A=5",strings.NewReader("TEST"))
+	if (err != nil) {
+		test.Fail(t, "", err.Error())
+	}
+	d := NewURLDetails(req)
+	text, err := d.GetBodyString()
+	if (err != nil) {
+		test.Fail(t, "", "Could not read body!")
+	}
+test.AssertEqualString(t, "", text, "TEST")
+}
 
 func TestWithUrl(t *testing.T) {
 	req, err := http.NewRequest("GET","http://abc:8080/data1/1/data2/2?A=5", nil)
