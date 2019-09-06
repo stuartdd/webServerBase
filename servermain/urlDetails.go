@@ -3,6 +3,7 @@ package servermain
 import (
 	"net/url"
 	"net/http"
+	"encoding/json"
 	"io/ioutil"
 	"strings"
 )
@@ -34,26 +35,80 @@ func NewURLDetails(r *http.Request) *URLDetails {
 }
 
 /*
-GetBody read the body from the request. This can only be done ONCE!
+GetJSONBodyAsObject return an object, populated from a known JSON structure. This can only be done ONCE!
+Example: (see urlDetails_test.go)
+	testStruct := &TestStruct{}
+	err = d.GetJSONBodyAsObject(testStruct)
 */
-func (p *URLDetails) GetBody() ([]byte, error) {
-	bodyText, err := ioutil.ReadAll(p.request.Body)
-	defer p.request.Body.Close()
+func (p *URLDetails) GetJSONBodyAsObject(configObject interface{}) error {
+	jsonBytes, err := p.GetBody()
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(jsonBytes, configObject)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+/*
+GetJSONBodyAsMap read the body from the request. This can only be done ONCE!
+Use this method if the expected Json starts with {
+Example: (see urlDetails_test.go)
+	aMap, err := d.GetJSONBodyAsMap()
+*/
+func (p *URLDetails) GetJSONBodyAsMap() (map[string]interface{}, error) {
+	jsonBytes, err := p.GetBody()
 	if err != nil {
 		return nil , err
 	}
-	return bodyText, nil
+	var v interface{}
+	err = json.Unmarshal(jsonBytes, &v)
+	if err != nil {
+		return nil, err
+	}
+	return v.(map[string]interface{}) ,nil
+}
+/*
+GetJSONBodyAsList read the body from the request. This can only be done ONCE!
+Use this method if the expected Json starts with [
+	aList, err := d.GetJSONBodyAsList()
+*/
+func (p *URLDetails) GetJSONBodyAsList() ([]interface{}, error) {
+	jsonBytes, err := p.GetBody()
+	if err != nil {
+		return nil , err
+	}
+	var v interface{}
+	err = json.Unmarshal(jsonBytes, &v)
+	if err != nil {
+		return nil, err
+	}
+	return v.([]interface{}), nil
 }
 
 /*
 GetBodyString read the body from the request. This can only be done ONCE!
 */
 func (p *URLDetails) GetBodyString() (string, error) {
-	bytes, err := p.GetBody()
+	bodyBytes, err := p.GetBody()
 	if err != nil {
 		return "" , err
 	}
-	return string(bytes), nil
+	return string(bodyBytes), nil
+}
+
+/*
+GetBody read the body from the request. This can only be done ONCE!
+*/
+func (p *URLDetails) GetBody() ([]byte, error) {
+	bodyBytes, err := ioutil.ReadAll(p.request.Body)
+	defer p.request.Body.Close()
+	if err != nil {
+		return nil , err
+	}
+	return bodyBytes, nil
 }
 
 /*

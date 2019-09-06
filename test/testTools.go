@@ -138,6 +138,16 @@ func AssertEqualString(t *testing.T, info string, expected string, actual string
 }
 
 /*
+AssertInterfaceType assert strings are equal
+*/
+func AssertInterfaceType(t *testing.T, info string, expectedTypeName string, actual interface{}) {
+	actualType := fmt.Sprintf("%T",actual)
+	if expectedTypeName != actualType {
+		logStackTraceAndFail(t, fmt.Sprintf("Expected type '%s' actual type '%s'", expectedTypeName, actualType), info, debug.Stack())
+	}
+}
+
+/*
 AssertErrorString assert strings are equal
 */
 func AssertErrorString(t *testing.T, info string, expected string, actual error) {

@@ -4,8 +4,84 @@ import (
 	"webServerBase/test"
 	"testing"
 	"strings"
+	"bytes"
+	"time"
 	"net/http"
 )
+
+type TestStruct struct {
+    Name    string
+    Types   []string
+    ID      int `json:"ref"`
+    Created time.Time
+}
+
+var jsonTestData = []byte(`
+{
+    "Name": "Fruit",
+    "Types": [
+        "Apple",
+        "Banana",
+        "Orange"
+    ],
+    "ref": 999,
+    "Created": "2018-04-09T23:00:00Z"
+}`)
+
+func TestWithBodyJsonObject(t *testing.T) {
+	req, err := http.NewRequest("GET","http://abc:8080/data1/1/data2/2?A=5",bytes.NewReader(jsonTestData))
+	if (err != nil) {
+		test.Fail(t, "", err.Error())
+	}
+	d := NewURLDetails(req)
+
+	testStruct := &TestStruct{}
+	err = d.GetJSONBodyAsObject(testStruct)
+	if (err != nil) {
+		test.Fail(t, "", "Could not read body!")
+	}
+
+	test.AssertEqualString(t, "", "Fruit", testStruct.Name)
+	test.AssertEqualInt(t, "", 999, testStruct.ID)
+	test.AssertEqualInt(t, "", 3, len(testStruct.Types))
+	test.AssertEqualString(t, "", "Apple", testStruct.Types[0])
+	test.AssertEqualString(t, "", "Banana", testStruct.Types[1])
+	test.AssertEqualString(t, "", "Orenge", testStruct.Types[2])
+	test.AssertEqualString(t, "", "2018-04-09T23:00:00", testStruct.Created.Format("2006-01-02T15:04:05"))
+}
+
+
+func TestWithBodyJsonList(t *testing.T) {
+	req, err := http.NewRequest("GET","http://abc:8080/data1/1/data2/2?A=5",strings.NewReader("[\"TEST\",\"VALUE\"]"))
+	if (err != nil) {
+		test.Fail(t, "", err.Error())
+	}
+	d := NewURLDetails(req)
+	aList, err := d.GetJSONBodyAsList()
+	if (err != nil) {
+		test.Fail(t, "", "Could not read body!")
+	}
+	test.AssertInterfaceType(t, "", "[]interface {}", aList)
+	test.AssertInterfaceType(t, "", "string", aList[0])
+	test.AssertEqualString(t, "", "TEST", aList[0].(string))
+	test.AssertEqualString(t, "", "VALUE", aList[1].(string))
+}
+
+func TestWithBodyJsonMap(t *testing.T) {
+	req, err := http.NewRequest("GET","http://abc:8080/data1/1/data2/2?A=5",strings.NewReader("{\"TEST\":\"VALUE\"}"))
+	if (err != nil) {
+		test.Fail(t, "", err.Error())
+	}
+	d := NewURLDetails(req)
+	aMap, err := d.GetJSONBodyAsMap()
+	if (err != nil) {
+		test.Fail(t, "", "Could not read body!")
+	}
+	val := aMap["TEST"]
+	test.AssertInterfaceType(t, "", "string", val)
+	test.AssertEqualString(t, "", "VALUE", val.(string))
+}
+
 func TestWithBodyText(t *testing.T) {
 	req, err := http.NewRequest("GET","http://abc:8080/data1/1/data2/2?A=5",strings.NewReader("TEST"))
 	if (err != nil) {
@@ -16,7 +92,7 @@ func TestWithBodyText(t *testing.T) {
 	if (err != nil) {
 		test.Fail(t, "", "Could not read body!")
 	}
-test.AssertEqualString(t, "", text, "TEST")
+	test.AssertEqualString(t, "", text, "TEST")
 }
 
 func TestWithUrl(t *testing.T) {
