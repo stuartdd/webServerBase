@@ -11,6 +11,10 @@ type Data struct {
 	Count    int
 	Material string
 }
+type DataError struct {
+	count    int
+	MadeOf string
+}
 
 var templ *Templates
 var err1 error
@@ -31,8 +35,7 @@ func TestLoadTemplatesNested(t *testing.T) {
 	test.AssertTrue(t, "", templ.HasTemplate("composite1.html"))
 	test.AssertTrue(t, "", templ.HasTemplate("simple1.html"))
 	test.AssertTrue(t, "", templ.HasTemplate("simple2.html"))
-	txt1, err := templ.ExecuteString("composite1.html", mapData)
-	test.AssertNotError(t, "", err)
+	txt1:= templ.ExecuteString("composite1.html", mapData)
 	test.AssertEqualString(t, "Template result data1", "Imp 1.0 - Count is 4 Material is More Silk --PART 1 Silk-- --PART 2 is 4 of Silk -- --PART 3 wants More--", txt1)
 
 }
@@ -51,6 +54,27 @@ func TestFileGroupTemplates(t *testing.T) {
 	test.AssertEqualString(t, "Template result data1", "Imp 1.0 - Count is 4 Material is More Silk --PART 1 Silk-- --PART 2 is 4 of Silk -- --PART 3 wants More--", buf.String())
 
 }
+func TestWriterNotFoundPanic(t *testing.T) {
+	if templ == nil {
+		templ, err1 = LoadTemplates("../site")
+	}
+	test.AssertNotError(t, "", err1)
+	defer test.AssertPanicThrown(t, "Template 'simple4.html' not found")
+	templ.ExecuteString("simple4.html", make(map[string]string))
+}
+
+func TestWriterPanic(t *testing.T) {
+	if templ == nil {
+		templ, err1 = LoadTemplates("../site")
+	}
+	test.AssertNotError(t, "", err1)
+	data1 := DataError{
+		count:    2,
+		MadeOf: "Metal",
+	}
+	defer test.AssertPanicThrown(t, "can't evaluate field Count")
+	templ.ExecuteString("simple1.html", data1)
+}
 
 func TestLoadTemplatesFromPath(t *testing.T) {
 	if templ == nil {
@@ -67,30 +91,24 @@ func TestLoadTemplatesFromPath(t *testing.T) {
 		Material: "Zinc",
 	}
 	test.AssertTrue(t, "", templ.HasTemplate("simple1.html"))
-	txt1, err2 := templ.ExecuteString("simple1.html", data1)
-	test.AssertNotError(t, "", err2)
+	txt1:= templ.ExecuteString("simple1.html", data1)
 	test.AssertEqualString(t, "Template result data1", "S1 - Count is 2 Material is Metal", txt1)
 
 	test.AssertTrue(t, "", templ.HasTemplate("simple2.html"))
-	txt2, err3 := templ.ExecuteString("simple2.html", data2)
-	test.AssertNotError(t, "", err3)
+	txt2 := templ.ExecuteString("simple2.html", data2)
 	test.AssertEqualString(t, "Template result data2", "S2 - Material is Zinc Count is 4", txt2)
 
 	test.AssertFalse(t, "simpleXXX.html", templ.HasTemplate("simpleXXX.html"))
-	_, err4 := templ.ExecuteString("simple3.html", data2)
-	test.AssertNotNilErrorAndContains(t, "", "can't evaluate field Type", err4)
 
 	test.AssertTrue(t, "", templ.HasTemplate("simple3.html"))
-	txt4, err5 := templ.ExecuteString("simple3.html", map[string]string{"Type": "Fire", "Count": "SIX"})
-	test.AssertNotError(t, "", err5)
+	txt4 := templ.ExecuteString("simple3.html", map[string]string{"Type": "Fire", "Count": "SIX"})
 	test.AssertEqualString(t, "S3 - Template result mapped", "S3 - Material is Fire Count is SIX", txt4)
 
 	mapData := make(map[string]string)
 	mapData["Type"] = "Water"
 	mapData["Count"] = "4"
 	mapData["Extra"] = "More"
-	txt5, err6 := templ.ExecuteString("simple3.html", mapData)
-	test.AssertNotError(t, "", err6)
+	txt5:= templ.ExecuteString("simple3.html", mapData)
 	test.AssertEqualString(t, "S3 - Template result mapped", "S3 - Material is Water Count is 4", txt5)
 }
 

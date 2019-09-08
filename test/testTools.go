@@ -221,6 +221,22 @@ func AssertFileDoesNotContain(t *testing.T, info string, fileName string, contai
 	}
 }
 
+/*
+AssertPanicThrown - Called via a defer in tests that require a panic containing specific text to be thrown
+*/
+func AssertPanicThrown(t *testing.T, contains string) {
+	rec := recover()
+	if rec != nil {
+		recText := fmt.Sprintf("%s",rec)
+		if (strings.Contains(recText,contains)) {
+			return
+		}
+		Fail(t, "", fmt.Sprintf("AssertPanicThrown(recover): Panic message '%s' does not contain '%s'", recText, contains))
+	}
+	Fail(t, "", fmt.Sprintf("AssertPanicThrown(recover): A 'panic' containing the text '%s' was NOT thrown!",contains))
+}
+
+
 func logStackTraceAndFail(t *testing.T, desc string, info string, bytes []byte) {
 	t.Logf("FAILED:%s :%s", info, desc)
 	for count, line := range strings.Split(strings.TrimSuffix(string(bytes), "\n"), "\n") {

@@ -129,14 +129,9 @@ func fileSaveHandler(r *http.Request, response *servermain.Response) {
 	if (staticPath == "") {
 		servermain.ThrowPanic("W",404,fmt.Sprintf("Parameter %s Not Found",pathName),fmt.Sprintf("fileSaveHandler: staticPaths: The path '%s' for %s OS was not found",pathName,config.GetOS()))
 	}
-	bodyText, err := d.GetBody()
-	if err != nil {
-		log.LogErrorWithStackTrace(fmt.Sprintf("fileSaveHandler: static path [%s], file [%s] could not read request body",pathName, fileName),err.Error())
-		response.ChangeResponse(400, "Error reading message body", "",err)
-		return
-	}
+	bodyText := d.GetBody()
 	fullFIle := staticPath+fileName+".txt"
-	err = ioutil.WriteFile(fullFIle, bodyText, 0644)
+	err := ioutil.WriteFile(fullFIle, bodyText, 0644)
 	if err != nil {
 		log.LogErrorWithStackTrace(fmt.Sprintf("fileSaveHandler: static path [%s], file [%s] could not write file",pathName, fileName),err.Error())
 		response.ChangeResponse(400, "Error writing message "+fullFIle, "",err)

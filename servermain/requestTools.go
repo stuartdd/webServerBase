@@ -1,6 +1,7 @@
 package servermain
 
 import (
+	"fmt"
 	"net/url"
 	"net/http"
 	"encoding/json"
@@ -40,17 +41,12 @@ Example: (see RequestTools_test.go)
 	testStruct := &TestStruct{}
 	err = d.GetJSONBodyAsObject(testStruct)
 */
-func (p *RequestTools) GetJSONBodyAsObject(configObject interface{}) error {
-	jsonBytes, err := p.GetBody()
+func (p *RequestTools) GetJSONBodyAsObject(configObject interface{}) {
+	jsonBytes := p.GetBody()
+	err := json.Unmarshal(jsonBytes, configObject)
 	if err != nil {
-		return err
+		ThrowPanic("E", 400, "Invalid JSON in request body", err.Error())
 	}
-
-	err = json.Unmarshal(jsonBytes, configObject)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 /*
 GetJSONBodyAsMap read the body from the request. This can only be done ONCE!
@@ -58,57 +54,47 @@ Use this method if the expected Json starts with {
 Example: (see RequestTools_test.go)
 	aMap, err := d.GetJSONBodyAsMap()
 */
-func (p *RequestTools) GetJSONBodyAsMap() (map[string]interface{}, error) {
-	jsonBytes, err := p.GetBody()
-	if err != nil {
-		return nil , err
-	}
+func (p *RequestTools) GetJSONBodyAsMap() (map[string]interface{}) {
+	jsonBytes := p.GetBody()
 	var v interface{}
-	err = json.Unmarshal(jsonBytes, &v)
+	err := json.Unmarshal(jsonBytes, &v)
 	if err != nil {
-		return nil, err
+		ThrowPanic("E", 400, "Invalid JSON in request body", err.Error())
 	}
-	return v.(map[string]interface{}) ,nil
+	return v.(map[string]interface{})
 }
 /*
 GetJSONBodyAsList read the body from the request. This can only be done ONCE!
 Use this method if the expected Json starts with [
 	aList, err := d.GetJSONBodyAsList()
 */
-func (p *RequestTools) GetJSONBodyAsList() ([]interface{}, error) {
-	jsonBytes, err := p.GetBody()
-	if err != nil {
-		return nil , err
-	}
+func (p *RequestTools) GetJSONBodyAsList() ([]interface{}) {
+	jsonBytes := p.GetBody()
 	var v interface{}
-	err = json.Unmarshal(jsonBytes, &v)
+	err := json.Unmarshal(jsonBytes, &v)
 	if err != nil {
-		return nil, err
+		ThrowPanic("E", 400, "Invalid JSON in request body", err.Error())
 	}
-	return v.([]interface{}), nil
+	return v.([]interface{})
 }
 
 /*
 GetBodyString read the body from the request. This can only be done ONCE!
 */
-func (p *RequestTools) GetBodyString() (string, error) {
-	bodyBytes, err := p.GetBody()
-	if err != nil {
-		return "" , err
-	}
-	return string(bodyBytes), nil
+func (p *RequestTools) GetBodyString() (string) {
+	return string(p.GetBody())
 }
 
 /*
 GetBody read the body from the request. This can only be done ONCE!
 */
-func (p *RequestTools) GetBody() ([]byte, error) {
+func (p *RequestTools) GetBody() ([]byte) {
 	bodyBytes, err := ioutil.ReadAll(p.request.Body)
 	defer p.request.Body.Close()
 	if err != nil {
-		return nil , err
+		ThrowPanic("E", 400, "Error reading request body", err.Error())
 	}
-	return bodyBytes, nil
+	return bodyBytes
 }
 
 /*
@@ -133,6 +119,9 @@ func (p *RequestTools) GetURLPart(n int, defaultValue string) string {
 	if ((n>=0 ) && (n<p.urlPartsCount)) {
 		return list[n]
 	}
+	if (defaultValue == "") {
+		ThrowPanic("E", 400, "Invalid URL parameter", fmt.Sprintf("URL parameter at position '%d' returned an empty value.",n))
+	}
 	return defaultValue
 }
 
@@ -153,6 +142,9 @@ func (p *RequestTools) GetNamedPart(name string, defaultValue string) string {
 		if (val == name) {
 			return p.GetURLPart(index+1, defaultValue)
 		}
+	}
+	if (defaultValue == "") {
+		ThrowPanic("E", 400, "Invalid URL parameter", fmt.Sprintf("URL parameter '%s' returned an empty value.",name))
 	}
 	return defaultValue
 }

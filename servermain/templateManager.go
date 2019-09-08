@@ -2,9 +2,9 @@ package servermain
 
 import (
 	"bytes"
-	"errors"
 	"html/template"
 	"io"
+	"fmt"
 	"os"
 	"path"
 	"path/filepath"
@@ -163,26 +163,22 @@ func ListTemplateNames(delim string, t map[string]*templateData) string {
 /*
 ExecuteWriter writes a template to a io.Writer object
 */
-func (p *Templates) ExecuteWriter(w io.Writer, templateName string, data interface{}) error {
+func (p *Templates) ExecuteWriter(w io.Writer, templateName string, data interface{}) {
 	tmpl := p.templates[templateName]
 	if tmpl == nil {
-		return errors.New("Template " + templateName + " not found")
+		ThrowPanic("E",400,fmt.Sprintf("Template '%s' not found", templateName),"")
 	}
 	err := tmpl.template.Execute(w, data)
 	if err != nil {
-		return errors.New("Template error: " + err.Error())
+		ThrowPanic("E",400,fmt.Sprintf("Template '%s' error", templateName),err.Error())
 	}
-	return nil
 }
 
 /*
 ExecuteString writes a template to a string using ExecuteWriter
 */
-func (p *Templates) ExecuteString(templateName string, data interface{}) (string, error) {
+func (p *Templates) ExecuteString(templateName string, data interface{}) (string) {
 	var buf bytes.Buffer
-	err := p.ExecuteWriter(&buf, templateName, data)
-	if err != nil {
-		return "", errors.New("Template error: " + err.Error())
-	}
-	return buf.String(), nil
+	p.ExecuteWriter(&buf, templateName, data)
+	return buf.String()
 }
