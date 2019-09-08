@@ -1,6 +1,7 @@
 package servermain
 
 import (
+	"fmt"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -34,7 +35,7 @@ func NewStaticFileServer(mappings map[string]string) *FileServerData {
 		},
 	}
 	for urlPrefix, root := range mappings {
-		sfs.AddFileServerData(urlPrefix, root)
+		sfs.AddStaticFileServerData(urlPrefix, root)
 	}
 	return sfs
 }
@@ -42,7 +43,7 @@ func NewStaticFileServer(mappings map[string]string) *FileServerData {
 /*
 AddFileServerData appends a URL prefix and a root directory
 */
-func (p *FileServerData) AddFileServerData(urlPrefix string, root string) {
+func (p *FileServerData) AddStaticFileServerData(urlPrefix string, root string) {
 	container := p.FileServerList
 	for container.next != nil {
 		container = container.next
@@ -69,16 +70,14 @@ func ReasonableStaticFileHandler(request *http.Request, response *Response) {
 	If an there is no file server data then change the response to Not Found and return
 	*/
 	if fileServerData == nil {
-		response.SetError404(url)
-		return
+		ThrowPanic("E",500,SCStaticFileInit,fmt.Sprintf("URL:%s Unsupported",url),"Static File Server Data has not been defined.")
 	}
 	/*
 	If an there is no file server list then change the response to Not Found and return
 	*/
 	fileServerList := fileServerData.FileServerList
 	if fileServerList == nil {
-		response.SetError404(url)
-		return
+		ThrowPanic("E",400,SCStaticFileInit,fmt.Sprintf("URL:%s Unsupported",url),"Static File Server Data - File Server List has not been defined.")
 	}
 
 	for fileServerList.fs != nil {
@@ -94,17 +93,9 @@ func ReasonableStaticFileHandler(request *http.Request, response *Response) {
 			derive the file name from the url and the path in the fileServerList
 			*/
 			filename := filepath.Join(fileServerList.root, url[len(fileServerList.path):])
-			err := ServeContent(response.GetWrappedWriter(), request, filename)
-			if err != nil {
-				/*
-				If an error occured change the response to an error and return
-				*/
-				response.ChangeResponse(400, "ServeContent", "", err)
-				return
-			}
+			ServeContent(response.GetWrappedWriter(), request, filename)
 			/*
 			The file is being written to the response writer.
-
 			Close the response to prevent further writes to the response writer
 			*/
 			response.Close()
@@ -115,5 +106,5 @@ func ReasonableStaticFileHandler(request *http.Request, response *Response) {
 	/*
 	If not matching file was found then change the response to Not Found and return
 	*/
-	response.SetError404(url)
+	response.SetError404(url, SCContentNotFound)
 }

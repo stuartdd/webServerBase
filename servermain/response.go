@@ -19,11 +19,12 @@ type responseContext struct {
 ResponseState contains the current response
 */
 type responseState struct {
-	code        int
-	resp        interface{}
-	contentType string
-	err         error
-	closed      bool
+	code        	int
+	subCode			int
+	resp        	interface{}
+	contentType 	string
+	errorMessage    string
+	closed      	bool
 }
 
 /*
@@ -41,6 +42,8 @@ SetContentType set the content type. E.G. application/json
 func (p *Response) SetContentType(contentType string) {
 	p.response.contentType = contentType
 }
+
+
 
 /*
 AddHeader adds an array/slice of strings to a header
@@ -93,20 +96,10 @@ func (p *Response) GetResp() string {
 }
 
 /*
-GetError returns the go error
+GetErrorMessage returns the go error
 */
-func (p *Response) GetError() error {
-	return p.response.err
-}
-
-/*
-GetError returns the go error
-*/
-func (p *Response) GetErrorString() string {
-	if (p.response.err == nil) {
-		return ""
-	}
-	return p.response.err.Error()
+func (p *Response) GetErrorMessage() string {
+	return p.response.errorMessage
 }
 
 /*
@@ -114,6 +107,12 @@ GetCode returns the http status code
 */
 func (p *Response) GetCode() int {
 	return p.response.code
+}
+/*
+GetSubCode returns the http status code
+*/
+func (p *Response) GetSubCode() int {
+	return p.response.subCode
 }
 
 /*
@@ -134,7 +133,11 @@ func (p *Response) GetWrappedWriter() *ResponseWriterWrapper {
 GetCSV returns JSON string representing this object
 */
 func (p *Response) GetCSV() string {
-	return fmt.Sprintf("code=%d, contentType=%s, err=%s, resp=%s", p.response.code, p.response.contentType, p.response.err, p.response.resp)
+	return fmt.Sprintf("status=%d, subCode=%d, errorMessage=%s, resp=%s, contentType=%s", p.response.code, p.response.subCode, p.response.errorMessage, p.response.resp, p.response.contentType)
+}
+
+func (p *Response) toErrorJSON() string {
+	return fmt.Sprintf("{\"Status\":%d,\"Code\":%d\"Message\":\"%s\",\"Error\":\"%s\"}", p.GetCode(), p.GetSubCode(), p.GetResp(), p.GetErrorMessage())
 }
 
 /*
@@ -160,9 +163,10 @@ func NewResponse(w *ResponseWriterWrapper, s *ServerInstanceData) *Response {
 	return &Response{
 		response:  &responseState{
 			code:        200,
-			resp:        "",
+			subCode:	 SCSubCodeZero,
+			resp:        nil,
 			contentType: "",
-			err:         nil,
+			errorMessage:"",
 			closed:      false,
 		},
 		context: &responseContext{
@@ -176,27 +180,44 @@ func NewResponse(w *ResponseWriterWrapper, s *ServerInstanceData) *Response {
 /*
 SetError404 create an error response
 */
-func (p *Response) SetError404(url string) *Response {
+func (p *Response) SetError404(url string, subCode int) *Response {
 	p.response = &responseState{
 		code:        404,
-		resp:        url + " - " + http.StatusText(404),
-		contentType: "",
-		err:         nil,
+		subCode:	 subCode,
+		resp:        http.StatusText(404),
+		errorMessage:url,
+		contentType: p.GetContentType(),
 		closed:      false,
 	}
 	return p
 }
 
 /*
-ChangeResponse create an error response
+SetErrorResponse create an error response
 */
-func (p *Response) ChangeResponse(statusCode int, response interface{}, contentType string, goErr error) *Response {
+func (p *Response) SetErrorResponse(statusCode int, subCode int, errorMessage string) *Response {
 	p.response = &responseState{
 		code:        statusCode,
-		resp:        response,
-		contentType: contentType,
-		err:         goErr,
+		subCode:     subCode,
+		resp:        http.StatusText(statusCode),
+		errorMessage:errorMessage,
+		contentType: p.GetContentType(),
 		closed:      false,
 	}
+	return p
+}
+
+/*
+SetResponse set the content type. E.G. application/json
+*/
+func (p *Response) SetResponse(code int, resp interface{}, contentType string)  *Response {
+	p.response = &responseState{
+		code:        code,
+		subCode:     SCSubCodeZero,
+		resp:        resp,
+		errorMessage:"",
+		contentType: contentType,
+		closed:      false,
+	}	
 	return p
 }

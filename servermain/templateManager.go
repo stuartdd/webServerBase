@@ -166,11 +166,11 @@ ExecuteWriter writes a template to a io.Writer object
 func (p *Templates) ExecuteWriter(w io.Writer, templateName string, data interface{}) {
 	tmpl := p.templates[templateName]
 	if tmpl == nil {
-		ThrowPanic("E",400,fmt.Sprintf("Template '%s' not found", templateName),"")
+		ThrowPanic("E",400,SCTemplateNotFound, fmt.Sprintf("Template '%s' not found", templateName),"")
 	}
 	err := tmpl.template.Execute(w, data)
 	if err != nil {
-		ThrowPanic("E",400,fmt.Sprintf("Template '%s' error", templateName),err.Error())
+		ThrowPanic("E",400,SCTemplateError, fmt.Sprintf("Template '%s' error", templateName),err.Error())
 	}
 }
 

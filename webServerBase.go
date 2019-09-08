@@ -13,6 +13,15 @@ import (
 	"webServerBase/servermain"
 )
 
+/*
+SCStaticPath and these constants are used as unique subcodes in error responses.
+They MUST start wit the highest sub code defined in  servermain SCMax
+*/
+const (
+	SCStaticPath = iota + servermain.SCMax + 1
+	SCWriteFile
+	SCParamValidation
+)
 
 var log *logging.LoggerDataReference
 var serverInstance *servermain.ServerInstanceData
@@ -123,55 +132,49 @@ Start of handlers section
 *************************************************/
 func fileSaveHandler(r *http.Request, response *servermain.Response) {
 	d := servermain.NewRequestTools(r)
-	fileName := d.GetNamedPart("file","")
-	pathName := d.GetNamedPart("path","")
+	fileName := d.GetNamedURLPart("file","")
+	pathName := d.GetNamedURLPart("path","")
 	staticPath := config.GetConfigDataInstance().GetConfigDataStaticFilePathForOS()[pathName]
 	if (staticPath == "") {
-		servermain.ThrowPanic("W",404,fmt.Sprintf("Parameter %s Not Found",pathName),fmt.Sprintf("fileSaveHandler: staticPaths: The path '%s' for %s OS was not found",pathName,config.GetOS()))
+		servermain.ThrowPanic("W",404,SCStaticPath, fmt.Sprintf("Parameter '%s' Not Found",pathName),fmt.Sprintf("fileSaveHandler: staticPaths: The path '%s' for %s OS was not found",pathName,config.GetOS()))
 	}
 	bodyText := d.GetBody()
 	fullFIle := staticPath+fileName+".txt"
 	err := ioutil.WriteFile(fullFIle, bodyText, 0644)
 	if err != nil {
-		log.LogErrorWithStackTrace(fmt.Sprintf("fileSaveHandler: static path [%s], file [%s] could not write file",pathName, fileName),err.Error())
-		response.ChangeResponse(400, "Error writing message "+fullFIle, "",err)
-		return
+		servermain.ThrowPanic("E",400,SCWriteFile,fmt.Sprintf("fileSaveHandler: static path [%s], file [%s] could not write file",pathName, fileName),err.Error())
 	}
-	response.ChangeResponse(201, "{\"Created\":\"OK\"}", "application/json", nil)
+	response.SetResponse(201, "{\"Created\":\"OK\"}", "application/json")
 }
-
-
 
 func stopServerInstance(r *http.Request, response *servermain.Response) {
 	d := servermain.NewRequestTools(r)
-	count, err := strconv.Atoi(d.GetNamedPart("stop","2"))
+	count, err := strconv.Atoi(d.GetNamedURLPart("stop","2"))
 	if err != nil {
-		response.ChangeResponse(400, "Invalid stop period", "Ha", err)
+		servermain.ThrowPanic("E",400, SCParamValidation, "Invalid stop period",err.Error())
 	} else {
 		serverInstance.StopServerLater(count, fmt.Sprintf("Stopped by request. Delay %d seconds", count))
-		response.ChangeResponse(200, serverInstance.GetStatusDataJSON(), "application/json", nil)	
+		response.SetResponse(200, serverInstance.GetStatusDataJSON(), "application/json")	
 	}
 }
 
 func divHandler(r *http.Request, response *servermain.Response) {
 	d := servermain.NewRequestTools(r)
-	p1 := d.GetNamedPart("calc","undefined")
-	p2 := d.GetNamedPart("div","undefined")
+	p1 := d.GetNamedURLPart("calc","")
+	p2 := d.GetNamedURLPart("div","")
 	a1, err := strconv.Atoi(p1)
 	if err != nil {
-		response.ChangeResponse(400, "invalid number "+p1, "", err)
-		return
+		servermain.ThrowPanic("E",400, SCParamValidation, "invalid number "+p1, err.Error())
 	}
 	a2, err := strconv.Atoi(p2)
 	if err != nil {
-		response.ChangeResponse(400, "invalid number "+p2, "", err)
-		return
+		servermain.ThrowPanic("E",400, SCParamValidation, "invalid number "+p2, err.Error())
 	}
-	response.ChangeResponse(200, strconv.Itoa(a1/a2), "", nil)
+	response.SetResponse(200, strconv.Itoa(a1/a2), "")
 }
 
 func statusHandler(r *http.Request, response *servermain.Response) {
-	response.ChangeResponse(200, serverInstance.GetStatusDataJSON(), "application/json", nil)
+	response.SetResponse(200, serverInstance.GetStatusDataJSON(), "application/json")
 }
 
 func filterBefore(r *http.Request, response *servermain.Response) {
@@ -190,7 +193,6 @@ Start of utility functions
 
 /*
 CloseLog closes the logger file if it exists
-
 A logger os passed to enable the CloseLog function to log that fact it has been closed!
 */
 func CloseLog() {

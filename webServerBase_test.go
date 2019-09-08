@@ -17,7 +17,7 @@ import (
 var configData *config.Data
 var testLog = logging.CreateTestLogger("Test-Logger")
 
-func TestGetStatus(t *testing.T) {
+func TestServer(t *testing.T) {
 	
 	startServer(t)
 	prc := configData.PanicResponseCode
@@ -25,7 +25,7 @@ func TestGetStatus(t *testing.T) {
 	testFile := configData.GetConfigDataStaticFilePathForOS()["static"]+string(os.PathSeparator)+"testFile.txt"
 	defer deleteFile(t, testFile)
 
-	test.AssertStringContains(t, "", sendPost(t, 404, "path/god/file/testFile", "Hello"),  []string{"Not Found", "Parameter god Not Found"})
+	test.AssertStringContains(t, "", sendPost(t, 404, "path/god/file/testFile", "Hello"),  []string{"Not Found", "Parameter 'god' Not Found"})
 	test.AssertStringContains(t, "", sendPost(t, 404, "status", "Hello"),  []string{"Not Found"})
 
 	test.AssertStringContains(t, "", sendPost(t, 201, "path/static/file/testFile", "Hello"),[]string{"\"Created\":\"OK\""})

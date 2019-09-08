@@ -2,7 +2,6 @@ package servermain
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -10,6 +9,24 @@ import (
 	"strings"
 	"time"
 	"webServerBase/logging"
+)
+
+/*
+SCSubCodeZero and these constants are used as unique subcodes in error responses
+*/
+const (
+	SCSubCodeZero = iota
+	SCPathNotFound
+	SCContentNotFound
+	SCContentReadFailed
+	SCServerShutDown
+	SCInvalidJSONRequest
+	SCReadJSONRequest
+	SCMissingURLParam
+	SCStaticFileInit
+	SCTemplateNotFound
+	SCTemplateError
+	SCMax	
 )
 
 const contentTypeName = "Content-Type"
@@ -161,8 +178,7 @@ func (p *ServerInstanceData) ServeHTTP(rw http.ResponseWriter, httpRequest *http
 			Mapping not found,
 			delegate to the current error handler to manage the error
 		*/
-		p.errorHandler(httpRequest, actualResponse.SetError404(url))
-		return
+		ThrowPanic("W",404,SCPathNotFound,fmt.Sprintf("%s URL:%s", httpRequest.Method, url), fmt.Sprintf("METHOD:%s URL:%s is not mapped"))
 	}
 
 	/*
@@ -413,7 +429,11 @@ Define DEBUG and ACCESS to see the response and headers in the logs
 */
 func (p *ServerInstanceData) LogResponse(response *Response) {
 	if p.logger.IsAccess() {
-		p.logger.LogAccessf("<<< STATUS=%d: RESP=%s", response.GetCode(), response.GetResp())
+		errText := response.GetErrorMessage()
+		if (errText != "") {
+			errText = ": ERROR:"+errText
+		} 
+		p.logger.LogAccessf("<<< STATUS=%d: RESP=%s%s", response.GetCode(), response.GetResp(), errText)
 		p.logHeaderMap(response.GetHeaders(), "<-<")
 	}
 }
@@ -433,22 +453,24 @@ Parameter level:
 
  Equivilent to panic("Level|statusCode|Error|info)
 */
-func ThrowPanic(level string, statusCode int, errorMessage string, info string) {
-	panic(fmt.Sprintf("%s|%d|%s|%s", level, statusCode, errorMessage, info))
+func ThrowPanic(level string, statusCode, subCode int, errorText string, logMessage string) {
+	panic(fmt.Sprintf("%s|%d|%d|%s|%s", level, statusCode, subCode, errorText, logMessage))
 }
 /*
 ServeContent wraps the http.ServeContent. It opens the file first.
 If the open fails it returns an error.
 After that it delegates to http.ServeContent
 */
-func ServeContent(w *ResponseWriterWrapper, r *http.Request, name string) error {
+func ServeContent(w *ResponseWriterWrapper, r *http.Request, name string) {
 	file, err := os.Open(name)
 	if err != nil {
-		return err
+		if (os.IsNotExist(err)) {
+			ThrowPanic("W",404,SCContentNotFound,fmt.Sprintf("URL:%s",r.URL.Path),err.Error())
+		} 
+		ThrowPanic("E",500,SCContentReadFailed,fmt.Sprintf("URL:%s",r.URL.Path),err.Error())
 	}
 	defer file.Close()
 	http.ServeContent(w, r, name, time.Now(), file)
-	return nil
 }
 
 func checkForPanicAndRecover(r *http.Request, response *Response) {
@@ -458,33 +480,39 @@ func checkForPanicAndRecover(r *http.Request, response *Response) {
 		recStr := fmt.Sprintf("%s",rec)
 		parts := strings.Split(recStr,"|")
 		if (len(parts)>1) {
-			rc, err := strconv.Atoi(parts[1])
-			if (err == nil) {
+			rc, err1 := strconv.Atoi(parts[1])
+			sub, err2 := strconv.Atoi(parts[2])
+			if (err1 == nil) && (err2 == nil) {
 				switch strings.ToUpper(parts[0]) {
 				case "I":
 					if (server.logger.IsInfo()) {
-						server.logger.LogInfo("--- "+recStr)
+						server.logger.LogInfo("--- PANIC|"+recStr[2:])
 					}
 					break
 				case "W":
 					if (server.logger.IsWarn()) {
-						server.logger.LogWarn("--- "+recStr)
+						server.logger.LogWarn("--- PANIC|"+recStr[2:])
+					}
+					break
+				case "E":
+					if (server.logger.IsError()) {
+						server.logger.LogError(fmt.Errorf("--- PANIC|%s",recStr[2:]))
 					}
 					break
 				default:
 					if (server.logger.IsError()) {
-						server.logger.LogError(fmt.Errorf("--- %s",recStr))
+						server.logger.LogError(fmt.Errorf("--- PANIC|%s",recStr))
 					}
 					break
 				}
-				server.errorHandler(r, response.ChangeResponse(rc, http.StatusText(rc), "", fmt.Errorf("%s", parts[2])))
+				server.errorHandler(r, response.SetErrorResponse(rc, sub, parts[3]))
 				return
 			} 
 		} 
 		server.serverState.panicCounter++
 		text := fmt.Sprintf("REQUEST:%s MESSAGE:%s", r.URL.Path, recStr)
 		server.logger.LogErrorWithStackTrace("!!!", text)
-		server.errorHandler(r, response.ChangeResponse(server.panicStatusCode, text, "", nil))		
+		server.errorHandler(r, response.SetErrorResponse(server.panicStatusCode,server.panicStatusCode, recStr))	
 	}
 }
 
@@ -501,7 +529,7 @@ func defaultErrorResponseHandler(request *http.Request, response *Response) {
 	response.SetContentType(server.contentTypeLookup["json"])
 	server.PreProcessResponse(request, response)
 	server.LogResponse(response)
-	fmt.Fprintf(response.GetWrappedWriter(), toErrorJSON(response.GetCode(), response.GetResp(), response.GetErrorString()))
+	fmt.Fprintf(response.GetWrappedWriter(), response.toErrorJSON())
 }
 
 func defaultResponseHandler(request *http.Request, response *Response) {
@@ -517,7 +545,7 @@ func (p *ServerInstanceData) stopServerThread(waitForSeconds int) {
 	}
 	err := p.server.Shutdown(context.TODO())
 	if err != nil {
-		panic(err)
+		ThrowPanic("E",500,SCServerShutDown,"Server Shutdown Failed",err.Error())
 	}
 }
 
@@ -565,24 +593,3 @@ func (p *ServerInstanceData) logHeaderMap(headers map[string][]string, dir strin
 	}
 }
 
-func toErrorJSON(code int, desc string, err string) string {
-	m := make(map[string]interface{})
-	m["Code"] = code
-	m["Message"] = desc
-	if err != "" {
-		m["Error"] = err
-	}
-	s, errm := toJSONMap(m)
-	if errm != nil {
-		return fmt.Sprintf("{\"Code\":%d\"Message\":\"%s\"}", code, desc)
-	}
-	return s
-}
-
-func toJSONMap(m map[string]interface{}) (string, error) {
-	v, err := json.Marshal(m)
-	if err != nil {
-		return "", err
-	}
-	return string(v), nil
-}
