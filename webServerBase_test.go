@@ -49,12 +49,18 @@ func TestServer(t *testing.T) {
 	*/
 	test.AssertEqualString(t, "", "2", sendGet(t, 200, "calc/10/div/5", headers("txt", "1")))
 	test.AssertEqualString(t, "", "50", sendGet(t, 200, "calc/100/div/2", headers("txt", "2")))
+	test.AssertEqualString(t, "", "50", sendGet(t, 200, "calc/100/div/2", headers("txt", "2")))
 	test.AssertStringContains(t, "", sendGet(t, 404, "calc", headers("json", "")), []string{"\"Status\":404", "\"Code\":" + strconv.Itoa(servermain.SCPathNotFound), "GET URL:/calc"})
 	test.AssertStringContains(t, "", sendGet(t, 404, "calc/10", headers("json", "")), []string{"\"Status\":404"})
 	test.AssertStringContains(t, "", sendGet(t, 404, "calc/10/div", headers("json", "")), []string{"\"Status\":404"})
 	test.AssertStringContains(t, "", sendGet(t, 404, "calc/10/div/", headers("json", "")), []string{"\"Status\":404"})
 	test.AssertStringContains(t, "", sendGet(t, 400, "calc/10/div/ten", headers("json", "")), []string{"\"Status\":400", "\"Code\":" + strconv.Itoa(SCParamValidation), "invalid number ten"})
 	test.AssertStringContains(t, "", sendGet(t, 400, "calc/five/div/ten", headers("json", "")), []string{"\"Status\":400", "\"Code\":" + strconv.Itoa(SCParamValidation), "invalid number five"})
+
+	test.AssertEqualString(t, "", "16", sendGet(t, 200, "calc/qube/2", headers("txt", "2")))
+	test.AssertStringContains(t, "", sendGet(t, 404, "calc/qube", headers("json", "")), []string{"\"Status\":404"})
+	test.AssertStringContains(t, "", sendGet(t, 404, "calc/qube/div/10", headers("json", "")), []string{"\"Status\":404"})
+	test.AssertStringContains(t, "", sendGet(t, 400, "calc/qube/div", headers("json", "")), []string{"\"Status\":400", "\"Code\":" + strconv.Itoa(SCParamValidation), "invalid number div"})
 	/*
 		Test PANIC responses
 	*/
@@ -73,33 +79,6 @@ func headers(ct string, cl string) map[string]string {
 		headers[servermain.ContentLengthName] = cl
 	}
 	return headers
-}
-
-func stopServer(t *testing.T) {
-	test.AssertStringContains(t, "", sendGet(t, 200, "stop", nil), []string{"\"state\":\"STOPPING\"", "\"executable\":\"TestExe\"", "\"panics\":1"})
-}
-
-func deleteFile(t *testing.T, name string) {
-	err := os.Remove(name)
-	if err != nil {
-		if os.IsNotExist(err) {
-			test.Fail(t, "", "Failed. File "+name+" was not created")
-		} else {
-			test.Fail(t, "", "Failed to remove file "+name+". "+err.Error())
-		}
-	}
-}
-
-func startServer(t *testing.T) {
-	if configData == nil {
-		err := config.LoadConfigData("webServerTest.json")
-		if err != nil {
-			test.Fail(t, "Read response Failed", err.Error())
-		}
-		configData = config.GetConfigDataInstance()
-		go RunWithConfig(configData, "TestExe")
-		time.Sleep(time.Millisecond * time.Duration(500))
-	}
 }
 
 func sendGet(t *testing.T, st int, url string, headers map[string]string) string {
@@ -148,4 +127,31 @@ func sendPost(t *testing.T, st int, url string, postBody string, headers map[str
 		}
 	}
 	return string(body)
+}
+
+func deleteFile(t *testing.T, name string) {
+	err := os.Remove(name)
+	if err != nil {
+		if os.IsNotExist(err) {
+			test.Fail(t, "", "Failed. File "+name+" was not created")
+		} else {
+			test.Fail(t, "", "Failed to remove file "+name+". "+err.Error())
+		}
+	}
+}
+
+func stopServer(t *testing.T) {
+	test.AssertStringContains(t, "", sendGet(t, 200, "stop", nil), []string{"\"state\":\"STOPPING\"", "\"executable\":\"TestExe\"", "\"panics\":1"})
+}
+
+func startServer(t *testing.T) {
+	if configData == nil {
+		err := config.LoadConfigData("webServerTest.json")
+		if err != nil {
+			test.Fail(t, "Read response Failed", err.Error())
+		}
+		configData = config.GetConfigDataInstance()
+		go RunWithConfig(configData, "TestExe")
+		time.Sleep(time.Millisecond * time.Duration(500))
+	}
 }

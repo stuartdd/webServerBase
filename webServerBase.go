@@ -119,6 +119,7 @@ func RunWithConfig(configData *config.Data, executable string) {
 	serverInstance.AddMappedHandler("/stop/?", http.MethodGet, stopServerInstance)
 	serverInstance.AddMappedHandler("/status", http.MethodGet, statusHandler)
 	serverInstance.AddMappedHandler("/static/?", http.MethodGet, servermain.ReasonableStaticFileHandler)
+	serverInstance.AddMappedHandler("/calc/qube/?", http.MethodGet, qubeHandler)
 	serverInstance.AddMappedHandler("/calc/?/div/?", http.MethodGet, divHandler)
 	serverInstance.AddMappedHandler("/path/?/file/?", http.MethodPost, fileSaveHandler)
 	
@@ -156,6 +157,16 @@ func stopServerInstance(r *http.Request, response *servermain.Response) {
 		serverInstance.StopServerLater(count, fmt.Sprintf("Stopped by request. Delay %d seconds", count))
 		response.SetResponse(200, serverInstance.GetStatusDataJSON(), "application/json")	
 	}
+}
+
+func qubeHandler(r *http.Request, response *servermain.Response) {
+	d := servermain.NewRequestTools(r)
+	p1 := d.GetNamedURLPart("qube","")
+	a1, err := strconv.Atoi(p1)
+	if err != nil {
+		servermain.ThrowPanic("E",400, SCParamValidation, "invalid number "+p1, err.Error())
+	}
+	response.SetResponse(200, strconv.Itoa(a1*a1*a1*a1), "")
 }
 
 func divHandler(r *http.Request, response *servermain.Response) {
