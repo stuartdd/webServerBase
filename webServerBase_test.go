@@ -18,47 +18,61 @@ import (
 var configData *config.Data
 var testLog = logging.CreateTestLogger("Test-Logger")
 
+/*
+Start server. Do loads of tests. Stop the server...
+*/
 func TestServer(t *testing.T) {
-	headers := make(map[string]string)
-
 	startServer(t)
-	test.AssertStringContains(t, "", sendGet(t, 404, "static/testfile", nil), []string{"\"Status\":404", "\"Code\":" + strconv.Itoa(servermain.SCContentNotFound), "Not Found", "URL:/static/testfile"})
-
-	headers[servermain.ContentTypeName] = servermain.LookupContentType("json")
-	headers[servermain.ContentLengthName] = "13"
-	test.AssertStringContains(t, "", sendGet(t, 200, "static/testfile.json", headers), []string{"{\"test\":true}"})
-
-	headers[servermain.ContentTypeName] = servermain.LookupContentType("xml")
-	headers[servermain.ContentLengthName] = "17"
-	test.AssertStringContains(t, "", sendGet(t, 200, "static/testfile.xml", headers), []string{"<test>true</test>"})
-
-	headers[servermain.ContentTypeName] = servermain.LookupContentType("ico")
-	headers[servermain.ContentLengthName] = "367958"
-	test.AssertStringContains(t, "", sendGet(t, 200, "static/arduino.ico", headers), []string{})
-
-	testFile := configData.GetConfigDataStaticFilePathForOS()["static"] + string(os.PathSeparator) + "testFile.txt"
-	defer deleteFile(t, testFile)
-
+	/*
+		Test static file retrieval
+	*/
+	test.AssertStringContains(t, "", sendGet(t, 404, "static/testfile", headers("json", "")), []string{"\"Status\":404", "\"Code\":" + strconv.Itoa(servermain.SCContentNotFound), "Not Found", "URL:/static/testfile"})
+	test.AssertStringContains(t, "", sendGet(t, 200, "static/testfile.json", headers("json", "13")), []string{"{\"test\":true}"})
+	test.AssertStringContains(t, "", sendGet(t, 200, "static/testfile.xml", headers("xml", "17")), []string{"<test>true</test>"})
+	test.AssertStringContains(t, "", sendGet(t, 200, "static/arduino.ico", headers("ico", "367958")), []string{})
+	/*
+		Test write file. Mainly to test POST processes
+	*/
+	testWriteFile := configData.GetConfigDataStaticFilePathForOS()["static"] + string(os.PathSeparator) + "testFile.txt"
+	defer deleteFile(t, testWriteFile) // Clean up the test data when done!
+	test.AssertStringContains(t, "", sendPost(t, 404, "status", "Hello", headers("json", "")), []string{"\"Status\":404", "\"Code\":" + strconv.Itoa(servermain.SCPathNotFound), "POST URL:/status"})
+	test.AssertStringContains(t, "", sendPost(t, 404, "path/god/file/testFile", "Hello", headers("json", "")), []string{"\"Status\":404", "\"Code\":" + strconv.Itoa(SCStaticPath), "Not Found", "Parameter 'god' Not Found"})
+	test.AssertStringContains(t, "", sendPost(t, 201, "path/static/file/testFile", "Hello", headers("json", "16")), []string{"\"Created\":\"OK\""})
+	test.AssertFileContains(t, "", testWriteFile, []string{"Hello"})
+	/*
+		Test GET functions
+	*/
+	test.AssertStringContains(t, "", sendGet(t, 200, "status", headers("json", "")), []string{"\"state\":\"RUNNING\"", "\"executable\":\"TestExe\"", "\"panics\":0"})
+	test.AssertStringContains(t, "", sendGet(t, 404, "not-fo", headers("json", "")), []string{"\"Status\":404", "\"Code\":" + strconv.Itoa(servermain.SCPathNotFound), "GET URL:/not-fo"})
+	/*
+		Test GET functions with calc
+	*/
+	test.AssertEqualString(t, "", "2", sendGet(t, 200, "calc/10/div/5", headers("txt", "1")))
+	test.AssertEqualString(t, "", "50", sendGet(t, 200, "calc/100/div/2", headers("txt", "2")))
+	test.AssertStringContains(t, "", sendGet(t, 404, "calc", headers("json", "")), []string{"\"Status\":404", "\"Code\":" + strconv.Itoa(servermain.SCPathNotFound), "GET URL:/calc"})
+	test.AssertStringContains(t, "", sendGet(t, 404, "calc/10", headers("json", "")), []string{"\"Status\":404"})
+	test.AssertStringContains(t, "", sendGet(t, 404, "calc/10/div", headers("json", "")), []string{"\"Status\":404"})
+	test.AssertStringContains(t, "", sendGet(t, 404, "calc/10/div/", headers("json", "")), []string{"\"Status\":404"})
+	test.AssertStringContains(t, "", sendGet(t, 400, "calc/10/div/ten", headers("json", "")), []string{"\"Status\":400", "\"Code\":" + strconv.Itoa(SCParamValidation), "invalid number ten"})
+	test.AssertStringContains(t, "", sendGet(t, 400, "calc/five/div/ten", headers("json", "")), []string{"\"Status\":400", "\"Code\":" + strconv.Itoa(SCParamValidation), "invalid number five"})
+	/*
+		Test PANIC responses
+	*/
 	prc := configData.PanicResponseCode
-	test.AssertStringContains(t, "", sendPost(t, 404, "path/god/file/testFile", "Hello"), []string{"\"Status\":404", "\"Code\":" + strconv.Itoa(SCStaticPath), "Not Found", "Parameter 'god' Not Found"})
-	test.AssertStringContains(t, "", sendPost(t, 404, "status", "Hello"), []string{"\"Status\":404", "\"Code\":" + strconv.Itoa(servermain.SCPathNotFound), "POST URL:/status"})
-
-	test.AssertStringContains(t, "", sendPost(t, 201, "path/static/file/testFile", "Hello"), []string{"\"Created\":\"OK\""})
-	test.AssertFileContains(t, "", testFile, []string{"Hello"})
-
-	test.AssertStringContains(t, "", sendGet(t, 200, "status", nil), []string{"\"state\":\"RUNNING\"", "\"executable\":\"TestExe\"", "\"panics\":0"})
-	test.AssertStringContains(t, "", sendGet(t, 404, "not-fo", nil), []string{"\"Status\":404", "\"Code\":" + strconv.Itoa(servermain.SCPathNotFound), "GET URL:/not-fo"})
-
-	test.AssertEqualString(t, "", "2", sendGet(t, 200, "calc/10/div/5", nil))
-	test.AssertStringContains(t, "", sendGet(t, 404, "calc", nil), []string{"\"Status\":404", "\"Code\":" + strconv.Itoa(servermain.SCPathNotFound), "GET URL:/calc"})
-	test.AssertStringContains(t, "", sendGet(t, 404, "calc/10", nil), []string{"\"Status\":404"})
-	test.AssertStringContains(t, "", sendGet(t, 404, "calc/10/div", nil), []string{"\"Status\":404"})
-	test.AssertStringContains(t, "", sendGet(t, 404, "calc/10/div/", nil), []string{"\"Status\":404"})
-	test.AssertStringContains(t, "", sendGet(t, 400, "calc/10/div/ten", nil), []string{"\"Status\":400", "\"Code\":" + strconv.Itoa(SCParamValidation), "invalid number ten"})
-	test.AssertStringContains(t, "", sendGet(t, 400, "calc/five/div/ten", nil), []string{"\"Status\":400", "\"Code\":" + strconv.Itoa(SCParamValidation), "invalid number five"})
-	test.AssertStringContains(t, "", sendGet(t, prc, "calc/10/div/0", nil), []string{"\"Status\":" + strconv.Itoa(prc), "\"Code\":" + strconv.Itoa(servermain.SCRuntimeError), "integer divide by zero", "Internal Server Error"})
+	test.AssertStringContains(t, "", sendGet(t, prc, "calc/10/div/0", headers("json", "")), []string{"\"Status\":" + strconv.Itoa(prc), "\"Code\":" + strconv.Itoa(servermain.SCRuntimeError), "integer divide by zero", "Internal Server Error"})
 
 	stopServer(t)
+}
+
+func headers(ct string, cl string) map[string]string {
+	headers := make(map[string]string)
+	if ct != "" {
+		headers[servermain.ContentTypeName] = servermain.LookupContentType(ct)
+	}
+	if cl != "" {
+		headers[servermain.ContentLengthName] = cl
+	}
+	return headers
 }
 
 func stopServer(t *testing.T) {
@@ -101,16 +115,18 @@ func sendGet(t *testing.T, st int, url string, headers map[string]string) string
 	test.AssertEqualInt(t, "", st, resp.StatusCode)
 	if headers != nil {
 		for name, value := range headers {
-			headerList := resp.Header[name]
-			if !strings.Contains(headerList[0], value) {
-				test.Fail(t, "", fmt.Sprintf("Header value '%s' does not contain '%s' in element[0]", headerList[0], value))
+			if value != "" {
+				headerList := resp.Header[name]
+				if !strings.Contains(headerList[0], value) {
+					test.Fail(t, "", fmt.Sprintf("GET: Header value '%s' does not contain '%s' in element[0]", headerList[0], value))
+				}
 			}
 		}
 	}
 	return string(body)
 }
 
-func sendPost(t *testing.T, st int, url string, postBody string) string {
+func sendPost(t *testing.T, st int, url string, postBody string, headers map[string]string) string {
 	resp, err := http.Post("http://localhost:8080/"+url, "application/json", strings.NewReader(postBody))
 	if err != nil {
 		test.Fail(t, "Post Failed", err.Error())
@@ -121,5 +137,15 @@ func sendPost(t *testing.T, st int, url string, postBody string) string {
 		test.Fail(t, "Read response Failed", err.Error())
 	}
 	test.AssertEqualInt(t, "", st, resp.StatusCode)
+	if headers != nil {
+		for name, value := range headers {
+			if value != "" {
+				headerList := resp.Header[name]
+				if !strings.Contains(headerList[0], value) {
+					test.Fail(t, "", fmt.Sprintf("POST: Header value '%s' does not contain '%s' in element[0]", headerList[0], value))
+				}
+			}
+		}
+	}
 	return string(body)
 }
