@@ -3,6 +3,7 @@ package servermain
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	jsonconfig "github.com/stuartdd/tools_jsonconfig"
 )
@@ -19,12 +20,12 @@ type responseContext struct {
 ResponseState contains the current response
 */
 type responseState struct {
-	code        	int
-	subCode			int
-	resp        	interface{}
-	contentType 	string
-	errorMessage    string
-	closed      	bool
+	code         int
+	subCode      int
+	resp         interface{}
+	contentType  string
+	errorMessage string
+	closed       bool
 }
 
 /*
@@ -42,8 +43,6 @@ SetContentType set the content type. E.G. application/json
 func (p *Response) SetContentType(contentType string) {
 	p.response.contentType = contentType
 }
-
-
 
 /*
 AddHeader adds an array/slice of strings to a header
@@ -88,11 +87,21 @@ func (p *Response) GetResp() string {
 	if ok {
 		return str
 	}
-	json, err := jsonconfig.StringJson(p.response.resp)
-	if err == nil {
-		return json
+	if strings.Contains(p.GetContentType(), LookupContentType("json")) {
+		return p.GetRespAsJSON()
 	}
 	return fmt.Sprintf("%v", p.response.resp)
+}
+
+/*
+GetRespAsJSON returns the String response as JSON
+*/
+func (p *Response) GetRespAsJSON() string {
+	json, err := jsonconfig.StringJson(p.response.resp)
+	if err != nil {
+		ThrowPanic("E", 500, SCJSONResponseErr, "Failed to marshal response to JSON", fmt.Sprintf("Marshal response type [%T] failed: %e", p.response.resp, err))
+	}
+	return json
 }
 
 /*
@@ -108,6 +117,7 @@ GetCode returns the http status code
 func (p *Response) GetCode() int {
 	return p.response.code
 }
+
 /*
 GetSubCode returns the http status code
 */
@@ -137,7 +147,7 @@ func (p *Response) GetCSV() string {
 }
 
 func (p *Response) toErrorJSON() string {
-	return fmt.Sprintf("{\"Status\":%d,\"Code\":%d\"Message\":\"%s\",\"Error\":\"%s\"}", p.GetCode(), p.GetSubCode(), p.GetResp(), p.GetErrorMessage())
+	return fmt.Sprintf("{\"Status\":%d,\"Code\":%d,\"Message\":\"%s\",\"Error\":\"%s\"}", p.GetCode(), p.GetSubCode(), p.GetResp(), p.GetErrorMessage())
 }
 
 /*
@@ -161,13 +171,13 @@ NewResponse create an error response
 */
 func NewResponse(w *ResponseWriterWrapper, s *ServerInstanceData) *Response {
 	return &Response{
-		response:  &responseState{
-			code:        200,
-			subCode:	 SCSubCodeZero,
-			resp:        nil,
-			contentType: "",
-			errorMessage:"",
-			closed:      false,
+		response: &responseState{
+			code:         200,
+			subCode:      SCSubCodeZero,
+			resp:         nil,
+			contentType:  "",
+			errorMessage: "",
+			closed:       false,
 		},
 		context: &responseContext{
 			writer: w,
@@ -182,12 +192,12 @@ SetError404 create an error response
 */
 func (p *Response) SetError404(url string, subCode int) *Response {
 	p.response = &responseState{
-		code:        404,
-		subCode:	 subCode,
-		resp:        http.StatusText(404),
-		errorMessage:url,
-		contentType: p.GetContentType(),
-		closed:      false,
+		code:         404,
+		subCode:      subCode,
+		resp:         http.StatusText(404),
+		errorMessage: url,
+		contentType:  p.GetContentType(),
+		closed:       false,
 	}
 	return p
 }
@@ -197,12 +207,12 @@ SetErrorResponse create an error response
 */
 func (p *Response) SetErrorResponse(statusCode int, subCode int, errorMessage string) *Response {
 	p.response = &responseState{
-		code:        statusCode,
-		subCode:     subCode,
-		resp:        http.StatusText(statusCode),
-		errorMessage:errorMessage,
-		contentType: p.GetContentType(),
-		closed:      false,
+		code:         statusCode,
+		subCode:      subCode,
+		resp:         http.StatusText(statusCode),
+		errorMessage: errorMessage,
+		contentType:  p.GetContentType(),
+		closed:       false,
 	}
 	return p
 }
@@ -210,14 +220,14 @@ func (p *Response) SetErrorResponse(statusCode int, subCode int, errorMessage st
 /*
 SetResponse set the content type. E.G. application/json
 */
-func (p *Response) SetResponse(code int, resp interface{}, contentType string)  *Response {
+func (p *Response) SetResponse(code int, resp interface{}, contentType string) *Response {
 	p.response = &responseState{
-		code:        code,
-		subCode:     SCSubCodeZero,
-		resp:        resp,
-		errorMessage:"",
-		contentType: contentType,
-		closed:      false,
-	}	
+		code:         code,
+		subCode:      SCSubCodeZero,
+		resp:         resp,
+		errorMessage: "",
+		contentType:  contentType,
+		closed:       false,
+	}
 	return p
 }

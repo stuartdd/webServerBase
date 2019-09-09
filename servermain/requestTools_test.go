@@ -1,19 +1,20 @@
 package servermain
 
 import (
-	"webServerBase/test"
-	"testing"
-	"strings"
 	"bytes"
-	"time"
 	"net/http"
+	"strconv"
+	"strings"
+	"testing"
+	"time"
+	"webServerBase/test"
 )
 
 type TestStruct struct {
-    Name    string
-    Types   []string
-    ID      int `json:"ref"`
-    Created time.Time
+	Name    string
+	Types   []string
+	ID      int `json:"ref"`
+	Created time.Time
 }
 
 var jsonTestData = []byte(`
@@ -29,8 +30,8 @@ var jsonTestData = []byte(`
 }`)
 
 func TestWithBodyJsonObject(t *testing.T) {
-	req, err := http.NewRequest("GET","http://abc:8080/data1/1/data2/2?A=5",bytes.NewReader(jsonTestData))
-	if (err != nil) {
+	req, err := http.NewRequest("GET", "http://abc:8080/data1/1/data2/2?A=5", bytes.NewReader(jsonTestData))
+	if err != nil {
 		test.Fail(t, "", err.Error())
 	}
 	d := NewRequestTools(req)
@@ -46,10 +47,9 @@ func TestWithBodyJsonObject(t *testing.T) {
 	test.AssertEqualString(t, "", "2018-04-09T23:00:00", testStruct.Created.Format("2006-01-02T15:04:05"))
 }
 
-
 func TestWithBodyJsonList(t *testing.T) {
-	req, err := http.NewRequest("GET","http://abc:8080/data1/1/data2/2?A=5",strings.NewReader("[\"TEST\",\"VALUE\"]"))
-	if (err != nil) {
+	req, err := http.NewRequest("GET", "http://abc:8080/data1/1/data2/2?A=5", strings.NewReader("[\"TEST\",\"VALUE\"]"))
+	if err != nil {
 		test.Fail(t, "", err.Error())
 	}
 	d := NewRequestTools(req)
@@ -61,41 +61,40 @@ func TestWithBodyJsonList(t *testing.T) {
 }
 
 func TestWithBodyJsonListPanic(t *testing.T) {
-	req, err := http.NewRequest("GET","http://abc:8080/data1/1/data2/2?A=5",strings.NewReader("[TEST\",\"VALUE\"]"))
-	if (err != nil) {
+	req, err := http.NewRequest("GET", "http://abc:8080/data1/1/data2/2?A=5", strings.NewReader("[TEST\",\"VALUE\"]"))
+	if err != nil {
 		test.Fail(t, "", err.Error())
 	}
-	defer test.AssertPanicThrown(t, "E|400|Invalid JSON")
+	defer test.AssertPanicThrown(t, "E|400|"+strconv.Itoa(SCInvalidJSONRequest)+"|Invalid JSON")
 	d := NewRequestTools(req)
 	d.GetJSONBodyAsList()
 }
 
 func TestWithBodyJsonMap(t *testing.T) {
-	req, err := http.NewRequest("GET","http://abc:8080/data1/1/data2/2?A=5",strings.NewReader("{\"TEST\":\"VALUE\"}"))
-	if (err != nil) {
+	req, err := http.NewRequest("GET", "http://abc:8080/data1/1/data2/2?A=5", strings.NewReader("{\"TEST\":\"VALUE\"}"))
+	if err != nil {
 		test.Fail(t, "", err.Error())
 	}
 	d := NewRequestTools(req)
-	aMap:= d.GetJSONBodyAsMap()
+	aMap := d.GetJSONBodyAsMap()
 	val := aMap["TEST"]
 	test.AssertInterfaceType(t, "", "string", val)
 	test.AssertEqualString(t, "", "VALUE", val.(string))
 }
 
 func TestWithBodyJsonMapPanic(t *testing.T) {
-	req, err := http.NewRequest("GET","http://abc:8080/data1/1/data2/2?A=5",strings.NewReader("{\"TEST\"\"VALUE\"}"))
-	if (err != nil) {
+	req, err := http.NewRequest("GET", "http://abc:8080/data1/1/data2/2?A=5", strings.NewReader("{\"TEST\"\"VALUE\"}"))
+	if err != nil {
 		test.Fail(t, "", err.Error())
 	}
 	d := NewRequestTools(req)
-	defer test.AssertPanicThrown(t, "E|400|Invalid JSON")
+	defer test.AssertPanicThrown(t, "E|400|"+strconv.Itoa(SCInvalidJSONRequest)+"|Invalid JSON")
 	d.GetJSONBodyAsMap()
 }
 
-
 func TestWithBodyText(t *testing.T) {
-	req, err := http.NewRequest("GET","http://abc:8080/data1/1/data2/2?A=5",strings.NewReader("TEST"))
-	if (err != nil) {
+	req, err := http.NewRequest("GET", "http://abc:8080/data1/1/data2/2?A=5", strings.NewReader("TEST"))
+	if err != nil {
 		test.Fail(t, "", err.Error())
 	}
 	d := NewRequestTools(req)
@@ -103,10 +102,9 @@ func TestWithBodyText(t *testing.T) {
 	test.AssertEqualString(t, "", text, "TEST")
 }
 
-
 func TestGetURLPartPanics(t *testing.T) {
-	req, err := http.NewRequest("GET","http://abc:8080/data1/1/data2/2?A=5", nil)
-	if (err != nil) {
+	req, err := http.NewRequest("GET", "http://abc:8080/data1/1/data2/2?A=5", nil)
+	if err != nil {
 		test.Fail(t, "", err.Error())
 	}
 	d := NewRequestTools(req)
@@ -115,18 +113,18 @@ func TestGetURLPartPanics(t *testing.T) {
 }
 
 func TestGetNamedPartPanics(t *testing.T) {
-	req, err := http.NewRequest("GET","http://abc:8080/data1/1/data2/2?A=5", nil)
-	if (err != nil) {
+	req, err := http.NewRequest("GET", "http://abc:8080/data1/1/data2/2?A=5", nil)
+	if err != nil {
 		test.Fail(t, "", err.Error())
 	}
 	d := NewRequestTools(req)
 	defer test.AssertPanicThrown(t, "URL parameter 'XXX' returned an empty value")
-	d.GetNamedPart("XXX", "")
+	d.GetNamedURLPart("XXX", "")
 }
 
 func TestWithUrl(t *testing.T) {
-	req, err := http.NewRequest("GET","http://abc:8080/data1/1/data2/2?A=5", nil)
-	if (err != nil) {
+	req, err := http.NewRequest("GET", "http://abc:8080/data1/1/data2/2?A=5", nil)
+	if err != nil {
 		test.Fail(t, "", err.Error())
 	}
 	d := NewRequestTools(req)
@@ -138,11 +136,11 @@ func TestWithUrl(t *testing.T) {
 	test.AssertEqualString(t, "", "Z", d.GetURLPart(4, "Z"))
 	test.AssertEqualString(t, "", "X", d.GetURLPart(-4, "X"))
 
-	test.AssertEqualString(t, "", "1", d.GetNamedPart("data1", ""))
-	test.AssertEqualString(t, "", "2", d.GetNamedPart("data2", ""))
+	test.AssertEqualString(t, "", "1", d.GetNamedURLPart("data1", ""))
+	test.AssertEqualString(t, "", "2", d.GetNamedURLPart("data2", ""))
 
-	test.AssertEqualString(t, "", "ZZ", d.GetNamedPart("", "ZZ"))
-	test.AssertEqualString(t, "", "ZZ", d.GetNamedPart("123", "ZZ"))
+	test.AssertEqualString(t, "", "ZZ", d.GetNamedURLPart("", "ZZ"))
+	test.AssertEqualString(t, "", "ZZ", d.GetNamedURLPart("123", "ZZ"))
 
 	test.AssertEqualString(t, "", "5", d.GetNamedQuery("A"))
 
@@ -151,5 +149,4 @@ func TestWithUrl(t *testing.T) {
 	d2 := NewRequestTools(req)
 	test.AssertEqualInt(t, "", 4, d2.GetPartsCount())
 
-	
 }

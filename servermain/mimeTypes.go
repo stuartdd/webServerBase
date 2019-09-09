@@ -1,9 +1,13 @@
 package servermain
 
+import "strings"
+
+var contentTypesMap = makeContentTypesMap()
+
 /*
 from : https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Complete_list_of_MIME_types
 */
-func getContentTypesMap() map[string]string {
+func makeContentTypesMap() map[string]string {
 	mime := make(map[string]string)
 	mime["aac"] = "audio/aac"
 	mime["abw"] = "application/x-abiword"
@@ -75,4 +79,27 @@ func getContentTypesMap() map[string]string {
 	mime["zip"] = "application/zip"
 	mime["7z"] = "application/x-7z-compressed"
 	return mime
+}
+
+/*
+AddContentType for a given url return the content type based on the .ext
+*/
+func AddNewContentTypeToMap(ext string, mime string) {
+	contentTypesMap[ext] = mime
+}
+
+/*
+LookupContentType for a given url return the content type based on the .ext
+*/
+func LookupContentType(url string) string {
+	ext := url
+	pos := strings.LastIndex(url, ".")
+	if pos > 0 {
+		ext = url[pos+1:]
+	}
+	mapping, found := contentTypesMap[ext]
+	if found {
+		return mapping
+	}
+	return ""
 }

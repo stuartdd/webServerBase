@@ -22,14 +22,20 @@ const (
 	SCServerShutDown
 	SCInvalidJSONRequest
 	SCReadJSONRequest
+	SCJSONResponseErr
 	SCMissingURLParam
 	SCStaticFileInit
 	SCTemplateNotFound
 	SCTemplateError
-	SCMax	
+	SCRuntimeError
+	SCMax
 )
 
-const contentTypeName = "Content-Type"
+/*
+ContentTypeName - so we always get it right!
+*/
+const ContentTypeName = "Content-Type"
+const ContentLengthName = "Content-Length"
 
 type vetoHandlerListData struct {
 	handlerFunc func(*http.Request, *Response)
@@ -46,10 +52,9 @@ type ServerInstanceData struct {
 	responseHandler    func(*http.Request, *Response)
 	redirections       map[string]string
 	contentTypeCharset string
-	contentTypeLookup  map[string]string
 	server             *http.Server
 	serverState        *statusData
-	logger            *logging.LoggerDataReference
+	logger             *logging.LoggerDataReference
 	panicStatusCode    int
 	fileServerData     *FileServerData
 	templates          *Templates
@@ -88,7 +93,6 @@ func NewServerInstanceData(baseHandlerNameIn string, contentTypeCharsetIn string
 
 		redirections:       make(map[string]string),
 		contentTypeCharset: contentTypeCharsetIn,
-		contentTypeLookup:  getContentTypesMap(),
 		serverState: &statusData{
 			unixTime:     time.Now().Unix(),
 			startTime:    time.Now().Format("2006-01-02 15:04:05"),
@@ -178,7 +182,7 @@ func (p *ServerInstanceData) ServeHTTP(rw http.ResponseWriter, httpRequest *http
 			Mapping not found,
 			delegate to the current error handler to manage the error
 		*/
-		ThrowPanic("W",404,SCPathNotFound,fmt.Sprintf("%s URL:%s", httpRequest.Method, url), fmt.Sprintf("METHOD:%s URL:%s is not mapped"))
+		ThrowPanic("W", 404, SCPathNotFound, fmt.Sprintf("%s URL:%s", httpRequest.Method, url), fmt.Sprintf("METHOD:%s URL:%s is not mapped", httpRequest.Method, url))
 	}
 
 	/*
@@ -233,21 +237,6 @@ func (p *ServerInstanceData) StopServerLater(waitForSeconds int, reason string) 
 	p.serverClosedReason = reason
 	p.serverReturnCode = 0
 	go p.stopServerThread(waitForSeconds)
-}
-
-/*
-LookupContentType for a given url return the content type based on the .ext
-*/
-func (p *ServerInstanceData) LookupContentType(url string) (string, string) {
-	pos := strings.LastIndex(url, ".")
-	if pos > 0 {
-		ext := url[pos+1:]
-		mapping, found := p.contentTypeLookup[ext]
-		if found {
-			return mapping, ext
-		}
-	}
-	return "", ""
 }
 
 /*
@@ -311,6 +300,13 @@ func (p *ServerInstanceData) GetServerReturnCode() int {
 }
 
 /*
+GetServerLogger handle an error response if one occurs
+*/
+func (p *ServerInstanceData) GetServerLogger() *logging.LoggerDataReference {
+	return p.logger
+}
+
+/*
 GetServerClosedReason handle an error response if one occurs
 */
 func (p *ServerInstanceData) GetServerClosedReason() string {
@@ -344,7 +340,7 @@ AddContentTypeFromMap add to or update the contentType Map
 */
 func (p *ServerInstanceData) AddContentTypeFromMap(mimeTypeMap map[string]string) {
 	for name, value := range mimeTypeMap {
-		p.contentTypeLookup[name] = value
+		AddNewContentTypeToMap(name, value)
 	}
 }
 
@@ -405,10 +401,10 @@ func (p *ServerInstanceData) PreProcessResponse(request *http.Request, response 
 		response.AddHeader("Connection", connection)
 	}
 	/*
-		If a content type is defined in the response then add content-type to the headers.
+		If a content type is defined in the response then add Content-Type to the headers.
 	*/
 	if response.GetContentType() != "" {
-		response.GetHeaders()[contentTypeName] = []string{response.GetContentType() + "; charset=" + p.contentTypeCharset}
+		response.GetHeaders()[ContentTypeName] = []string{response.GetContentType() + "; charset=" + p.contentTypeCharset}
 	}
 	/*
 		Push all of the headers in the response in to the http.ResponseWriter
@@ -430,10 +426,10 @@ Define DEBUG and ACCESS to see the response and headers in the logs
 func (p *ServerInstanceData) LogResponse(response *Response) {
 	if p.logger.IsAccess() {
 		errText := response.GetErrorMessage()
-		if (errText != "") {
-			errText = ": ERROR:"+errText
-		} 
-		p.logger.LogAccessf("<<< STATUS=%d: RESP=%s%s", response.GetCode(), response.GetResp(), errText)
+		if errText != "" {
+			errText = ": ERROR=" + errText
+		}
+		p.logger.LogAccessf("<<< STATUS=%d: CODE=%d: RESP=%s%s", response.GetCode(), response.GetSubCode(), response.GetResp(), errText)
 		p.logHeaderMap(response.GetHeaders(), "<-<")
 	}
 }
@@ -445,7 +441,7 @@ Parameter level:
  I for log at INFO level
  W for log at WARN level
  Anything else is ERROR level
- 
+
  Note ALL data is logged.
  StatusCode, errorMessage are returned to the client as Code and Error. For example;
  {"Code":404,"Message":"Not Found","Error":"Parameter XXX Not Found"}
@@ -456,6 +452,7 @@ Parameter level:
 func ThrowPanic(level string, statusCode, subCode int, errorText string, logMessage string) {
 	panic(fmt.Sprintf("%s|%d|%d|%s|%s", level, statusCode, subCode, errorText, logMessage))
 }
+
 /*
 ServeContent wraps the http.ServeContent. It opens the file first.
 If the open fails it returns an error.
@@ -464,10 +461,10 @@ After that it delegates to http.ServeContent
 func ServeContent(w *ResponseWriterWrapper, r *http.Request, name string) {
 	file, err := os.Open(name)
 	if err != nil {
-		if (os.IsNotExist(err)) {
-			ThrowPanic("W",404,SCContentNotFound,fmt.Sprintf("URL:%s",r.URL.Path),err.Error())
-		} 
-		ThrowPanic("E",500,SCContentReadFailed,fmt.Sprintf("URL:%s",r.URL.Path),err.Error())
+		if os.IsNotExist(err) {
+			ThrowPanic("W", 404, SCContentNotFound, fmt.Sprintf("URL:%s", r.URL.Path), err.Error())
+		}
+		ThrowPanic("E", 500, SCContentReadFailed, fmt.Sprintf("URL:%s", r.URL.Path), err.Error())
 	}
 	defer file.Close()
 	http.ServeContent(w, r, name, time.Now(), file)
@@ -477,42 +474,42 @@ func checkForPanicAndRecover(r *http.Request, response *Response) {
 	server := response.GetWrappedServer()
 	rec := recover()
 	if rec != nil {
-		recStr := fmt.Sprintf("%s",rec)
-		parts := strings.Split(recStr,"|")
-		if (len(parts)>1) {
+		recStr := fmt.Sprintf("%s", rec)
+		parts := strings.Split(recStr, "|")
+		if len(parts) > 1 {
 			rc, err1 := strconv.Atoi(parts[1])
 			sub, err2 := strconv.Atoi(parts[2])
 			if (err1 == nil) && (err2 == nil) {
 				switch strings.ToUpper(parts[0]) {
 				case "I":
-					if (server.logger.IsInfo()) {
-						server.logger.LogInfo("--- PANIC|"+recStr[2:])
+					if server.logger.IsInfo() {
+						server.logger.LogInfo("--- PANIC|" + recStr[2:])
 					}
 					break
 				case "W":
-					if (server.logger.IsWarn()) {
-						server.logger.LogWarn("--- PANIC|"+recStr[2:])
+					if server.logger.IsWarn() {
+						server.logger.LogWarn("--- PANIC|" + recStr[2:])
 					}
 					break
 				case "E":
-					if (server.logger.IsError()) {
-						server.logger.LogError(fmt.Errorf("--- PANIC|%s",recStr[2:]))
+					if server.logger.IsError() {
+						server.logger.LogError(fmt.Errorf("--- PANIC|%s", recStr[2:]))
 					}
 					break
 				default:
-					if (server.logger.IsError()) {
-						server.logger.LogError(fmt.Errorf("--- PANIC|%s",recStr))
+					if server.logger.IsError() {
+						server.logger.LogError(fmt.Errorf("--- PANIC|%s", recStr))
 					}
 					break
 				}
 				server.errorHandler(r, response.SetErrorResponse(rc, sub, parts[3]))
 				return
-			} 
-		} 
+			}
+		}
 		server.serverState.panicCounter++
 		text := fmt.Sprintf("REQUEST:%s MESSAGE:%s", r.URL.Path, recStr)
 		server.logger.LogErrorWithStackTrace("!!!", text)
-		server.errorHandler(r, response.SetErrorResponse(server.panicStatusCode,server.panicStatusCode, recStr))	
+		server.errorHandler(r, response.SetErrorResponse(server.panicStatusCode, SCRuntimeError, recStr))
 	}
 }
 
@@ -526,7 +523,7 @@ func defaultStaticFileHandler(w *ResponseWriterWrapper, r *http.Request) (bool, 
 
 func defaultErrorResponseHandler(request *http.Request, response *Response) {
 	server := response.GetWrappedServer()
-	response.SetContentType(server.contentTypeLookup["json"])
+	response.SetContentType(LookupContentType("json"))
 	server.PreProcessResponse(request, response)
 	server.LogResponse(response)
 	fmt.Fprintf(response.GetWrappedWriter(), response.toErrorJSON())
@@ -545,7 +542,7 @@ func (p *ServerInstanceData) stopServerThread(waitForSeconds int) {
 	}
 	err := p.server.Shutdown(context.TODO())
 	if err != nil {
-		ThrowPanic("E",500,SCServerShutDown,"Server Shutdown Failed",err.Error())
+		ThrowPanic("E", 500, SCServerShutDown, "Server Shutdown Failed", err.Error())
 	}
 }
 
@@ -568,7 +565,7 @@ func (p *ServerInstanceData) invokeAllVetoHandlersInList(httpRequest *http.Reque
 
 func (p *ServerInstanceData) logFileServerResponse(response *ResponseWriterWrapper, path string, ext string, mime string, fileName string) {
 	if p.logger.IsAccess() {
-		p.logger.LogAccessf("<<< STATUS=%d staticPath:%s ext:%s content-type:%s file:%s", response.GetStatusCode(), path, ext, mime, fileName)
+		p.logger.LogAccessf("<<< STATUS=%d staticPath:%s ext:%s Content-Type:%s file:%s", response.GetStatusCode(), path, ext, mime, fileName)
 		p.logHeaderMap(response.Header(), "<-<")
 	}
 }
@@ -592,4 +589,3 @@ func (p *ServerInstanceData) logHeaderMap(headers map[string][]string, dir strin
 		}
 	}
 }
-

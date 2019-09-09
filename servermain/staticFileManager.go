@@ -67,44 +67,62 @@ func ReasonableStaticFileHandler(request *http.Request, response *Response) {
 	server := response.GetWrappedServer()
 	fileServerData := server.fileServerData
 	/*
-	If an there is no file server data then change the response to Not Found and return
+		If an there is no file server data then change the response to Not Found and return
 	*/
 	if fileServerData == nil {
-		ThrowPanic("E",500,SCStaticFileInit,fmt.Sprintf("URL:%s Unsupported",url),"Static File Server Data has not been defined.")
+		ThrowPanic("E", 500, SCStaticFileInit, fmt.Sprintf("URL:%s Unsupported", url), "Static File Server Data has not been defined.")
 	}
 	/*
-	If an there is no file server list then change the response to Not Found and return
+		If an there is no file server list then change the response to Not Found and return
 	*/
 	fileServerList := fileServerData.FileServerList
 	if fileServerList == nil {
-		ThrowPanic("E",400,SCStaticFileInit,fmt.Sprintf("URL:%s Unsupported",url),"Static File Server Data - File Server List has not been defined.")
+		ThrowPanic("E", 400, SCStaticFileInit, fmt.Sprintf("URL:%s Unsupported", url), "Static File Server Data - File Server List has not been defined.")
 	}
 
 	for fileServerList.fs != nil {
 		if strings.HasPrefix(url, fileServerList.path) {
 			/*
-			Work out the content type from the file name extension
+				Forward the response headers in to the wrapped http.ResponseWriter
 			*/
-			contentType, _ := server.LookupContentType(url)
-			if contentType != "" {
-				response.GetHeaders()[contentTypeName] = []string{contentType + "; charset=" + server.contentTypeCharset}
+			ww := response.GetWrappedWriter()
+
+			for name, value := range response.GetHeaders() {
+				ww.Header()[name] = value
 			}
 			/*
-			derive the file name from the url and the path in the fileServerList
+				Work out the content type from the file name extension and add it to the wrapped http.ResponseWriter
+				Dont overwrite a content type that already exists!
 			*/
-			filename := filepath.Join(fileServerList.root, url[len(fileServerList.path):])
-			ServeContent(response.GetWrappedWriter(), request, filename)
+			contentType := LookupContentType(url)
+			if (contentType != "") && (ww.Header()[ContentTypeName] == nil) {
+				ww.Header()[ContentTypeName] = []string{contentType + "; charset=" + server.contentTypeCharset}
+			}
 			/*
-			The file is being written to the response writer.
-			Close the response to prevent further writes to the response writer
+				derive the file name from the url and the path in the fileServerList
+			*/
+			fileShort := url[len(fileServerList.path):]
+			filename := filepath.Join(fileServerList.root, fileShort)
+			ServeContent(ww, request, filename)
+			/*
+				The file is being written to the response writer.
+				Close the response to prevent further writes to the response writer
 			*/
 			response.Close()
+			/*
+				Specific ACCESS log entry for data returned from a file. Dont echo the response as this is a stream. Just indicate the file.
+				Dont log the full file name as this reveals the server file system structure and can lead to vulnerabilities.
+			*/
+			if response.GetWrappedServer().GetServerLogger().IsAccess() {
+				response.GetWrappedServer().GetServerLogger().LogAccessf("<<< STATUS=%d: CODE=%d: RESP-FROM-FILE=%s: TYPE=%s", response.GetCode(), response.GetSubCode(), fileShort, contentType)
+				response.GetWrappedServer().logHeaderMap(response.GetHeaders(), "<-<")
+			}
 			return
 		}
 		fileServerList = fileServerList.next
 	}
 	/*
-	If not matching file was found then change the response to Not Found and return
+		If not matching file was found then change the response to Not Found and return
 	*/
 	response.SetError404(url, SCContentNotFound)
 }
