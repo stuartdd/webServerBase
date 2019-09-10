@@ -6,12 +6,8 @@ GoLang based ReST based Server
 
 * **servermain** - This is where all the server code resides
   * Dependends on **config** and **logging**
-* **config** - Contains server configuration data read from JSON file
   * NOT dependent on any other package (except standard go)
   * **Depends on external JSON config package - must fix this!**
-* **logging** - Contains a wrapper for the go logging framework that is configurable and has more functionality
-  * NOT dependent on any other package (except standard go)
-* **test** - Contains test tools for doing Asserts etc...
   * NOT dependent on any other package (except standard go)
 
 ## Directories

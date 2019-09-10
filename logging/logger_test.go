@@ -3,6 +3,7 @@ package logging
 import (
 	"fmt"
 	"math/rand"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"testing"
@@ -46,10 +47,10 @@ func TestInvalidOption(t *testing.T) {
 func TestCreateLogDefaults(t *testing.T) {
 	CreateLogWithFilenameAndAppID("", "AppDI", make(map[string]string))
 	defer CloseLog()
-	test.AssertEqualString(t, "", "DEBUG:In-Active note[UNDEFINED] error[NO]", LoggerLevelDataString("DEBUG"))
-	test.AssertEqualString(t, "", "INFO:In-Active note[UNDEFINED] error[NO]", LoggerLevelDataString("INFO"))
-	test.AssertEqualString(t, "", "WARN:In-Active note[UNDEFINED] error[NO]", LoggerLevelDataString("WARN"))
-	test.AssertEqualString(t, "", "ACCESS:In-Active note[UNDEFINED] error[NO]", LoggerLevelDataString("ACCESS"))
+	test.AssertEqualString(t, "", "DEBUG:In-Active note[OFF] error[NO]", LoggerLevelDataString("DEBUG"))
+	test.AssertEqualString(t, "", "INFO:In-Active note[OFF] error[NO]", LoggerLevelDataString("INFO"))
+	test.AssertEqualString(t, "", "WARN:In-Active note[OFF] error[NO]", LoggerLevelDataString("WARN"))
+	test.AssertEqualString(t, "", "ACCESS:In-Active note[OFF] error[NO]", LoggerLevelDataString("ACCESS"))
 	test.AssertEqualString(t, "", "ERROR:Active note[SYSERR] error[YES]:Out=Console:", LoggerLevelDataString("ERROR"))
 	test.AssertEqualString(t, "", "FATAL:Active note[SYSERR] error[YES]:Out=Console:", LoggerLevelDataString("FATAL"))
 
@@ -69,9 +70,9 @@ func TestDebugToSysErr(t *testing.T) {
 	CreateLogWithFilenameAndAppID("", "AppDI", levels)
 	defer CloseLog()
 	test.AssertEqualString(t, "", "DEBUG:Active note[SYSERR] error[NO]:Out=Console:", LoggerLevelDataString("DEBUG"))
-	test.AssertEqualString(t, "", "INFO:In-Active note[UNDEFINED] error[NO]", LoggerLevelDataString("INFO"))
-	test.AssertEqualString(t, "", "WARN:In-Active note[UNDEFINED] error[NO]", LoggerLevelDataString("WARN"))
-	test.AssertEqualString(t, "", "ACCESS:In-Active note[UNDEFINED] error[NO]", LoggerLevelDataString("ACCESS"))
+	test.AssertEqualString(t, "", "INFO:In-Active note[OFF] error[NO]", LoggerLevelDataString("INFO"))
+	test.AssertEqualString(t, "", "WARN:In-Active note[OFF] error[NO]", LoggerLevelDataString("WARN"))
+	test.AssertEqualString(t, "", "ACCESS:In-Active note[OFF] error[NO]", LoggerLevelDataString("ACCESS"))
 	test.AssertEqualString(t, "", "ERROR:Active note[SYSOUT] error[YES]:Out=Console:", LoggerLevelDataString("ERROR"))
 	test.AssertEqualString(t, "", "FATAL:Active note[SYSERR] error[YES]:Out=Console:", LoggerLevelDataString("FATAL"))
 
@@ -89,10 +90,10 @@ func TestSwitchOffError(t *testing.T) {
 	levels["ERROR"] = "OFF"
 	CreateLogWithFilenameAndAppID("", "AppDI", levels)
 	defer CloseLog()
-	test.AssertEqualString(t, "", "DEBUG:In-Active note[UNDEFINED] error[NO]", LoggerLevelDataString("DEBUG"))
-	test.AssertEqualString(t, "", "INFO:In-Active note[UNDEFINED] error[NO]", LoggerLevelDataString("INFO"))
-	test.AssertEqualString(t, "", "WARN:In-Active note[UNDEFINED] error[NO]", LoggerLevelDataString("WARN"))
-	test.AssertEqualString(t, "", "ACCESS:In-Active note[UNDEFINED] error[NO]", LoggerLevelDataString("ACCESS"))
+	test.AssertEqualString(t, "", "DEBUG:In-Active note[OFF] error[NO]", LoggerLevelDataString("DEBUG"))
+	test.AssertEqualString(t, "", "INFO:In-Active note[OFF] error[NO]", LoggerLevelDataString("INFO"))
+	test.AssertEqualString(t, "", "WARN:In-Active note[OFF] error[NO]", LoggerLevelDataString("WARN"))
+	test.AssertEqualString(t, "", "ACCESS:In-Active note[OFF] error[NO]", LoggerLevelDataString("ACCESS"))
 	test.AssertEqualString(t, "", "ERROR:In-Active note[OFF] error[YES]", LoggerLevelDataString("ERROR"))
 	test.AssertEqualString(t, "", "FATAL:Active note[SYSERR] error[YES]:Out=Console:", LoggerLevelDataString("FATAL"))
 
@@ -111,10 +112,10 @@ func TestSwitchOffFatal(t *testing.T) {
 	levels["FATAL"] = "OFF"
 	CreateLogWithFilenameAndAppID("", "AppDI", levels)
 	defer CloseLog()
-	test.AssertEqualString(t, "", "DEBUG:In-Active note[UNDEFINED] error[NO]", LoggerLevelDataString("DEBUG"))
-	test.AssertEqualString(t, "", "INFO:In-Active note[UNDEFINED] error[NO]", LoggerLevelDataString("INFO"))
-	test.AssertEqualString(t, "", "WARN:In-Active note[UNDEFINED] error[NO]", LoggerLevelDataString("WARN"))
-	test.AssertEqualString(t, "", "ACCESS:In-Active note[UNDEFINED] error[NO]", LoggerLevelDataString("ACCESS"))
+	test.AssertEqualString(t, "", "DEBUG:In-Active note[OFF] error[NO]", LoggerLevelDataString("DEBUG"))
+	test.AssertEqualString(t, "", "INFO:In-Active note[OFF] error[NO]", LoggerLevelDataString("INFO"))
+	test.AssertEqualString(t, "", "WARN:In-Active note[OFF] error[NO]", LoggerLevelDataString("WARN"))
+	test.AssertEqualString(t, "", "ACCESS:In-Active note[OFF] error[NO]", LoggerLevelDataString("ACCESS"))
 	test.AssertEqualString(t, "", "ERROR:Active note[SYSERR] error[YES]:Out=Console:", LoggerLevelDataString("ERROR"))
 	test.AssertEqualString(t, "", "FATAL:In-Active note[OFF] error[YES]", LoggerLevelDataString("FATAL"))
 
@@ -140,9 +141,9 @@ func TestCreateLogDefaultsWithFile(t *testing.T) {
 	defer CloseLog()
 
 	test.AssertEqualString(t, "", "DEBUG:Active note[DEFAULT] error[NO]:Out=:ef.log:Open", LoggerLevelDataString("DEBUG"))
-	test.AssertEqualString(t, "", "INFO:In-Active note[UNDEFINED] error[NO]", LoggerLevelDataString("INFO"))
-	test.AssertEqualString(t, "", "WARN:In-Active note[UNDEFINED] error[NO]", LoggerLevelDataString("WARN"))
-	test.AssertEqualString(t, "", "ACCESS:In-Active note[UNDEFINED] error[NO]", LoggerLevelDataString("ACCESS"))
+	test.AssertEqualString(t, "", "INFO:In-Active note[OFF] error[NO]", LoggerLevelDataString("INFO"))
+	test.AssertEqualString(t, "", "WARN:In-Active note[OFF] error[NO]", LoggerLevelDataString("WARN"))
+	test.AssertEqualString(t, "", "ACCESS:In-Active note[OFF] error[NO]", LoggerLevelDataString("ACCESS"))
 	test.AssertEqualString(t, "", "ERROR:Active note[DEFAULT] error[YES]:Out=:ef.log:Open", LoggerLevelDataString("ERROR"))
 	test.AssertEqualString(t, "", "FATAL:Active note[DEFAULT] error[YES]:Out=:ef.log:Open", LoggerLevelDataString("FATAL"))
 	t1 := NewLogger("T1")
@@ -195,7 +196,7 @@ func TestCreateLog(t *testing.T) {
 
 	test.AssertEqualString(t, "", "DEBUG:Active note[FILE] error[NO]:Out=:d.log:Open", LoggerLevelDataString("DEBUG"))
 	test.AssertEqualString(t, "", "INFO:Active note[FILE] error[NO]:Out=:i.log:Open", LoggerLevelDataString("INFO"))
-	test.AssertEqualString(t, "", "WARN:In-Active note[UNDEFINED] error[NO]", LoggerLevelDataString("WARN"))
+	test.AssertEqualString(t, "", "WARN:In-Active note[OFF] error[NO]", LoggerLevelDataString("WARN"))
 	test.AssertEqualString(t, "", "ACCESS:Active note[FILE] error[NO]:Out=:i.log:Open", LoggerLevelDataString("ACCESS"))
 	test.AssertEqualString(t, "", "ERROR:Active note[DEFAULT] error[YES]:Out=:ef.log:Open", LoggerLevelDataString("ERROR"))
 	test.AssertEqualString(t, "", "FATAL:Active note[DEFAULT] error[YES]:Out=:ef.log:Open", LoggerLevelDataString("FATAL"))
@@ -203,7 +204,7 @@ func TestCreateLog(t *testing.T) {
 	CloseLog()
 	test.AssertEqualString(t, "", "DEBUG:In-Active note[FILE] error[NO]", LoggerLevelDataString("DEBUG"))
 	test.AssertEqualString(t, "", "INFO:In-Active note[FILE] error[NO]", LoggerLevelDataString("INFO"))
-	test.AssertEqualString(t, "", "WARN:In-Active note[UNDEFINED] error[NO]", LoggerLevelDataString("WARN"))
+	test.AssertEqualString(t, "", "WARN:In-Active note[OFF] error[NO]", LoggerLevelDataString("WARN"))
 	test.AssertEqualString(t, "", "ACCESS:In-Active note[FILE] error[NO]", LoggerLevelDataString("ACCESS"))
 	test.AssertEqualString(t, "", "ERROR:In-Active note[DEFAULT] error[YES]", LoggerLevelDataString("ERROR"))
 	test.AssertEqualString(t, "", "FATAL:In-Active note[DEFAULT] error[YES]", LoggerLevelDataString("FATAL"))
@@ -234,6 +235,7 @@ func checkPanicIsThrown(t *testing.T, desc string) {
 		if strings.Contains(s, desc) {
 			return
 		}
+		t.Log(string(debug.Stack()))
 		t.Fatalf("\nERROR:\n  %s\nDOES NOT CONTAIN:\n  %s\n", s, desc)
 	}
 	t.Fatalf("\nTEST did not panic:\nThe test MUST panic with error message containing:'%s'", desc)
