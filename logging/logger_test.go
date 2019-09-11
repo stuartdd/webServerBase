@@ -43,24 +43,18 @@ func TestInvalidLevel(t *testing.T) {
 	defer checkPanicIsThrown(t, "is not a valid log level")
 	levels := make(map[string]string)
 	levels["DEBUGd"] = "SYSERR"
-	CreateLogWithFilenameAndAppID("", "AppDI", levels)
-}
-
-func TestFileNameresolution(t *testing.T) {
-	levels := make(map[string]string)
-	levels["DEBUG"] = "db_%{YYYY}_%{MM}_%{DD}.log"
-	CreateLogWithFilenameAndAppID("", "AppDI", levels)
+	CreateLogWithFilenameAndAppID("", "AppID", -1, levels)
 }
 
 func TestInvalidOption(t *testing.T) {
 	defer checkPanicIsThrown(t, "File name requires a '.'")
 	levels := make(map[string]string)
 	levels["DEBUG"] = "SYSSSS"
-	CreateLogWithFilenameAndAppID("", "AppDI", levels)
+	CreateLogWithFilenameAndAppID("", "AppID", -1, levels)
 }
 
 func TestCreateLogDefaults(t *testing.T) {
-	CreateLogWithFilenameAndAppID("", "AppDI", make(map[string]string))
+	CreateLogWithFilenameAndAppID("", "AppID", -1, make(map[string]string))
 	defer CloseLog()
 	test.AssertEqualString(t, "", "DEBUG:In-Active note[OFF] error[NO]", LoggerLevelDataString("DEBUG"))
 	test.AssertEqualString(t, "", "INFO:In-Active note[OFF] error[NO]", LoggerLevelDataString("INFO"))
@@ -82,7 +76,7 @@ func TestDebugToSysErr(t *testing.T) {
 	levels := make(map[string]string)
 	levels["DEBUG"] = "SYSERR"
 	levels["ERROR"] = "SYSOUT"
-	CreateLogWithFilenameAndAppID("", "AppDI", levels)
+	CreateLogWithFilenameAndAppID("", "AppID", -1, levels)
 	defer CloseLog()
 	test.AssertEqualString(t, "", "DEBUG:Active note[SYSERR] error[NO]:Out=Console:", LoggerLevelDataString("DEBUG"))
 	test.AssertEqualString(t, "", "INFO:In-Active note[OFF] error[NO]", LoggerLevelDataString("INFO"))
@@ -103,7 +97,7 @@ func TestDebugToSysErr(t *testing.T) {
 func TestSwitchOffError(t *testing.T) {
 	levels := make(map[string]string)
 	levels["ERROR"] = "OFF"
-	CreateLogWithFilenameAndAppID("", "AppDI", levels)
+	CreateLogWithFilenameAndAppID("", "AppID", -1, levels)
 	defer CloseLog()
 	test.AssertEqualString(t, "", "DEBUG:In-Active note[OFF] error[NO]", LoggerLevelDataString("DEBUG"))
 	test.AssertEqualString(t, "", "INFO:In-Active note[OFF] error[NO]", LoggerLevelDataString("INFO"))
@@ -125,7 +119,7 @@ func TestSwitchOffError(t *testing.T) {
 func TestSwitchOffFatal(t *testing.T) {
 	levels := make(map[string]string)
 	levels["FATAL"] = "OFF"
-	CreateLogWithFilenameAndAppID("", "AppDI", levels)
+	CreateLogWithFilenameAndAppID("", "AppID", -1, levels)
 	defer CloseLog()
 	test.AssertEqualString(t, "", "DEBUG:In-Active note[OFF] error[NO]", LoggerLevelDataString("DEBUG"))
 	test.AssertEqualString(t, "", "INFO:In-Active note[OFF] error[NO]", LoggerLevelDataString("INFO"))
@@ -147,7 +141,7 @@ func TestSwitchOffFatal(t *testing.T) {
 func TestCreateLogDefaultsWithFile(t *testing.T) {
 	levels := make(map[string]string)
 	levels["DEBUG"] = "DEFAULT"
-	CreateLogWithFilenameAndAppID("ef.log", "AppDI", levels)
+	CreateLogWithFilenameAndAppID("ef.log", "AppID", -1, levels)
 	/*
 		Note last defer runs first. It is a stack!
 		CloseLog must run before test.RemoveFile
@@ -184,10 +178,10 @@ func TestCreateLogDefaultsWithFile(t *testing.T) {
 	t2.LogInfo(t2Data)
 	fileName := GetLogLevelFileNameForLevelName("DEBUG")
 	test.AssertFileContains(t, "", fileName, []string{
-		"AppDI T1 [-]  DEBUG " + t1Data,
-		"AppDI T2 [-]  DEBUG " + t2Data,
-		"AppDI T1 [-]  ERROR 10:20: Trial error: " + t1Data,
-		"AppDI T2 [-]  ERROR 10:20: Trial error: " + t2Data,
+		"AppID T1 [-]  DEBUG " + t1Data,
+		"AppID T2 [-]  DEBUG " + t2Data,
+		"AppID T1 [-]  ERROR 10:20: Trial error: " + t1Data,
+		"AppID T2 [-]  ERROR 10:20: Trial error: " + t2Data,
 	})
 	test.AssertFileDoesNotContain(t, "", fileName, []string{
 		"INFO",
@@ -205,7 +199,7 @@ func TestCreateLog(t *testing.T) {
 	levels["INFO"] = "i.log"
 	levels["ACCESS"] = "i.log"
 
-	CreateLogWithFilenameAndAppID("ef.log", "AppDI", levels)
+	CreateLogWithFilenameAndAppID("ef.log", "AppID", -1, levels)
 	defer test.RemoveFile(t, "", GetLogLevelFileNameForLevelName("DEBUG"))
 	defer test.RemoveFile(t, "", GetLogLevelFileNameForLevelName("INFO"))
 	defer test.RemoveFile(t, "", GetLogLevelFileNameForLevelName("ERROR"))
@@ -238,7 +232,7 @@ func TestCreateLog(t *testing.T) {
 func TestNameToIndex(t *testing.T) {
 	levels := make(map[string]string)
 	levels["DEBUG"] = "DEFAULT"
-	CreateLogWithFilenameAndAppID("", "AppDI", levels)
+	CreateLogWithFilenameAndAppID("", "AppID", -1, levels)
 	test.AssertEqualInt(t, "GetLogLevelTypeForName:DEBUG", int(DebugLevel), int(GetLogLevelTypeIndexForLevelName("DEBUG")))
 	test.AssertEqualInt(t, "GetLogLevelTypeForName:INFO", int(InfoLevel), int(GetLogLevelTypeIndexForLevelName("INFO")))
 	test.AssertEqualInt(t, "GetLogLevelTypeForName:WARN", int(WarnLevel), int(GetLogLevelTypeIndexForLevelName("WARN")))

@@ -207,6 +207,17 @@ func AssertStringContains(t *testing.T, info string, content string, contains []
 }
 
 /*
+AssertStringContains see if all the strings are contained in the string
+*/
+func AssertStringDoseNotContain(t *testing.T, info string, content string, contains []string) {
+	for _, val := range contains {
+		if strings.Contains(content, val) {
+			logStackTraceAndFail(t, fmt.Sprintf("String '%s' contains '%s'",content, val), info, debug.Stack())
+		}
+	}
+}
+
+/*
 AssertFileDoesNotContain read a file ans see if any if the strings are contained in it
 */
 func AssertFileDoesNotContain(t *testing.T, info string, fileName string, contains []string) {

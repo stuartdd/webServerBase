@@ -114,6 +114,8 @@ The identity of teh application. This is in the prefix for each line
 var logApplicationID string
 var defaultLogFileName string
 var fallBack = true
+var fatalRC int
+var enabled = false
 
 /*
 CreateTestLogger - creates a logger for testing
@@ -123,7 +125,7 @@ func CreateTestLogger(id string) *LoggerDataReference {
 	for name := range logLevelDataMap {
 		levels[name] = systemOutName
 	}
-	CreateLogWithFilenameAndAppID("", "TestLogger", levels)
+	CreateLogWithFilenameAndAppID("", "TestLogger", -1, levels)
 	return NewLogger(id)
 }
 
@@ -132,10 +134,12 @@ CreateLogWithFilenameAndAppID should configure the logger to output somthing lik
 2019-07-16 14:47:43.993 applicationID module  [-]  INFO Starti
 2019-07-16 14:47:43.993 applicationID module  [-] DEBUG Runnin
 */
-func CreateLogWithFilenameAndAppID(defaultLogFileNameIn string, applicationID string, logLevelActivationData map[string]string) error {
+func CreateLogWithFilenameAndAppID(defaultLogFileNameIn string, applicationID string, fatalRCIn int, logLevelActivationData map[string]string) error {
+	enabled = false
 	logDataFlags = log.LstdFlags | log.Lmicroseconds
 	defaultLogFileName = defaultLogFileNameIn
 	logApplicationID = applicationID
+	fatalRC = fatalRCIn
 	startFromKnownState()
 	/*
 		Validate and Activate each log level.
@@ -152,6 +156,7 @@ func CreateLogWithFilenameAndAppID(defaultLogFileNameIn string, applicationID st
 		return err
 	}
 	fallBack = false
+	enabled = true
 	return nil
 }
 
@@ -260,14 +265,15 @@ Fatal does the same as log.Fatal
 func (p *LoggerDataReference) Fatal(err error) {
 	if fallBack {
 		fmt.Printf("FATAL: type[%T] %s\n", err, err.Error())
-		os.Exit(1)
 	} else {
-		if logLevelDataIndexList[FatalLevel].active {
+		if logLevelDataIndexList[FatalLevel].active && enabled {
 			logLevelDataIndexList[FatalLevel].logger.Printf(p.loggerPrefix+"[%s] %T %s", logLevelDataIndexList[FatalLevel].paddedName, err, err.Error())
-			os.Exit(1)
 		} else {
 			fmt.Printf("FATAL: type[%T] %s\n", err, err.Error())
 		}
+	}
+	if (fatalRC >= 0) {
+		os.Exit(fatalRC)
 	}
 }
 
@@ -275,7 +281,7 @@ func (p *LoggerDataReference) Fatal(err error) {
 LogErrorf delegates to log.Printf
 */
 func (p *LoggerDataReference) LogErrorf(format string, v ...interface{}) {
-	if logLevelDataIndexList[ErrorLevel].active {
+	if logLevelDataIndexList[ErrorLevel].active && enabled {
 		logLevelDataIndexList[ErrorLevel].logger.Printf(p.loggerPrefix+logLevelDataIndexList[ErrorLevel].paddedName+format, v...)
 	}
 }
@@ -284,7 +290,7 @@ func (p *LoggerDataReference) LogErrorf(format string, v ...interface{}) {
 LogError delegates to log.Print
 */
 func (p *LoggerDataReference) LogError(message error) {
-	if logLevelDataIndexList[ErrorLevel].active {
+	if logLevelDataIndexList[ErrorLevel].active && enabled {
 		logLevelDataIndexList[ErrorLevel].logger.Print(p.loggerPrefix + logLevelDataIndexList[ErrorLevel].paddedName + message.Error())
 	}
 }
@@ -293,7 +299,7 @@ func (p *LoggerDataReference) LogError(message error) {
 LogErrorWithStackTrace - Log an error and a stack trace
 */
 func (p *LoggerDataReference) LogErrorWithStackTrace(prefix string, message string) {
-	if p.IsError() {
+	if p.IsError() && enabled {
 		logLevelDataIndexList[ErrorLevel].logger.Print(p.loggerPrefix + logLevelDataIndexList[ErrorLevel].paddedName + prefix + " " + message)
 		st := string(debug.Stack())
 		for count, line := range strings.Split(strings.TrimSuffix(st, "\n"), "\n") {
@@ -308,7 +314,7 @@ func (p *LoggerDataReference) LogErrorWithStackTrace(prefix string, message stri
 LogInfof delegates to log.Printf
 */
 func (p *LoggerDataReference) LogInfof(format string, v ...interface{}) {
-	if logLevelDataIndexList[InfoLevel].active {
+	if logLevelDataIndexList[InfoLevel].active && enabled {
 		logLevelDataIndexList[InfoLevel].logger.Printf(p.loggerPrefix+logLevelDataIndexList[InfoLevel].paddedName+format, v...)
 	}
 }
@@ -317,7 +323,7 @@ func (p *LoggerDataReference) LogInfof(format string, v ...interface{}) {
 LogInfo delegates to log.Print
 */
 func (p *LoggerDataReference) LogInfo(message string) {
-	if logLevelDataIndexList[InfoLevel].active {
+	if logLevelDataIndexList[InfoLevel].active && enabled {
 		logLevelDataIndexList[InfoLevel].logger.Print(p.loggerPrefix + logLevelDataIndexList[InfoLevel].paddedName + message)
 	}
 }
@@ -326,7 +332,7 @@ func (p *LoggerDataReference) LogInfo(message string) {
 LogAccessf delegates to log.Printf
 */
 func (p *LoggerDataReference) LogAccessf(format string, v ...interface{}) {
-	if logLevelDataIndexList[AccessLevel].active {
+	if logLevelDataIndexList[AccessLevel].active && enabled {
 		logLevelDataIndexList[AccessLevel].logger.Printf(p.loggerPrefix+logLevelDataIndexList[AccessLevel].paddedName+format, v...)
 	}
 }
@@ -335,7 +341,7 @@ func (p *LoggerDataReference) LogAccessf(format string, v ...interface{}) {
 LogAccess delegates to log.Print
 */
 func (p *LoggerDataReference) LogAccess(message string) {
-	if logLevelDataIndexList[AccessLevel].active {
+	if logLevelDataIndexList[AccessLevel].active && enabled {
 		logLevelDataIndexList[AccessLevel].logger.Print(p.loggerPrefix + logLevelDataIndexList[AccessLevel].paddedName + message)
 	}
 }
@@ -344,7 +350,7 @@ func (p *LoggerDataReference) LogAccess(message string) {
 LogWarnf delegates to log.Printf
 */
 func (p *LoggerDataReference) LogWarnf(format string, v ...interface{}) {
-	if logLevelDataIndexList[WarnLevel].active {
+	if logLevelDataIndexList[WarnLevel].active && enabled {
 		logLevelDataIndexList[WarnLevel].logger.Printf(p.loggerPrefix+logLevelDataIndexList[WarnLevel].paddedName+format, v...)
 	}
 }
@@ -353,7 +359,7 @@ func (p *LoggerDataReference) LogWarnf(format string, v ...interface{}) {
 LogWarn delegates to log.Print
 */
 func (p *LoggerDataReference) LogWarn(message string) {
-	if logLevelDataIndexList[WarnLevel].active {
+	if logLevelDataIndexList[WarnLevel].active && enabled {
 		logLevelDataIndexList[WarnLevel].logger.Print(p.loggerPrefix + logLevelDataIndexList[WarnLevel].paddedName + message)
 	}
 }
@@ -362,8 +368,17 @@ func (p *LoggerDataReference) LogWarn(message string) {
 LogDebugf delegates to log.Printf
 */
 func (p *LoggerDataReference) LogDebugf(format string, v ...interface{}) {
-	if logLevelDataIndexList[DebugLevel].active {
+	if logLevelDataIndexList[DebugLevel].active && enabled {
 		logLevelDataIndexList[DebugLevel].logger.Printf(p.loggerPrefix+logLevelDataIndexList[DebugLevel].paddedName+format, v...)
+	}
+}
+
+/*
+LogDebug delegates to log.Print
+*/
+func (p *LoggerDataReference) LogDebug(message string) {
+	if logLevelDataIndexList[DebugLevel].active && enabled {
+		logLevelDataIndexList[DebugLevel].logger.Print(p.loggerPrefix + logLevelDataIndexList[DebugLevel].paddedName + message)
 	}
 }
 
@@ -393,15 +408,6 @@ func LoggerLevelDataString(name string) string {
 		return name + ":In-Active note[" + lld.note + "] error[" + errorLevel + "]"
 	}
 	return name + ":Not Found"
-}
-
-/*
-LogDebug delegates to log.Print
-*/
-func (p *LoggerDataReference) LogDebug(message string) {
-	if logLevelDataIndexList[DebugLevel].active {
-		logLevelDataIndexList[DebugLevel].logger.Print(p.loggerPrefix + logLevelDataIndexList[DebugLevel].paddedName + message)
-	}
 }
 
 func logError(message string) error {
@@ -538,8 +544,8 @@ func validateAndActivateLogLevels(values map[string]string) error {
 			}
 		} else {
 			var b bytes.Buffer
-			for index := 0; index < len(logLevelDataIndexList); index++ {
-				b.WriteString(logLevelDataIndexList[index].paddedName)
+			for name := range logLevelDataMap {
+				b.WriteString(name)
 				b.WriteString(", ")
 			}
 			return logError("The Log level name '" + key + "' is not a valid log level. Valid values are:" + b.String()[0:b.Len()-2])
@@ -562,7 +568,7 @@ func updateLoggerPrefixesForAllModules() {
 }
 
 func getLogLevelFileDataForFilename(logFileNameUnresolved string) (*logLevelFileData, error) {
-	logFileName := resolveLogFileName(logFileNameUnresolved)
+	logFileName := resolvePercentValues(logFileNameUnresolved)
 	nameUcTrim := strings.TrimSpace(strings.ToUpper(logFileName))
 	if val, ok := logLevelFileMap[nameUcTrim]; ok {
 		return val, nil
@@ -586,13 +592,50 @@ func getLogLevelFileDataForFilename(logFileNameUnresolved string) (*logLevelFile
 	return lfd, nil
 }
 
-func resolveLogFileName(fn string) string {
-	if strings.Contains(fn, "%{") {
-		yyyy, mm, dd := time.Now().Date()
-		fn = strings.ReplaceAll(fn, "%{YYYY}", strconv.Itoa(yyyy))
-		fn = strings.ReplaceAll(fn, "%{MM}", fmt.Sprintf("%d", mm))
-		fn = strings.ReplaceAll(fn, "%{DD}", strconv.Itoa(dd))
-		fmt.Println(yyyy, mm, dd)
+/*
+resolvePercentValues replaces substitution values in a String. This is NOT time critical as it is only
+called when the logger is created.
+
+Sub:%YYYY = 4 digt year
+Sub:%MM = 2 digt Month
+Sub:%DD = 2 digt Day
+Sub:%HH = 2 digt Hour
+Sub:%mm = 2 digt Minutes
+Sub:%SS = 2 digt Seconds
+Sub:%ID = The application ID
+Sub:%PID = The application process id
+Sub:%ENV = An environment variable
+	%ENV.NAME.ENV% will be replaced with the environment variable 'NAME' or an empty string.
+*/
+func resolvePercentValues(fn string) string {
+	if strings.Contains(fn, "%") {
+		tim := time.Now()
+		yyyy, mm, dd := tim.Date()
+		fn = strings.ReplaceAll(fn, "%YYYY", padString2(yyyy))
+		fn = strings.ReplaceAll(fn, "%MM", padString2(int(mm)))
+		fn = strings.ReplaceAll(fn, "%DD", padString2(dd))
+		fn = strings.ReplaceAll(fn, "%HH", padString2(tim.Hour()))
+		fn = strings.ReplaceAll(fn, "%mm", padString2(tim.Minute()))
+		fn = strings.ReplaceAll(fn, "%SS", padString2(tim.Second()))
+		fn = strings.ReplaceAll(fn, "%ID", logApplicationID)
+		fn = strings.ReplaceAll(fn, "%PID", padString2(os.Getpid()))
+		index1 := strings.Index(fn, "%ENV.")
+		for index1 >= 0 {
+			index2 := strings.Index(fn[index1:], ".ENV%")
+			if index2 > index1 {
+				tag := fn[index1 : index1+index2+5]
+				key := fn[index1+5 : index1+index2]
+				fn = strings.ReplaceAll(fn, tag, os.Getenv(key))
+			}
+			index1 = strings.Index(fn, "%ENV.")
+		}
 	}
 	return fn
+}
+
+func padString2(i int) string {
+	if i < 10 {
+		return "0" + strconv.Itoa(i)
+	}
+	return strconv.Itoa(i)
 }
