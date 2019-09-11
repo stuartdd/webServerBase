@@ -180,7 +180,7 @@ GetLogLevelFileName get the file name for the level name
 */
 func GetLogLevelFileName(name string) string {
 	value, ok := logLevelDataMap[strings.ToUpper(strings.TrimSpace(name))]
-	if ok {
+	if !ok {
 		return ""
 	}
 	if value.file == nil {
@@ -428,7 +428,7 @@ func startFromKnownState() {
 	logLevelDataMap = make(map[string]*logLevelData)
 	for name, value := range logLevelDataMapKnownState {
 		logLevelDataMap[name] = &logLevelData{
-			paddedName:   padName(name, longest+2),
+			paddedName:   padName(name, longest+1),
 			index:        value.index,
 			note:         value.note,
 			active:       value.active,
@@ -438,8 +438,7 @@ func startFromKnownState() {
 }
 
 func padName(name string, longest int) string {
-	pad := " " + name + " "
-	return strings.Repeat(" ", longest-len(pad)) + pad
+	return strings.Repeat(" ", longest-len(name)) + name + " "
 }
 
 func initLoggerLevelDataList() {

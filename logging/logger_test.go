@@ -176,13 +176,12 @@ func TestCreateLogDefaultsWithFile(t *testing.T) {
 	t2.LogWarn(t2Data)
 	t2.LogAccess(t2Data)
 	t2.LogInfo(t2Data)
-
 	fileName := GetLogLevelFileName("DEBUG")
 	test.AssertFileContains(t, "", fileName, []string{
-		"AppDI T1 [-]  DEBUG " + t1Data,
-		"AppDI T2 [-]  DEBUG " + t2Data,
-		"AppDI T1 [-]  ERROR 10:20: syntax error: " + t1Data,
-		"AppDI T2 [-]  ERROR 10:20: syntax error: " + t2Data,
+		"AppDI T1 [-]   DEBUG " + t1Data,
+		"AppDI T2 [-]   DEBUG " + t2Data,
+		"AppDI T1 [-]   ERROR 10:20: Trial error: " + t1Data,
+		"AppDI T2 [-]   ERROR 10:20: Trial error: " + t2Data,
 	})
 	test.AssertFileDoesNotContain(t, "", fileName, []string{
 		"INFO",
@@ -231,6 +230,9 @@ func TestCreateLog(t *testing.T) {
 }
 
 func TestNameToIndex(t *testing.T) {
+	levels := make(map[string]string)
+	levels["DEBUG"] = "DEFAULT"
+	CreateLogWithFilenameAndAppID("", "AppDI", levels)
 	test.AssertEqualInt(t, "GetLogLevelTypeForName:DEBUG", int(DebugLevel), int(GetLogLevelTypeIndexForName("DEBUG")))
 	test.AssertEqualInt(t, "GetLogLevelTypeForName:INFO", int(InfoLevel), int(GetLogLevelTypeIndexForName("INFO")))
 	test.AssertEqualInt(t, "GetLogLevelTypeForName:WARN", int(WarnLevel), int(GetLogLevelTypeIndexForName("WARN")))

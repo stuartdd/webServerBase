@@ -174,8 +174,9 @@ RemoveFile assert strings are equal
 func RemoveFile(t *testing.T, info string, path string) {
 	var err = os.Remove(path)
 	if err != nil {
-		logStackTraceAndFail(t, fmt.Sprintf("File %s could not be deleted. Error:%s", path, err.Error()), info, debug.Stack())
+		logStackTraceAndFail(t, fmt.Sprintf("File '%s' could not be deleted. Error:%s", path, err.Error()), info, debug.Stack())
 	}
+	t.Logf("Remove File:%s '%s'", info, path)
 }
 
 /*
@@ -184,7 +185,7 @@ AssertFileContains see if all the strings are contained in the file
 func AssertFileContains(t *testing.T, info string, fileName string, contains []string) {
 	b, err := ioutil.ReadFile(fileName)
 	if err != nil {
-		logStackTraceAndFail(t, fmt.Sprintf("File %s could not read. Error:%s", fileName, err.Error()), info, debug.Stack())
+		logStackTraceAndFail(t, fmt.Sprintf("File '%s' could not read. Error:%s", fileName, err.Error()), info, debug.Stack())
 	}
 	for _, val := range contains {
 		if !strings.Contains(string(b), val) {

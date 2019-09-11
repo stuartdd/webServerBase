@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"html/template"
 	"testing"
+	"webServerBase/logging"
 	"webServerBase/test"
 )
 
@@ -12,7 +13,7 @@ type Data struct {
 	Material string
 }
 type DataError struct {
-	count    int
+	count  int
 	MadeOf string
 }
 
@@ -21,6 +22,7 @@ var err1 error
 
 func TestLoadTemplatesNested(t *testing.T) {
 	if templ == nil {
+		logging.CreateTestLogger("TestTemplates")
 		templ, err1 = LoadTemplates("../site")
 		test.AssertNotError(t, "", err1)
 	}
@@ -35,7 +37,7 @@ func TestLoadTemplatesNested(t *testing.T) {
 	test.AssertTrue(t, "", templ.HasTemplate("composite1.html"))
 	test.AssertTrue(t, "", templ.HasTemplate("simple1.html"))
 	test.AssertTrue(t, "", templ.HasTemplate("simple2.html"))
-	txt1:= templ.ExecuteString("composite1.html", mapData)
+	txt1 := templ.ExecuteString("composite1.html", mapData)
 	test.AssertEqualString(t, "Template result data1", "Imp 1.0 - Count is 4 Material is More Silk --PART 1 Silk-- --PART 2 is 4 of Silk -- --PART 3 wants More--", txt1)
 
 }
@@ -69,7 +71,7 @@ func TestWriterPanic(t *testing.T) {
 	}
 	test.AssertNotError(t, "", err1)
 	data1 := DataError{
-		count:    2,
+		count:  2,
 		MadeOf: "Metal",
 	}
 	defer test.AssertPanicThrown(t, "can't evaluate field Count")
@@ -91,7 +93,7 @@ func TestLoadTemplatesFromPath(t *testing.T) {
 		Material: "Zinc",
 	}
 	test.AssertTrue(t, "", templ.HasTemplate("simple1.html"))
-	txt1:= templ.ExecuteString("simple1.html", data1)
+	txt1 := templ.ExecuteString("simple1.html", data1)
 	test.AssertEqualString(t, "Template result data1", "S1 - Count is 2 Material is Metal", txt1)
 
 	test.AssertTrue(t, "", templ.HasTemplate("simple2.html"))
@@ -108,7 +110,7 @@ func TestLoadTemplatesFromPath(t *testing.T) {
 	mapData["Type"] = "Water"
 	mapData["Count"] = "4"
 	mapData["Extra"] = "More"
-	txt5:= templ.ExecuteString("simple3.html", mapData)
+	txt5 := templ.ExecuteString("simple3.html", mapData)
 	test.AssertEqualString(t, "S3 - Template result mapped", "S3 - Material is Water Count is 4", txt5)
 }
 
