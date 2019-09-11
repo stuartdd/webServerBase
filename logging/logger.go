@@ -49,9 +49,6 @@ var logLevelDataMapKnownState = map[string]*logLevelDataKnownState{
 	"FATAL":  &logLevelDataKnownState{FatalLevel, systemErrName, true, true},
 }
 
-var logLevelDataMap map[string]*logLevelData
-var logLevelDataIndexList []*logLevelData
-
 type logLevelDataKnownState struct {
 	index        LoggerLevelTypeIndex // The index. This identifies which log data is used. No duplicates allowed!
 	note         string               // mode - OFF, SYSERR, SYSOUT etc
@@ -94,9 +91,11 @@ type LoggerDataReference struct {
 }
 
 /*
-These names should be ALL the same length and should have a ' ' before AND after the name
+Map - Key is the Log level name, value is the definition (configuration) of that log
+This is populated from logLevelDataMapKnownState map in
 */
-//var loggerLevelTypeNames = [...]string{"  INFO ", " DEBUG ", "  WARN ", "ACCESS ", " ERROR ", " FATAL "}
+var logLevelDataMap map[string]*logLevelData
+var logLevelDataIndexList []*logLevelData
 
 /*
 For each logger level there MAY be a file. Indexed by file name. This is so we can re-use the file with the same name for different levels
@@ -137,26 +136,22 @@ CreateLogWithFilenameAndAppID should configure the logger to output somthing lik
 2019-07-16 14:47:43.993 applicationID module  [-]  INFO Starti
 2019-07-16 14:47:43.993 applicationID module  [-] DEBUG Runnin
 */
-func CreateLogWithFilenameAndAppID(defaultLogFileNameIn string, applicationID string, logLeveldata map[string]string) error {
-	CloseLog()
+func CreateLogWithFilenameAndAppID(defaultLogFileNameIn string, applicationID string, logLevelActivationData map[string]string) error {
+	logDataFlags = log.LstdFlags | log.Lmicroseconds
 	defaultLogFileName = defaultLogFileNameIn
 	logApplicationID = applicationID
-	logDataFlags = log.LstdFlags | log.Lmicroseconds
-	logDataModules = make(map[string]*LoggerDataReference)
-	loggerLevelFiles = make(map[string]*loggerFileData)
 	startFromKnownState()
-	initLoggerLevelDataList()
 	/*
 		Validate and Activate each log level.
-		We MUST activate Error and Fatal so add them if not already defined
+		We MUST activate Error and Fatal so add them to the inINPUTput list if not already defined
 	*/
-	if logLeveldata[errorName] == "" {
-		logLeveldata[errorName] = defaultName
+	if logLevelActivationData[errorName] == "" {
+		logLevelActivationData[errorName] = defaultName
 	}
-	if logLeveldata[fatalName] == "" {
-		logLeveldata[fatalName] = defaultName
+	if logLevelActivationData[fatalName] == "" {
+		logLevelActivationData[fatalName] = defaultName
 	}
-	err := validateAndActivateLogLevels(logLeveldata)
+	err := validateAndActivateLogLevels(logLevelActivationData)
 	if err != nil {
 		return err
 	}
@@ -419,36 +414,58 @@ func logError(message string) error {
 }
 
 func startFromKnownState() {
+	/*
+		Make sure the lists and maps are empty first
+	*/
+	CloseLog()
+	logDataModules = make(map[string]*LoggerDataReference)
+	loggerLevelFiles = make(map[string]*loggerFileData)
+	logLevelDataMap = make(map[string]*logLevelData)
+	logLevelDataIndexList = []*logLevelData{}
+	/*
+		Find the longest name
+	*/
 	longest := 0
 	for name := range logLevelDataMapKnownState {
 		if longest < len(name) {
 			longest = len(name)
 		}
 	}
-	logLevelDataMap = make(map[string]*logLevelData)
+	/*
+		Create each logLevelData from each logLevelDataKnownState
+	*/
 	for name, value := range logLevelDataMapKnownState {
 		logLevelDataMap[name] = &logLevelData{
-			paddedName:   padName(name, longest+1),
+			paddedName:   padName(name, longest),
 			index:        value.index,
 			note:         value.note,
 			active:       value.active,
 			isErrorLevel: value.isErrorLevel,
 		}
 	}
+	/*
+		Create a list of empty (nil) values the right size.
+	*/
+	for i := 0; i < len(logLevelDataMap); i++ {
+		logLevelDataIndexList = append(logLevelDataIndexList, nil)
+	}
+	/*
+		Insert each logLevelData in the correct slot. Duplicate entries will cause a panic
+
+		Note they may not be in the right sequence (it depends on values in logLevelDataMapKnownState)
+			so we need to use the value.index from the logLevelData to make sure order is maintained!
+	*/
+	for name, value := range logLevelDataMap {
+		if logLevelDataIndexList[value.index] == nil {
+			logLevelDataIndexList[value.index] = value
+		} else {
+			panic("Duplicate index value in logLevelDataMapKnownState[" + name + "]")
+		}
+	}
 }
 
 func padName(name string, longest int) string {
 	return strings.Repeat(" ", longest-len(name)) + name + " "
-}
-
-func initLoggerLevelDataList() {
-	for i := 0; i < len(logLevelDataMap); i++ {
-		logLevelDataIndexList = append(logLevelDataIndexList, nil)
-	}
-
-	for _, value := range logLevelDataMap {
-		logLevelDataIndexList[value.index] = value
-	}
 }
 
 /*
