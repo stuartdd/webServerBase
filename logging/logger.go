@@ -36,28 +36,40 @@ const (
 	NotFound
 )
 
-var logLevelDataMap = map[string]*logLevelData {
-	"INFO":   &logLevelData{"   INFO ", InfoLevel, offName, false, false, nil, nil},
-	"DEBUG":  &logLevelData{"  DEBUG ", DebugLevel, offName, false, false, nil, nil},
-	"WARN":   &logLevelData{"   WARN ", WarnLevel, offName, false, false, nil, nil},
-	"ACCESS": &logLevelData{" ACCESS ", AccessLevel, offName, false, false, nil, nil},
-	"ERROR":  &logLevelData{"  ERROR ", ErrorLevel, systemErrName, true, true, nil, nil},
-	"FATAL":  &logLevelData{"  FATAL ", FatalLevel, systemErrName, true, true, nil, nil},
+/*
+Create default instances of each log level.
+This map is updated by CreateLogWithFilenameAndAppID. This can cause issues when test is run as teh state cannot be reset!
+*/
+var logLevelDataMapKnownState = map[string]*logLevelDataKnownState{
+	"INFO":   &logLevelDataKnownState{InfoLevel, offName, false, false},
+	"DEBUG":  &logLevelDataKnownState{DebugLevel, offName, false, false},
+	"WARN":   &logLevelDataKnownState{WarnLevel, offName, false, false},
+	"ACCESS": &logLevelDataKnownState{AccessLevel, offName, false, false},
+	"ERROR":  &logLevelDataKnownState{ErrorLevel, systemErrName, true, true},
+	"FATAL":  &logLevelDataKnownState{FatalLevel, systemErrName, true, true},
 }
 
+var logLevelDataMap map[string]*logLevelData
 var logLevelDataIndexList []*logLevelData
 
+type logLevelDataKnownState struct {
+	index        LoggerLevelTypeIndex // The index. This identifies which log data is used. No duplicates allowed!
+	note         string               // mode - OFF, SYSERR, SYSOUT etc
+	active       bool                 // Is the log logging?
+	isErrorLevel bool                 // Is it or error or fatal log as these are active by default
+}
+
 /*
-logLevelData One instance per Log Level
+logLevelData One instance per Log Level. Note the order of the fields must match the above definition.
 */
 type logLevelData struct {
 	paddedName   string
-	index        LoggerLevelTypeIndex
-	note         string          // mode - OFF, SYSERR, SYSOUT etc
-	active       bool            // Is the log logging?
-	isErrorLevel bool            // Is it or error or fatal log as these are active by default
-	logger       *log.Logger     // The actual (wrapped) logger imported via "log"
-	file         *loggerFileData // If the is a file associated with the log
+	index        LoggerLevelTypeIndex // The index. This identifies which log data is used. No duplicates allowed!
+	note         string               // mode - OFF, SYSERR, SYSOUT etc
+	active       bool                 // Is the log logging?
+	isErrorLevel bool                 // Is it or error or fatal log as these are active by default
+	logger       *log.Logger          // The actual (wrapped) logger imported via "log"
+	file         *loggerFileData      // If the is a file associated with the log
 }
 
 /*
@@ -132,6 +144,7 @@ func CreateLogWithFilenameAndAppID(defaultLogFileNameIn string, applicationID st
 	logDataFlags = log.LstdFlags | log.Lmicroseconds
 	logDataModules = make(map[string]*LoggerDataReference)
 	loggerLevelFiles = make(map[string]*loggerFileData)
+	startFromKnownState()
 	initLoggerLevelDataList()
 	/*
 		Validate and Activate each log level.
@@ -149,16 +162,6 @@ func CreateLogWithFilenameAndAppID(defaultLogFileNameIn string, applicationID st
 	}
 	fallBack = false
 	return nil
-}
-
-func initLoggerLevelDataList() {
-	for i := 0; i < len(logLevelDataMap); i++ {
-		logLevelDataIndexList = append(logLevelDataIndexList, nil)
-	}
-
-	for _, value := range logLevelDataMap {
-		logLevelDataIndexList[value.index] = value
-	}
 }
 
 /*
@@ -413,6 +416,40 @@ func (p *LoggerDataReference) LogDebug(message string) {
 func logError(message string) error {
 	log.Panic("Logging:" + message)
 	return errors.New("Logging:" + message)
+}
+
+func startFromKnownState() {
+	longest := 0
+	for name := range logLevelDataMapKnownState {
+		if longest < len(name) {
+			longest = len(name)
+		}
+	}
+	logLevelDataMap = make(map[string]*logLevelData)
+	for name, value := range logLevelDataMapKnownState {
+		logLevelDataMap[name] = &logLevelData{
+			paddedName:   padName(name, longest+2),
+			index:        value.index,
+			note:         value.note,
+			active:       value.active,
+			isErrorLevel: value.isErrorLevel,
+		}
+	}
+}
+
+func padName(name string, longest int) string {
+	pad := " " + name + " "
+	return strings.Repeat(" ", longest-len(pad)) + pad
+}
+
+func initLoggerLevelDataList() {
+	for i := 0; i < len(logLevelDataMap); i++ {
+		logLevelDataIndexList = append(logLevelDataIndexList, nil)
+	}
+
+	for _, value := range logLevelDataMap {
+		logLevelDataIndexList[value.index] = value
+	}
 }
 
 /*

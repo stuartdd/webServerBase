@@ -12,18 +12,27 @@ import (
 
 var globalErr interface{}
 
-type SyntaxError struct {
+/*
+Create an error type so we can test the logError functionality
+*/
+type TrialError struct {
 	Desc string
 	Line int
 	Col  int
 }
 
-func (e *SyntaxError) Error() string {
-	return fmt.Sprintf("%d:%d: syntax error: %s", e.Line, e.Col, e.Desc)
+/*
+Overrite the Error method togenerate our own message
+*/
+func (e *TrialError) Error() string {
+	return fmt.Sprintf("%d:%d: Trial error: %s", e.Line, e.Col, e.Desc)
 }
 
-func NewSyntaxError(desc string) *SyntaxError {
-	return &SyntaxError{
+/*
+Create a new
+*/
+func NewTrialError(desc string) *TrialError {
+	return &TrialError{
 		Desc: desc,
 		Line: 10,
 		Col:  20,
@@ -104,7 +113,7 @@ func TestSwitchOffError(t *testing.T) {
 	test.AssertFalse(t, "IsInfo", t1.IsInfo())
 	test.AssertFalse(t, "IsError", t1.IsError())
 	test.AssertTrue(t, "IsFatal", t1.IsFatal())
-	t1.LogError(NewSyntaxError("Test Error OFF"))
+	t1.LogError(NewTrialError("SwitchOffError ended OK"))
 }
 
 func TestSwitchOffFatal(t *testing.T) {
@@ -126,7 +135,7 @@ func TestSwitchOffFatal(t *testing.T) {
 	test.AssertFalse(t, "IsInfo", t1.IsInfo())
 	test.AssertTrue(t, "IsError", t1.IsError())
 	test.AssertFalse(t, "IsFatal", t1.IsFatal())
-	t1.Fatal(NewSyntaxError("Test Fatal OFF"))
+	t1.Fatal(NewTrialError("SwitchOffFatal ended OK"))
 }
 
 func TestCreateLogDefaultsWithFile(t *testing.T) {
@@ -157,23 +166,25 @@ func TestCreateLogDefaultsWithFile(t *testing.T) {
 	test.AssertTrue(t, "IsFatal", t1.IsFatal())
 	t1Data := strconv.Itoa(rand.Int())
 	t1.LogDebug(t1Data)
-	t1.LogError(NewSyntaxError(t1Data))
+	t1.LogError(NewTrialError(t1Data))
 	t1.LogWarn(t1Data)
 	t1.LogAccess(t1Data)
 	t1.LogInfo(t1Data)
 	t2Data := strconv.Itoa(rand.Int())
 	t2.LogDebug(t2Data)
-	t2.LogError(NewSyntaxError(t2Data))
+	t2.LogError(NewTrialError(t2Data))
 	t2.LogWarn(t2Data)
 	t2.LogAccess(t2Data)
 	t2.LogInfo(t2Data)
-	test.AssertFileContains(t, "", GetLogLevelFileName("DEBUG"), []string{
+
+	fileName := GetLogLevelFileName("DEBUG")
+	test.AssertFileContains(t, "", fileName, []string{
 		"AppDI T1 [-]  DEBUG " + t1Data,
 		"AppDI T2 [-]  DEBUG " + t2Data,
 		"AppDI T1 [-]  ERROR 10:20: syntax error: " + t1Data,
 		"AppDI T2 [-]  ERROR 10:20: syntax error: " + t2Data,
 	})
-	test.AssertFileDoesNotContain(t, "", GetLogLevelFileName("DEBUG"), []string{
+	test.AssertFileDoesNotContain(t, "", fileName, []string{
 		"INFO",
 		"ACCESS",
 		"WARN",
