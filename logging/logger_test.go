@@ -22,7 +22,7 @@ type TrialError struct {
 }
 
 /*
-Overrite the Error method togenerate our own message
+Overrite the Error method to generate our own message
 */
 func (e *TrialError) Error() string {
 	return fmt.Sprintf("%d:%d: Trial error: %s", e.Line, e.Col, e.Desc)
@@ -43,6 +43,12 @@ func TestInvalidLevel(t *testing.T) {
 	defer checkPanicIsThrown(t, "is not a valid log level")
 	levels := make(map[string]string)
 	levels["DEBUGd"] = "SYSERR"
+	CreateLogWithFilenameAndAppID("", "AppDI", levels)
+}
+
+func TestFileNameresolution(t *testing.T) {
+	levels := make(map[string]string)
+	levels["DEBUG"] = "db_%{YYYY}_%{MM}_%{DD}.log"
 	CreateLogWithFilenameAndAppID("", "AppDI", levels)
 }
 
@@ -146,7 +152,7 @@ func TestCreateLogDefaultsWithFile(t *testing.T) {
 		Note last defer runs first. It is a stack!
 		CloseLog must run before test.RemoveFile
 	*/
-	defer test.RemoveFile(t, "", GetLogLevelFileName("ERROR"))
+	defer test.RemoveFile(t, "", GetLogLevelFileNameForLevelName("ERROR"))
 	defer CloseLog()
 
 	test.AssertEqualString(t, "", "DEBUG:Active note[DEFAULT] error[NO]:Out=:ef.log:Open", LoggerLevelDataString("DEBUG"))
@@ -176,7 +182,7 @@ func TestCreateLogDefaultsWithFile(t *testing.T) {
 	t2.LogWarn(t2Data)
 	t2.LogAccess(t2Data)
 	t2.LogInfo(t2Data)
-	fileName := GetLogLevelFileName("DEBUG")
+	fileName := GetLogLevelFileNameForLevelName("DEBUG")
 	test.AssertFileContains(t, "", fileName, []string{
 		"AppDI T1 [-]  DEBUG " + t1Data,
 		"AppDI T2 [-]  DEBUG " + t2Data,
@@ -200,9 +206,9 @@ func TestCreateLog(t *testing.T) {
 	levels["ACCESS"] = "i.log"
 
 	CreateLogWithFilenameAndAppID("ef.log", "AppDI", levels)
-	defer test.RemoveFile(t, "", GetLogLevelFileName("DEBUG"))
-	defer test.RemoveFile(t, "", GetLogLevelFileName("INFO"))
-	defer test.RemoveFile(t, "", GetLogLevelFileName("ERROR"))
+	defer test.RemoveFile(t, "", GetLogLevelFileNameForLevelName("DEBUG"))
+	defer test.RemoveFile(t, "", GetLogLevelFileNameForLevelName("INFO"))
+	defer test.RemoveFile(t, "", GetLogLevelFileNameForLevelName("ERROR"))
 
 	test.AssertEqualString(t, "", "DEBUG:Active note[FILE] error[NO]:Out=:d.log:Open", LoggerLevelDataString("DEBUG"))
 	test.AssertEqualString(t, "", "INFO:Active note[FILE] error[NO]:Out=:i.log:Open", LoggerLevelDataString("INFO"))
@@ -220,12 +226,12 @@ func TestCreateLog(t *testing.T) {
 	test.AssertEqualString(t, "", "FATAL:In-Active note[DEFAULT] error[YES]", LoggerLevelDataString("FATAL"))
 	test.AssertEqualString(t, "", "UNKNOWN:Not Found", LoggerLevelDataString("UNKNOWN"))
 
-	test.AssertEndsWithString(t, "", GetLogLevelFileName("DEBUG"), "d.log")
-	test.AssertEndsWithString(t, "", GetLogLevelFileName("INFO"), "i.log")
-	test.AssertEqualString(t, "", "", GetLogLevelFileName("WARN"))
-	test.AssertEndsWithString(t, "", GetLogLevelFileName("ACCESS"), "i.log")
-	test.AssertEndsWithString(t, "", GetLogLevelFileName("ERROR"), "ef.log")
-	test.AssertEndsWithString(t, "", GetLogLevelFileName("FATAL"), "ef.log")
+	test.AssertEndsWithString(t, "", GetLogLevelFileNameForLevelName("DEBUG"), "d.log")
+	test.AssertEndsWithString(t, "", GetLogLevelFileNameForLevelName("INFO"), "i.log")
+	test.AssertEqualString(t, "", "", GetLogLevelFileNameForLevelName("WARN"))
+	test.AssertEndsWithString(t, "", GetLogLevelFileNameForLevelName("ACCESS"), "i.log")
+	test.AssertEndsWithString(t, "", GetLogLevelFileNameForLevelName("ERROR"), "ef.log")
+	test.AssertEndsWithString(t, "", GetLogLevelFileNameForLevelName("FATAL"), "ef.log")
 
 }
 
@@ -233,13 +239,13 @@ func TestNameToIndex(t *testing.T) {
 	levels := make(map[string]string)
 	levels["DEBUG"] = "DEFAULT"
 	CreateLogWithFilenameAndAppID("", "AppDI", levels)
-	test.AssertEqualInt(t, "GetLogLevelTypeForName:DEBUG", int(DebugLevel), int(GetLogLevelTypeIndexForName("DEBUG")))
-	test.AssertEqualInt(t, "GetLogLevelTypeForName:INFO", int(InfoLevel), int(GetLogLevelTypeIndexForName("INFO")))
-	test.AssertEqualInt(t, "GetLogLevelTypeForName:WARN", int(WarnLevel), int(GetLogLevelTypeIndexForName("WARN")))
-	test.AssertEqualInt(t, "GetLogLevelTypeForName:ACCESS", int(AccessLevel), int(GetLogLevelTypeIndexForName("ACCESS")))
-	test.AssertEqualInt(t, "GetLogLevelTypeForName:ERROR", int(ErrorLevel), int(GetLogLevelTypeIndexForName("ERROR")))
-	test.AssertEqualInt(t, "GetLogLevelTypeForName:FATAL", int(FatalLevel), int(GetLogLevelTypeIndexForName("FATAL")))
-	test.AssertEqualInt(t, "GetLogLevelTypeForName:UNKNOWN", int(NotFound), int(GetLogLevelTypeIndexForName("UNKNOWN")))
+	test.AssertEqualInt(t, "GetLogLevelTypeForName:DEBUG", int(DebugLevel), int(GetLogLevelTypeIndexForLevelName("DEBUG")))
+	test.AssertEqualInt(t, "GetLogLevelTypeForName:INFO", int(InfoLevel), int(GetLogLevelTypeIndexForLevelName("INFO")))
+	test.AssertEqualInt(t, "GetLogLevelTypeForName:WARN", int(WarnLevel), int(GetLogLevelTypeIndexForLevelName("WARN")))
+	test.AssertEqualInt(t, "GetLogLevelTypeForName:ACCESS", int(AccessLevel), int(GetLogLevelTypeIndexForLevelName("ACCESS")))
+	test.AssertEqualInt(t, "GetLogLevelTypeForName:ERROR", int(ErrorLevel), int(GetLogLevelTypeIndexForLevelName("ERROR")))
+	test.AssertEqualInt(t, "GetLogLevelTypeForName:FATAL", int(FatalLevel), int(GetLogLevelTypeIndexForLevelName("FATAL")))
+	test.AssertEqualInt(t, "GetLogLevelTypeForName:UNKNOWN", int(NotFound), int(GetLogLevelTypeIndexForLevelName("UNKNOWN")))
 }
 
 func checkPanicIsThrown(t *testing.T, desc string) {
