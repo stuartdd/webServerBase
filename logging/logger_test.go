@@ -2,7 +2,9 @@ package logging
 
 import (
 	"fmt"
+	"io/ioutil"
 	"math/rand"
+	"os"
 	"runtime/debug"
 	"strconv"
 	"strings"
@@ -37,6 +39,62 @@ func NewTrialError(desc string) *TrialError {
 		Line: 10,
 		Col:  20,
 	}
+}
+
+func TestFallback(t *testing.T) {
+	levels := make(map[string]string)
+	levels["DEBUG"] = "ZZZZZZ"
+	CreateLogWithFilenameAndAppID("", "AppID", -1, levels)
+	test.AssertTrue(t, "", IsFallback())
+	CreateLogWithFilenameAndAppID("", "AppID", -1, levels)
+	test.AssertTrue(t, "", IsFallback())
+	rescueStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	tstlog := NewLogger("NEW-LOG")
+	tstlog.LogAccess("LINE 1")
+	tstlog.LogAccessf("LINE %d", 2)
+	tstlog.LogDebug("LINE 3")
+	tstlog.LogDebugf("LINE %d", 4)
+	tstlog.LogWarn("LINE 5")
+	tstlog.LogWarnf("LINE %d", 6)
+	tstlog.LogInfo("LINE 7")
+	tstlog.LogInfof("LINE %d", 8)
+	tstlog.LogError(fmt.Errorf("LINE %d", 9))
+	tstlog.LogErrorf("LINE %d", 10)
+	tstlog.LogErrorWithStackTrace("TRACE 11", "LINE 11")
+	tstlog.Fatal(fmt.Errorf("FATAL %d", 12))
+
+	test.AssertFalse(t, "", tstlog.IsAccess())
+	test.AssertFalse(t, "", tstlog.IsWarn())
+	test.AssertFalse(t, "", tstlog.IsDebug())
+	test.AssertFalse(t, "", tstlog.IsInfo())
+	test.AssertTrue(t, "", tstlog.IsError())
+	test.AssertTrue(t, "", tstlog.IsFatal())
+
+	w.Close()
+	out, _ := ioutil.ReadAll(r)
+	os.Stdout = rescueStdout
+
+	captured := string(out)
+
+	test.AssertStringContains(t, "", captured, []string{
+		"FALLBACK:ACCESS: LINE 1",
+		"FALLBACK:ACCESS: LINE 2",
+		"FALLBACK:DEBUG: LINE 3",
+		"FALLBACK:DEBUG: LINE 4",
+		"FALLBACK:WARN: LINE 5",
+		"FALLBACK:WARN: LINE 6",
+		"FALLBACK:INFO: LINE 7",
+		"FALLBACK:INFO: LINE 8",
+		"FALLBACK:ERROR: LINE 9",
+		"FALLBACK:ERROR: LINE 10",
+		"FALLBACK:ERROR: TRACE 11 LINE 11",
+		"webServerBase/logging.(*LoggerDataReference).LogErrorWithStackTrace",
+		"FALLBACK:FATAL: type[*errors.errorString] FATAL 12",
+	})
+
 }
 
 func TestInvalidLevel(t *testing.T) {

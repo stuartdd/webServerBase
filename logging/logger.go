@@ -10,6 +10,7 @@ import (
 	"runtime/debug"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -116,6 +117,8 @@ var defaultLogFileName string
 var fallBack = true
 var fatalRC int
 
+var mutex = &sync.Mutex{}
+
 /*
 false when Initialising true when complete!
 */
@@ -139,7 +142,12 @@ CreateLogWithFilenameAndAppID should configure the logger to output somthing lik
 2019-07-16 14:47:43.993 applicationID module  [-] DEBUG Runnin
 */
 func CreateLogWithFilenameAndAppID(defaultLogFileNameIn string, applicationID string, fatalRCIn int, logLevelActivationData map[string]string) error {
+	mutex.Lock()
 	loggerEnabled = false
+	fallBack = true
+	defer mutex.Unlock()
+	defer clearFlags()
+
 	logDataFlags = log.LstdFlags | log.Lmicroseconds
 	defaultLogFileName = defaultLogFileNameIn
 	logApplicationID = applicationID
@@ -157,11 +165,22 @@ func CreateLogWithFilenameAndAppID(defaultLogFileNameIn string, applicationID st
 	}
 	err := validateAndActivateLogLevels(logLevelActivationData)
 	if err != nil {
+		fmt.Printf("FALLBACK:Logging is in Fallback mode) Create Failed with error: %s\n" + err.Error())
 		return err
 	}
 	fallBack = false
-	loggerEnabled = true
 	return nil
+}
+
+/*
+IsFallback - Return the fallback state
+*/
+func IsFallback() bool {
+	return fallBack
+}
+
+func clearFlags() {
+	loggerEnabled = true
 }
 
 /*
@@ -268,7 +287,7 @@ Fatal does the same as log.Fatal
 */
 func (p *LoggerDataReference) Fatal(err error) {
 	if fallBack {
-		fmt.Printf("FATAL: type[%T] %s\n", err, err.Error())
+		fmt.Printf("FALLBACK:FATAL: type[%T] %s\n", err, err.Error())
 	} else {
 		if logLevelDataIndexList[FatalLevel].active && isEnabled() {
 			logLevelDataIndexList[FatalLevel].logger.Printf(p.loggerPrefix+"[%s] %T %s", logLevelDataIndexList[FatalLevel].paddedName, err, err.Error())
@@ -285,6 +304,10 @@ func (p *LoggerDataReference) Fatal(err error) {
 LogErrorf delegates to log.Printf
 */
 func (p *LoggerDataReference) LogErrorf(format string, v ...interface{}) {
+	if fallBack {
+		fmt.Printf("FALLBACK:ERROR: "+format+"\n", v...)
+		return
+	}
 	if logLevelDataIndexList[ErrorLevel].active && isEnabled() {
 		logLevelDataIndexList[ErrorLevel].logger.Printf(p.loggerPrefix+logLevelDataIndexList[ErrorLevel].paddedName+format, v...)
 	}
@@ -294,23 +317,12 @@ func (p *LoggerDataReference) LogErrorf(format string, v ...interface{}) {
 LogError delegates to log.Print
 */
 func (p *LoggerDataReference) LogError(message error) {
+	if fallBack {
+		fmt.Println("FALLBACK:ERROR: " + message.Error())
+		return
+	}
 	if logLevelDataIndexList[ErrorLevel].active && isEnabled() {
 		logLevelDataIndexList[ErrorLevel].logger.Print(p.loggerPrefix + logLevelDataIndexList[ErrorLevel].paddedName + message.Error())
-	}
-}
-
-/*
-LogErrorWithStackTrace - Log an error and a stack trace
-*/
-func (p *LoggerDataReference) LogErrorWithStackTrace(prefix string, message string) {
-	if p.IsError() && isEnabled() {
-		logLevelDataIndexList[ErrorLevel].logger.Print(p.loggerPrefix + logLevelDataIndexList[ErrorLevel].paddedName + prefix + " " + message)
-		st := string(debug.Stack())
-		for count, line := range strings.Split(strings.TrimSuffix(st, "\n"), "\n") {
-			if count > 6 && count <= 18 {
-				logLevelDataIndexList[ErrorLevel].logger.Print(p.loggerPrefix + logLevelDataIndexList[ErrorLevel].paddedName + prefix + " " + line)
-			}
-		}
 	}
 }
 
@@ -318,6 +330,10 @@ func (p *LoggerDataReference) LogErrorWithStackTrace(prefix string, message stri
 LogInfof delegates to log.Printf
 */
 func (p *LoggerDataReference) LogInfof(format string, v ...interface{}) {
+	if fallBack {
+		fmt.Printf("FALLBACK:INFO: "+format+"\n", v...)
+		return
+	}
 	if logLevelDataIndexList[InfoLevel].active && isEnabled() {
 		logLevelDataIndexList[InfoLevel].logger.Printf(p.loggerPrefix+logLevelDataIndexList[InfoLevel].paddedName+format, v...)
 	}
@@ -327,6 +343,10 @@ func (p *LoggerDataReference) LogInfof(format string, v ...interface{}) {
 LogInfo delegates to log.Print
 */
 func (p *LoggerDataReference) LogInfo(message string) {
+	if fallBack {
+		fmt.Println("FALLBACK:INFO: " + message)
+		return
+	}
 	if logLevelDataIndexList[InfoLevel].active && isEnabled() {
 		logLevelDataIndexList[InfoLevel].logger.Print(p.loggerPrefix + logLevelDataIndexList[InfoLevel].paddedName + message)
 	}
@@ -336,6 +356,10 @@ func (p *LoggerDataReference) LogInfo(message string) {
 LogAccessf delegates to log.Printf
 */
 func (p *LoggerDataReference) LogAccessf(format string, v ...interface{}) {
+	if fallBack {
+		fmt.Printf("FALLBACK:ACCESS: "+format+"\n", v...)
+		return
+	}
 	if logLevelDataIndexList[AccessLevel].active && isEnabled() {
 		logLevelDataIndexList[AccessLevel].logger.Printf(p.loggerPrefix+logLevelDataIndexList[AccessLevel].paddedName+format, v...)
 	}
@@ -345,6 +369,10 @@ func (p *LoggerDataReference) LogAccessf(format string, v ...interface{}) {
 LogAccess delegates to log.Print
 */
 func (p *LoggerDataReference) LogAccess(message string) {
+	if fallBack {
+		fmt.Println("FALLBACK:ACCESS: " + message)
+		return
+	}
 	if logLevelDataIndexList[AccessLevel].active && isEnabled() {
 		logLevelDataIndexList[AccessLevel].logger.Print(p.loggerPrefix + logLevelDataIndexList[AccessLevel].paddedName + message)
 	}
@@ -354,6 +382,10 @@ func (p *LoggerDataReference) LogAccess(message string) {
 LogWarnf delegates to log.Printf
 */
 func (p *LoggerDataReference) LogWarnf(format string, v ...interface{}) {
+	if fallBack {
+		fmt.Printf("FALLBACK:WARN: "+format+"\n", v...)
+		return
+	}
 	if logLevelDataIndexList[WarnLevel].active && isEnabled() {
 		logLevelDataIndexList[WarnLevel].logger.Printf(p.loggerPrefix+logLevelDataIndexList[WarnLevel].paddedName+format, v...)
 	}
@@ -363,6 +395,10 @@ func (p *LoggerDataReference) LogWarnf(format string, v ...interface{}) {
 LogWarn delegates to log.Print
 */
 func (p *LoggerDataReference) LogWarn(message string) {
+	if fallBack {
+		fmt.Println("FALLBACK:WARN: " + message)
+		return
+	}
 	if logLevelDataIndexList[WarnLevel].active && isEnabled() {
 		logLevelDataIndexList[WarnLevel].logger.Print(p.loggerPrefix + logLevelDataIndexList[WarnLevel].paddedName + message)
 	}
@@ -372,6 +408,10 @@ func (p *LoggerDataReference) LogWarn(message string) {
 LogDebugf delegates to log.Printf
 */
 func (p *LoggerDataReference) LogDebugf(format string, v ...interface{}) {
+	if fallBack {
+		fmt.Printf("FALLBACK:DEBUG: "+format+"\n", v...)
+		return
+	}
 	if logLevelDataIndexList[DebugLevel].active && isEnabled() {
 		logLevelDataIndexList[DebugLevel].logger.Printf(p.loggerPrefix+logLevelDataIndexList[DebugLevel].paddedName+format, v...)
 	}
@@ -381,8 +421,31 @@ func (p *LoggerDataReference) LogDebugf(format string, v ...interface{}) {
 LogDebug delegates to log.Print
 */
 func (p *LoggerDataReference) LogDebug(message string) {
+	if fallBack {
+		fmt.Println("FALLBACK:DEBUG: " + message)
+		return
+	}
 	if logLevelDataIndexList[DebugLevel].active && isEnabled() {
 		logLevelDataIndexList[DebugLevel].logger.Print(p.loggerPrefix + logLevelDataIndexList[DebugLevel].paddedName + message)
+	}
+}
+
+/*
+LogErrorWithStackTrace - Log an error and a stack trace
+*/
+func (p *LoggerDataReference) LogErrorWithStackTrace(prefix string, message string) {
+	if fallBack {
+		fmt.Println("FALLBACK:ERROR: " + prefix + " " + message + "\n" + string(debug.Stack()))
+		return
+	}
+	if logLevelDataIndexList[ErrorLevel].active && isEnabled() {
+		logLevelDataIndexList[ErrorLevel].logger.Print(p.loggerPrefix + logLevelDataIndexList[ErrorLevel].paddedName + prefix + " " + message)
+		st := string(debug.Stack())
+		for count, line := range strings.Split(strings.TrimSuffix(st, "\n"), "\n") {
+			if count > 6 && count <= 18 {
+				logLevelDataIndexList[ErrorLevel].logger.Print(p.loggerPrefix + logLevelDataIndexList[ErrorLevel].paddedName + prefix + " " + line)
+			}
+		}
 	}
 }
 
@@ -412,11 +475,6 @@ func LoggerLevelDataString(name string) string {
 		return name + ":In-Active note[" + lld.note + "] error[" + errorLevel + "]"
 	}
 	return name + ":Not Found"
-}
-
-func logError(message string) error {
-	log.Panic("Logging:" + message)
-	return errors.New("Logging:" + message)
 }
 
 func startFromKnownState() {
@@ -566,7 +624,7 @@ func validateAndActivateLogLevels(values map[string]string) error {
 				b.WriteString(name)
 				b.WriteString(", ")
 			}
-			return logError("The Log level name '" + key + "' is not a valid log level. Valid values are:" + b.String()[0:b.Len()-2])
+			return newError("The Log level name '" + key + "' is not a valid log level. Valid values are:" + b.String()[0:b.Len()-2])
 		}
 	}
 	return nil
@@ -592,15 +650,15 @@ func getLogLevelFileDataForFilename(logFileNameUnresolved string) (*logLevelFile
 		return val, nil
 	}
 	if !strings.ContainsRune(logFileName, '.') {
-		return nil, logError("applicationID " + logApplicationID + ". Log file " + logFileName + " is invalid. File name requires a '.' extension:")
+		return nil, newError("applicationID " + logApplicationID + ". Log file " + logFileName + " is invalid. File name requires a '.' extension:")
 	}
 	absFileName, err := filepath.Abs(logFileName)
 	if err != nil {
-		return nil, logError("applicationID " + logApplicationID + ". Log file " + logFileName + " is not a valid file path: " + err.Error())
+		return nil, newError("applicationID " + logApplicationID + ". Log file " + logFileName + " is not a valid file path: " + err.Error())
 	}
 	f, err := os.OpenFile(absFileName, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
-		return nil, logError("applicationID " + logApplicationID + ". Log file " + logFileName + " could NOT be Created or Opened: " + err.Error())
+		return nil, newError("applicationID " + logApplicationID + ". Log file " + logFileName + " could NOT be Created or Opened: " + err.Error())
 	}
 	lfd := &logLevelFileData{
 		fileName: absFileName,
@@ -608,6 +666,10 @@ func getLogLevelFileDataForFilename(logFileNameUnresolved string) (*logLevelFile
 	}
 	logLevelFileMap[nameUcTrim] = lfd
 	return lfd, nil
+}
+
+func newError(message string) error {
+	return errors.New("Logging:" + message)
 }
 
 /*
