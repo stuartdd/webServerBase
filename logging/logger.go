@@ -115,7 +115,11 @@ var logApplicationID string
 var defaultLogFileName string
 var fallBack = true
 var fatalRC int
-var enabled = false
+
+/*
+false when Initialising true when complete!
+*/
+var loggerEnabled = false
 
 /*
 CreateTestLogger - creates a logger for testing
@@ -135,7 +139,7 @@ CreateLogWithFilenameAndAppID should configure the logger to output somthing lik
 2019-07-16 14:47:43.993 applicationID module  [-] DEBUG Runnin
 */
 func CreateLogWithFilenameAndAppID(defaultLogFileNameIn string, applicationID string, fatalRCIn int, logLevelActivationData map[string]string) error {
-	enabled = false
+	loggerEnabled = false
 	logDataFlags = log.LstdFlags | log.Lmicroseconds
 	defaultLogFileName = defaultLogFileNameIn
 	logApplicationID = applicationID
@@ -156,7 +160,7 @@ func CreateLogWithFilenameAndAppID(defaultLogFileNameIn string, applicationID st
 		return err
 	}
 	fallBack = false
-	enabled = true
+	loggerEnabled = true
 	return nil
 }
 
@@ -266,13 +270,13 @@ func (p *LoggerDataReference) Fatal(err error) {
 	if fallBack {
 		fmt.Printf("FATAL: type[%T] %s\n", err, err.Error())
 	} else {
-		if logLevelDataIndexList[FatalLevel].active && enabled {
+		if logLevelDataIndexList[FatalLevel].active && isEnabled() {
 			logLevelDataIndexList[FatalLevel].logger.Printf(p.loggerPrefix+"[%s] %T %s", logLevelDataIndexList[FatalLevel].paddedName, err, err.Error())
 		} else {
 			fmt.Printf("FATAL: type[%T] %s\n", err, err.Error())
 		}
 	}
-	if (fatalRC >= 0) {
+	if fatalRC >= 0 {
 		os.Exit(fatalRC)
 	}
 }
@@ -281,7 +285,7 @@ func (p *LoggerDataReference) Fatal(err error) {
 LogErrorf delegates to log.Printf
 */
 func (p *LoggerDataReference) LogErrorf(format string, v ...interface{}) {
-	if logLevelDataIndexList[ErrorLevel].active && enabled {
+	if logLevelDataIndexList[ErrorLevel].active && isEnabled() {
 		logLevelDataIndexList[ErrorLevel].logger.Printf(p.loggerPrefix+logLevelDataIndexList[ErrorLevel].paddedName+format, v...)
 	}
 }
@@ -290,7 +294,7 @@ func (p *LoggerDataReference) LogErrorf(format string, v ...interface{}) {
 LogError delegates to log.Print
 */
 func (p *LoggerDataReference) LogError(message error) {
-	if logLevelDataIndexList[ErrorLevel].active && enabled {
+	if logLevelDataIndexList[ErrorLevel].active && isEnabled() {
 		logLevelDataIndexList[ErrorLevel].logger.Print(p.loggerPrefix + logLevelDataIndexList[ErrorLevel].paddedName + message.Error())
 	}
 }
@@ -299,7 +303,7 @@ func (p *LoggerDataReference) LogError(message error) {
 LogErrorWithStackTrace - Log an error and a stack trace
 */
 func (p *LoggerDataReference) LogErrorWithStackTrace(prefix string, message string) {
-	if p.IsError() && enabled {
+	if p.IsError() && isEnabled() {
 		logLevelDataIndexList[ErrorLevel].logger.Print(p.loggerPrefix + logLevelDataIndexList[ErrorLevel].paddedName + prefix + " " + message)
 		st := string(debug.Stack())
 		for count, line := range strings.Split(strings.TrimSuffix(st, "\n"), "\n") {
@@ -314,7 +318,7 @@ func (p *LoggerDataReference) LogErrorWithStackTrace(prefix string, message stri
 LogInfof delegates to log.Printf
 */
 func (p *LoggerDataReference) LogInfof(format string, v ...interface{}) {
-	if logLevelDataIndexList[InfoLevel].active && enabled {
+	if logLevelDataIndexList[InfoLevel].active && isEnabled() {
 		logLevelDataIndexList[InfoLevel].logger.Printf(p.loggerPrefix+logLevelDataIndexList[InfoLevel].paddedName+format, v...)
 	}
 }
@@ -323,7 +327,7 @@ func (p *LoggerDataReference) LogInfof(format string, v ...interface{}) {
 LogInfo delegates to log.Print
 */
 func (p *LoggerDataReference) LogInfo(message string) {
-	if logLevelDataIndexList[InfoLevel].active && enabled {
+	if logLevelDataIndexList[InfoLevel].active && isEnabled() {
 		logLevelDataIndexList[InfoLevel].logger.Print(p.loggerPrefix + logLevelDataIndexList[InfoLevel].paddedName + message)
 	}
 }
@@ -332,7 +336,7 @@ func (p *LoggerDataReference) LogInfo(message string) {
 LogAccessf delegates to log.Printf
 */
 func (p *LoggerDataReference) LogAccessf(format string, v ...interface{}) {
-	if logLevelDataIndexList[AccessLevel].active && enabled {
+	if logLevelDataIndexList[AccessLevel].active && isEnabled() {
 		logLevelDataIndexList[AccessLevel].logger.Printf(p.loggerPrefix+logLevelDataIndexList[AccessLevel].paddedName+format, v...)
 	}
 }
@@ -341,7 +345,7 @@ func (p *LoggerDataReference) LogAccessf(format string, v ...interface{}) {
 LogAccess delegates to log.Print
 */
 func (p *LoggerDataReference) LogAccess(message string) {
-	if logLevelDataIndexList[AccessLevel].active && enabled {
+	if logLevelDataIndexList[AccessLevel].active && isEnabled() {
 		logLevelDataIndexList[AccessLevel].logger.Print(p.loggerPrefix + logLevelDataIndexList[AccessLevel].paddedName + message)
 	}
 }
@@ -350,7 +354,7 @@ func (p *LoggerDataReference) LogAccess(message string) {
 LogWarnf delegates to log.Printf
 */
 func (p *LoggerDataReference) LogWarnf(format string, v ...interface{}) {
-	if logLevelDataIndexList[WarnLevel].active && enabled {
+	if logLevelDataIndexList[WarnLevel].active && isEnabled() {
 		logLevelDataIndexList[WarnLevel].logger.Printf(p.loggerPrefix+logLevelDataIndexList[WarnLevel].paddedName+format, v...)
 	}
 }
@@ -359,7 +363,7 @@ func (p *LoggerDataReference) LogWarnf(format string, v ...interface{}) {
 LogWarn delegates to log.Print
 */
 func (p *LoggerDataReference) LogWarn(message string) {
-	if logLevelDataIndexList[WarnLevel].active && enabled {
+	if logLevelDataIndexList[WarnLevel].active && isEnabled() {
 		logLevelDataIndexList[WarnLevel].logger.Print(p.loggerPrefix + logLevelDataIndexList[WarnLevel].paddedName + message)
 	}
 }
@@ -368,7 +372,7 @@ func (p *LoggerDataReference) LogWarn(message string) {
 LogDebugf delegates to log.Printf
 */
 func (p *LoggerDataReference) LogDebugf(format string, v ...interface{}) {
-	if logLevelDataIndexList[DebugLevel].active && enabled {
+	if logLevelDataIndexList[DebugLevel].active && isEnabled() {
 		logLevelDataIndexList[DebugLevel].logger.Printf(p.loggerPrefix+logLevelDataIndexList[DebugLevel].paddedName+format, v...)
 	}
 }
@@ -377,7 +381,7 @@ func (p *LoggerDataReference) LogDebugf(format string, v ...interface{}) {
 LogDebug delegates to log.Print
 */
 func (p *LoggerDataReference) LogDebug(message string) {
-	if logLevelDataIndexList[DebugLevel].active && enabled {
+	if logLevelDataIndexList[DebugLevel].active && isEnabled() {
 		logLevelDataIndexList[DebugLevel].logger.Print(p.loggerPrefix + logLevelDataIndexList[DebugLevel].paddedName + message)
 	}
 }
@@ -464,6 +468,20 @@ func startFromKnownState() {
 			panic("Duplicate index value in logLevelDataMapKnownState[" + name + "]")
 		}
 	}
+}
+
+func isEnabled() bool {
+	if loggerEnabled {
+		return true
+	}
+	for i := 0; i < 50; i++ {
+		time.Sleep(100 * time.Millisecond)
+		if loggerEnabled {
+			return true
+		}
+
+	}
+	return false
 }
 
 func padName(name string, longest int) string {

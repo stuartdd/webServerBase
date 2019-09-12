@@ -1,16 +1,16 @@
 package config
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"runtime"
 	"strings"
-
-	jsonconfig "github.com/stuartdd/tools_jsonconfig"
 )
 
 /*
-Data read configuration data from the JSON configuration file.
+Data - Read configuration data from the JSON configuration file.
 Note any undefined values are defaulted to constants defined below
 */
 type Data struct {
@@ -34,7 +34,7 @@ var configDataInstance *Data
 /*
 LoadConfigData method loads the config data
 */
-func LoadConfigData(configFileName string) (error) {
+func LoadConfigData(configFileName string) error {
 
 	if configFileName == "" {
 		configFileName = "webServerBase.json"
@@ -52,7 +52,12 @@ func LoadConfigData(configFileName string) (error) {
 	/*
 		load the config object
 	*/
-	err := jsonconfig.LoadJson(configFileName, &configDataInstance)
+	content, err := ioutil.ReadFile(configFileName)
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(content, &configDataInstance)
 	if err != nil {
 		return err
 	}
@@ -64,11 +69,12 @@ func LoadConfigData(configFileName string) (error) {
 /*
 GetOS returns the name of the operating system. Used to look up os
 specific paths in config data staticPaths and templatePaths.
-Use this in error messages to indicate a path is not found for the OS 
+Use this in error messages to indicate a path is not found for the OS
 */
-func GetOS() string { 
+func GetOS() string {
 	return runtime.GOOS
 }
+
 /*
 GetConfigDataStaticFilePathForOS Get the static path for the OS. If not found return the first one!
 */
