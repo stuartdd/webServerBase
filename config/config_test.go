@@ -13,6 +13,7 @@ func TestConfigLoad(t *testing.T) {
 func TestConfigDat(t *testing.T) {
 	test.AssertErrorIsNil(t, "Should not return an error", LoadConfigData("../webServerTest.json"))
 	config := GetConfigDataInstance()
-	test.AssertEqualString(t, "", "../webServerTest.json", config.ConfigName)
-	test.AssertEqualInt(t, "", 8080, config.Port)
+	test.AssertStringEquals(t, "", "../webServerTest.json", config.ConfigName)
+	test.AssertIntEqual(t, "", 8080, config.Port)
+	test.AssertStringEquals(t, "", "utf-8", config.ContentTypeCharset)
 }

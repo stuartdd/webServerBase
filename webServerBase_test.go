@@ -47,9 +47,9 @@ func TestServer(t *testing.T) {
 	/*
 		Test GET functions with calc
 	*/
-	test.AssertEqualString(t, "", "2", sendGet(t, 200, "calc/10/div/5", headers("txt", "1")))
-	test.AssertEqualString(t, "", "50", sendGet(t, 200, "calc/100/div/2", headers("txt", "2")))
-	test.AssertEqualString(t, "", "50", sendGet(t, 200, "calc/100/div/2", headers("txt", "2")))
+	test.AssertStringEquals(t, "", "2", sendGet(t, 200, "calc/10/div/5", headers("txt", "1")))
+	test.AssertStringEquals(t, "", "50", sendGet(t, 200, "calc/100/div/2", headers("txt", "2")))
+	test.AssertStringEquals(t, "", "50", sendGet(t, 200, "calc/100/div/2", headers("txt", "2")))
 	test.AssertStringContains(t, "", sendGet(t, 404, "calc", headers("json", "")), []string{"\"Status\":404", "\"Code\":" + strconv.Itoa(servermain.SCPathNotFound), "GET URL:/calc"})
 	test.AssertStringContains(t, "", sendGet(t, 404, "calc/10", headers("json", "")), []string{"\"Status\":404"})
 	test.AssertStringContains(t, "", sendGet(t, 404, "calc/10/div", headers("json", "")), []string{"\"Status\":404"})
@@ -57,7 +57,7 @@ func TestServer(t *testing.T) {
 	test.AssertStringContains(t, "", sendGet(t, 400, "calc/10/div/ten", headers("json", "")), []string{"\"Status\":400", "\"Code\":" + strconv.Itoa(SCParamValidation), "invalid number ten"})
 	test.AssertStringContains(t, "", sendGet(t, 400, "calc/five/div/ten", headers("json", "")), []string{"\"Status\":400", "\"Code\":" + strconv.Itoa(SCParamValidation), "invalid number five"})
 
-	test.AssertEqualString(t, "", "16", sendGet(t, 200, "calc/qube/2", headers("txt", "2")))
+	test.AssertStringEquals(t, "", "16", sendGet(t, 200, "calc/qube/2", headers("txt", "2")))
 	test.AssertStringContains(t, "", sendGet(t, 404, "calc/qube", headers("json", "")), []string{"\"Status\":404"})
 	test.AssertStringContains(t, "", sendGet(t, 404, "calc/qube/div/10", headers("json", "")), []string{"\"Status\":404"})
 	test.AssertStringContains(t, "", sendGet(t, 400, "calc/qube/div", headers("json", "")), []string{"\"Status\":400", "\"Code\":" + strconv.Itoa(SCParamValidation), "invalid number div"})
@@ -91,7 +91,7 @@ func sendGet(t *testing.T, st int, url string, headers map[string]string) string
 	if err != nil {
 		test.Fail(t, "Read response Failed", err.Error())
 	}
-	test.AssertEqualInt(t, "", st, resp.StatusCode)
+	test.AssertIntEqual(t, "", st, resp.StatusCode)
 	if headers != nil {
 		for name, value := range headers {
 			if value != "" {
@@ -115,7 +115,7 @@ func sendPost(t *testing.T, st int, url string, postBody string, headers map[str
 	if err != nil {
 		test.Fail(t, "Read response Failed", err.Error())
 	}
-	test.AssertEqualInt(t, "", st, resp.StatusCode)
+	test.AssertIntEqual(t, "", st, resp.StatusCode)
 	if headers != nil {
 		for name, value := range headers {
 			if value != "" {
