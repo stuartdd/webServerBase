@@ -17,9 +17,9 @@ func Fail(t *testing.T, info string, message string) {
 }
 
 /*
-AssertNotError - Fail if error is not null. Logs error and the stack trace.
+AssertErrorIsNil - Fail if error is not null. Logs error and the stack trace.
 */
-func AssertNotError(t *testing.T, info string, err error) {
+func AssertErrorIsNil(t *testing.T, info string, err error) {
 	if err == nil {
 		return
 	}
@@ -27,9 +27,9 @@ func AssertNotError(t *testing.T, info string, err error) {
 }
 
 /*
-AssertIsError - Fail if error is null. Logs error and the stack trace.
+AssertError - Fail if error is null. Logs error and the stack trace.
 */
-func AssertIsError(t *testing.T, info string, err error) string {
+func AssertError(t *testing.T, info string, err error) string {
 	if err != nil {
 		return err.Error()
 	}
@@ -38,9 +38,9 @@ func AssertIsError(t *testing.T, info string, err error) string {
 }
 
 /*
-AssertNotNilErrorAndContains - Fail if error is null. Logs error and the stack trace.
+AssertErrorTextContains - Fail if error is null. Logs error and the stack trace.
 */
-func AssertNotNilErrorAndContains(t *testing.T, info string, contains string, err error) string {
+func AssertErrorTextContains(t *testing.T, info string, err error, contains string) string {
 	if err != nil {
 		text := err.Error()
 		if contains != "" {
@@ -141,7 +141,7 @@ func AssertEqualString(t *testing.T, info string, expected string, actual string
 AssertInterfaceType assert strings are equal
 */
 func AssertInterfaceType(t *testing.T, info string, expectedTypeName string, actual interface{}) {
-	actualType := fmt.Sprintf("%T",actual)
+	actualType := fmt.Sprintf("%T", actual)
 	if expectedTypeName != actualType {
 		logStackTraceAndFail(t, fmt.Sprintf("Expected type '%s' actual type '%s'", expectedTypeName, actualType), info, debug.Stack())
 	}
@@ -189,7 +189,7 @@ func AssertFileContains(t *testing.T, info string, fileName string, contains []s
 	}
 	for _, val := range contains {
 		if !strings.Contains(string(b), val) {
-			logStackTraceAndFail(t, fmt.Sprintf("File '%s' does not contain the string '%s'",fileName, val), info, debug.Stack())
+			logStackTraceAndFail(t, fmt.Sprintf("File '%s' does not contain the string '%s'", fileName, val), info, debug.Stack())
 		}
 	}
 	AssertStringContains(t, info, string(b), contains)
@@ -201,7 +201,7 @@ AssertStringContains see if all the strings are contained in the string
 func AssertStringContains(t *testing.T, info string, content string, contains []string) {
 	for _, val := range contains {
 		if !strings.Contains(content, val) {
-			logStackTraceAndFail(t, fmt.Sprintf("String '%s' does not contain '%s'",content, val), info, debug.Stack())
+			logStackTraceAndFail(t, fmt.Sprintf("String '%s' does not contain '%s'", content, val), info, debug.Stack())
 		}
 	}
 }
@@ -212,7 +212,7 @@ AssertStringContains see if all the strings are contained in the string
 func AssertStringDoseNotContain(t *testing.T, info string, content string, contains []string) {
 	for _, val := range contains {
 		if strings.Contains(content, val) {
-			logStackTraceAndFail(t, fmt.Sprintf("String '%s' contains '%s'",content, val), info, debug.Stack())
+			logStackTraceAndFail(t, fmt.Sprintf("String '%s' contains '%s'", content, val), info, debug.Stack())
 		}
 	}
 }
@@ -239,15 +239,14 @@ AssertPanicThrown - Called via a defer in tests that require a panic containing 
 func AssertPanicThrown(t *testing.T, contains string) {
 	rec := recover()
 	if rec != nil {
-		recText := fmt.Sprintf("%s",rec)
-		if (strings.Contains(recText,contains)) {
+		recText := fmt.Sprintf("%s", rec)
+		if strings.Contains(recText, contains) {
 			return
 		}
 		Fail(t, "", fmt.Sprintf("AssertPanicThrown(recover): Panic message '%s' does not contain '%s'", recText, contains))
 	}
-	Fail(t, "", fmt.Sprintf("AssertPanicThrown(recover): A 'panic' containing the text '%s' was NOT thrown!",contains))
+	Fail(t, "", fmt.Sprintf("AssertPanicThrown(recover): A 'panic' containing the text '%s' was NOT thrown!", contains))
 }
-
 
 func logStackTraceAndFail(t *testing.T, desc string, info string, bytes []byte) {
 	t.Logf("FAILED:%s :%s", info, desc)

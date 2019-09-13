@@ -44,8 +44,10 @@ func NewTrialError(desc string) *TrialError {
 func TestFallback(t *testing.T) {
 	levels := make(map[string]string)
 	levels["DEBUG"] = "ZZZZZZ"
+	/*
+		Test that fallback did not leave the constructor locked!
+	*/
 	CreateLogWithFilenameAndAppID("", "AppID", -1, levels)
-	test.AssertTrue(t, "", IsFallback())
 	CreateLogWithFilenameAndAppID("", "AppID", -1, levels)
 	test.AssertTrue(t, "", IsFallback())
 	rescueStdout := os.Stdout
@@ -98,17 +100,15 @@ func TestFallback(t *testing.T) {
 }
 
 func TestInvalidLevel(t *testing.T) {
-	defer checkPanicIsThrown(t, "is not a valid log level")
 	levels := make(map[string]string)
 	levels["DEBUGd"] = "SYSERR"
-	CreateLogWithFilenameAndAppID("", "AppID", -1, levels)
+	test.AssertError(t, "Maust have an error", CreateLogWithFilenameAndAppID("", "AppID", -1, levels))
 }
 
 func TestInvalidOption(t *testing.T) {
-	defer checkPanicIsThrown(t, "File name requires a '.'")
 	levels := make(map[string]string)
 	levels["DEBUG"] = "SYSSSS"
-	CreateLogWithFilenameAndAppID("", "AppID", -1, levels)
+	test.AssertError(t, "Maust have an error", CreateLogWithFilenameAndAppID("", "AppID", -1, levels))
 }
 
 func TestCreateLogDefaults(t *testing.T) {
