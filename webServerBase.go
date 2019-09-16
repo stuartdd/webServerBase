@@ -155,7 +155,7 @@ func stopServerInstance(r *http.Request, response *servermain.Response) {
 		servermain.ThrowPanic("E", 400, SCParamValidation, "Invalid stop period", err.Error())
 	} else {
 		serverInstance.StopServerLater(count, fmt.Sprintf("Stopped by request. Delay %d seconds", count))
-		response.SetResponse(200, serverInstance.GetStatusDataJSON(), "application/json")
+		response.SetResponse(200, serverInstance.GetStatusData(), "application/json")
 	}
 }
 
@@ -185,7 +185,7 @@ func divHandler(r *http.Request, response *servermain.Response) {
 }
 
 func statusHandler(r *http.Request, response *servermain.Response) {
-	response.SetResponse(200, serverInstance.GetStatusDataJSON(), "application/json")
+	response.SetResponse(200, serverInstance.GetStatusData(), "application/json")
 }
 
 func filterBefore(r *http.Request, response *servermain.Response) {

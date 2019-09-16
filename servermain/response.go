@@ -4,8 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-
-	jsonconfig "github.com/stuartdd/tools_jsonconfig"
+	"encoding/json"
 )
 
 /*
@@ -97,11 +96,11 @@ func (p *Response) GetResp() string {
 GetRespAsJSON returns the String response as JSON
 */
 func (p *Response) GetRespAsJSON() string {
-	json, err := jsonconfig.StringJson(p.response.resp)
+	json, err := json.Marshal(p.response.resp)
 	if err != nil {
 		ThrowPanic("E", 500, SCJSONResponseErr, "Failed to marshal response to JSON", fmt.Sprintf("Marshal response type [%T] failed: %e", p.response.resp, err))
 	}
-	return json
+	return string(json)
 }
 
 /*

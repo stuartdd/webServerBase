@@ -7,7 +7,7 @@ import (
 
 func TestConfigLoad(t *testing.T) {
 	test.AssertErrorIsNil(t, "Should not return an error", LoadConfigData("../webServerTest.json"))
-	test.AssertErrorTextContains(t, "File not found", LoadConfigData("webServerTest.json"), "The system cannot find the file specified")
+	test.AssertErrorTextContains(t, "File not found", LoadConfigData("webServerTest.json"), "no such file or directory")
 }
 
 func TestConfigDat(t *testing.T) {

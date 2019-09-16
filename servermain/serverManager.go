@@ -17,6 +17,7 @@ SCSubCodeZero and these constants are used as unique subcodes in error responses
 const (
 	SCSubCodeZero = iota
 	SCPathNotFound
+	SCStaticPathNotFound
 	SCContentNotFound
 	SCContentReadFailed
 	SCServerShutDown
@@ -35,6 +36,10 @@ const (
 ContentTypeName - so we always get it right!
 */
 const ContentTypeName = "Content-Type"
+
+/*
+ContentLengthName - so we always get it right!
+*/
 const ContentLengthName = "Content-Length"
 
 type vetoHandlerListData struct {
@@ -53,7 +58,7 @@ type ServerInstanceData struct {
 	redirections       map[string]string
 	contentTypeCharset string
 	server             *http.Server
-	serverState        *statusData
+	serverState        *StatusData
 	logger             *logging.LoggerDataReference
 	panicStatusCode    int
 	fileServerData     *FileServerData
@@ -62,12 +67,16 @@ type ServerInstanceData struct {
 	serverClosedReason string
 }
 
-type statusData struct {
-	unixTime     int64
-	startTime    string
-	executable   string
-	state        string
-	panicCounter int
+/*
+StatusData the state of the server
+*/
+type StatusData struct {
+	UnixTime   int64
+	StartTime  string
+	Executable string
+	State      string
+	Panics     int
+	Uptime     int64
 }
 
 /*
@@ -93,12 +102,13 @@ func NewServerInstanceData(baseHandlerNameIn string, contentTypeCharsetIn string
 
 		redirections:       make(map[string]string),
 		contentTypeCharset: contentTypeCharsetIn,
-		serverState: &statusData{
-			unixTime:     time.Now().Unix(),
-			startTime:    time.Now().Format("2006-01-02 15:04:05"),
-			executable:   baseHandlerNameIn,
-			state:        "RUNNING",
-			panicCounter: 0,
+		serverState: &StatusData{
+			UnixTime:   time.Now().Unix(),
+			StartTime:  time.Now().Format("2006-01-02 15:04:05"),
+			Executable: baseHandlerNameIn,
+			State:      "RUNNING",
+			Panics:     0,
+			Uptime:     0,
 		},
 		logger:             logging.NewLogger(baseHandlerNameIn),
 		panicStatusCode:    500,
@@ -233,7 +243,7 @@ func (p *ServerInstanceData) ServeHTTP(rw http.ResponseWriter, httpRequest *http
 StopServerLater stop the server after N seconds
 */
 func (p *ServerInstanceData) StopServerLater(waitForSeconds int, reason string) {
-	p.serverState.state = "STOPPING"
+	p.serverState.State = "STOPPING"
 	p.serverClosedReason = reason
 	p.serverReturnCode = 0
 	go p.stopServerThread(waitForSeconds)
@@ -314,17 +324,11 @@ func (p *ServerInstanceData) GetServerClosedReason() string {
 }
 
 /*
-GetStatusDataJSON server status as a JSON string
+GetStatusData server status
 */
-func (p *ServerInstanceData) GetStatusDataJSON() string {
-	uptime := time.Now().Unix() - p.serverState.unixTime
-	return fmt.Sprintf("{\"state\":\"%s\",\"startTime\":\"%s\",\"executable\":\"%s\",\"uptime\":%d,\"panics\":%d}",
-		p.serverState.state,
-		p.serverState.startTime,
-		p.serverState.executable,
-		uptime,
-		p.serverState.panicCounter,
-	)
+func (p *ServerInstanceData) GetStatusData() *StatusData {
+	p.serverState.Uptime = time.Now().Unix() - p.serverState.UnixTime
+	return p.serverState
 }
 
 /*
@@ -392,7 +396,7 @@ func (p *ServerInstanceData) PreProcessResponse(request *http.Request, response 
 	/*
 		Add server id to the headers
 	*/
-	response.AddHeader("Server", []string{p.serverState.executable})
+	response.AddHeader("Server", []string{p.serverState.Executable})
 	/*
 		Reflect connection keep-alive. Note - request.Header["Connection"] returns sn array!
 	*/
@@ -506,7 +510,7 @@ func checkForPanicAndRecover(r *http.Request, response *Response) {
 				return
 			}
 		}
-		server.serverState.panicCounter++
+		server.serverState.Panics++
 		text := fmt.Sprintf("REQUEST:%s MESSAGE:%s", r.URL.Path, recStr)
 		server.logger.LogErrorWithStackTrace("!!!", text)
 		server.errorHandler(r, response.SetErrorResponse(server.panicStatusCode, SCRuntimeError, recStr))

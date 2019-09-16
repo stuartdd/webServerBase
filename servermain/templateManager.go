@@ -4,14 +4,14 @@ import (
 	"bytes"
 	"html/template"
 	"io"
+	"io/ioutil"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 	"webServerBase/logging"
-
-	jsonconfig "github.com/stuartdd/tools_jsonconfig"
 )
 
 type templateGroup struct {
@@ -70,7 +70,7 @@ func loadGroupOfTemplates(templatePath string, groupFile string, templateList *T
 		if filePathErr != nil {
 			return filePathErr
 		}
-		err := jsonconfig.LoadJson(fullPath, &groupList)
+		err := loadJSONGroupList(fullPath, &groupList)
 		if err != nil {
 			return err
 		}
@@ -97,6 +97,20 @@ func loadGroupOfTemplates(templatePath string, groupFile string, templateList *T
 		}
 	}
 	return filePathErr
+}
+
+
+func loadJSONGroupList(fileName string, obj interface{})  error {
+	content, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(content, obj)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func loadSingletemplate(path string, templateList *Templates) error {

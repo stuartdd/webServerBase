@@ -42,7 +42,7 @@ func TestServer(t *testing.T) {
 	/*
 		Test GET functions
 	*/
-	test.AssertStringContains(t, "", sendGet(t, 200, "status", headers("json", "")), []string{"\"state\":\"RUNNING\"", "\"executable\":\"TestExe\"", "\"panics\":0"})
+	test.AssertStringContains(t, "", sendGet(t, 200, "status", headers("json", "")), []string{"\"State\":\"RUNNING\"", "\"Executable\":\"TestExe\"", "\"Panics\":0"})
 	test.AssertStringContains(t, "", sendGet(t, 404, "not-fo", headers("json", "")), []string{"\"Status\":404", "\"Code\":" + strconv.Itoa(servermain.SCPathNotFound), "GET URL:/not-fo"})
 	/*
 		Test GET functions with calc
@@ -141,7 +141,7 @@ func deleteFile(t *testing.T, name string) {
 }
 
 func stopServer(t *testing.T) {
-	test.AssertStringContains(t, "", sendGet(t, 200, "stop", nil), []string{"\"state\":\"STOPPING\"", "\"executable\":\"TestExe\"", "\"panics\":1"})
+	test.AssertStringContains(t, "", sendGet(t, 200, "stop", nil), []string{"\"State\":\"STOPPING\"", "\"Executable\":\"TestExe\"", "\"Panics\":1"})
 }
 
 func startServer(t *testing.T) {

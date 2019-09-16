@@ -98,7 +98,7 @@ func (p *RequestTools) GetBody() ([]byte) {
 }
 
 /*
-GetURL returns the URL
+GetURL returns the URL (Cached in the in thos tool's instance)
 */
 func (p *RequestTools) GetURL() string {
 	if (p.url=="") {
@@ -110,9 +110,8 @@ func (p *RequestTools) GetURL() string {
 	return p.url
 }
 
-
 /*
-GetURLPart returns part by index
+GetURLPart returns part by index or panics if not found and default is empty
 */
 func (p *RequestTools) GetURLPart(n int, defaultValue string) string {
 	list := p.readParts()
@@ -134,7 +133,7 @@ func (p *RequestTools) GetPartsCount() int {
 }
 
 /*
-GetNamedPart returns part by name
+GetNamedURLPart returns part by name or panics if not found and default is empty
 */
 func (p *RequestTools) GetNamedURLPart(name string, defaultValue string) string {
 	list := p.readParts()
