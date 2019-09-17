@@ -60,6 +60,17 @@ func (p *FileServerData) AddStaticFileServerData(urlPrefix string, root string) 
 }
 
 /*
+GetStaticPath return the path for a given 'static' name
+*/
+func (p *FileServerData) GetStaticPath(name string) string {
+	fileServerList := fileServerData.FileServerList
+	if fileServerList == nil {
+		ThrowPanic("E", 400, SCStaticFileInit, fmt.Sprintf("URL:%s Unsupported", url), "Static File Server Data - File Server List has not been defined.")
+	}
+	return ""
+}
+
+/*
 ReasonableStaticFileHandler Read a file from a static file location and return it
 */
 func ReasonableStaticFileHandler(request *http.Request, response *Response) {
