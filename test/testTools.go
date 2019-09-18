@@ -51,6 +51,16 @@ func AssertErrorString(t *testing.T, info string, expected string, actual error)
 }
 
 /*
+AssertErrorIsNotExist assert that the error is a Not Found error
+*/
+func AssertErrorIsNotExist(t *testing.T, info string, err error) {
+	if (os.IsNotExist(err)) {
+		return
+	}
+	logStackTraceAndFail(t, fmt.Sprintf("Error [%s] is NOT a 'Not Exist' error ", err.Error()), info, debug.Stack())
+}
+
+/*
 AssertErrorTextContains - Fail if error is null. Logs error and the stack trace.
 */
 func AssertErrorTextContains(t *testing.T, info string, err error, contains string) string {

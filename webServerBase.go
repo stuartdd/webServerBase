@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"path/filepath"
 	"os"
 	"runtime"
 	"strconv"
@@ -132,16 +133,12 @@ func RunWithConfig(configData *config.Data, executable string) {
 Start of handlers section
 *************************************************/
 func fileSaveHandler(r *http.Request, response *servermain.Response) {
-	d := servermain.NewRequestTools(r)
+	d := servermain.NewRequestHandlerHelper(r, response)
 	fileName := d.GetNamedURLPart("file", "")
 	pathName := d.GetNamedURLPart("path", "")
-	staticPath := config.GetConfigDataInstance().GetConfigDataStaticFilePathForOS()[pathName]
-	if staticPath == "" {
-		servermain.ThrowPanic("W", 404, SCStaticPath, fmt.Sprintf("Parameter '%s' Not Found", pathName), fmt.Sprintf("fileSaveHandler: staticPaths: The path '%s' for %s OS was not found", pathName, config.GetOS()))
-	}
 	bodyText := d.GetBody()
-	fullFIle := staticPath + fileName + ".txt"
-	err := ioutil.WriteFile(fullFIle, bodyText, 0644)
+	fullFile := filepath.Join(d.GetStaticPathForName(pathName), fileName + ".txt") 
+	err := ioutil.WriteFile(fullFile, bodyText, 0644)
 	if err != nil {
 		servermain.ThrowPanic("E", 400, SCWriteFile, fmt.Sprintf("fileSaveHandler: static path [%s], file [%s] could not write file", pathName, fileName), err.Error())
 	}
@@ -149,7 +146,7 @@ func fileSaveHandler(r *http.Request, response *servermain.Response) {
 }
 
 func stopServerInstance(r *http.Request, response *servermain.Response) {
-	d := servermain.NewRequestTools(r)
+	d := servermain.NewRequestHandlerHelper(r, response)
 	count, err := strconv.Atoi(d.GetNamedURLPart("stop", "2"))
 	if err != nil {
 		servermain.ThrowPanic("E", 400, SCParamValidation, "Invalid stop period", err.Error())
@@ -160,7 +157,7 @@ func stopServerInstance(r *http.Request, response *servermain.Response) {
 }
 
 func qubeHandler(r *http.Request, response *servermain.Response) {
-	d := servermain.NewRequestTools(r)
+	d := servermain.NewRequestHandlerHelper(r, response)
 	p1 := d.GetNamedURLPart("qube", "")
 	a1, err := strconv.Atoi(p1)
 	if err != nil {
@@ -170,7 +167,7 @@ func qubeHandler(r *http.Request, response *servermain.Response) {
 }
 
 func divHandler(r *http.Request, response *servermain.Response) {
-	d := servermain.NewRequestTools(r)
+	d := servermain.NewRequestHandlerHelper(r, response)
 	p1 := d.GetNamedURLPart("calc", "")
 	p2 := d.GetNamedURLPart("div", "")
 	a1, err := strconv.Atoi(p1)

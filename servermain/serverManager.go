@@ -257,6 +257,25 @@ func (p *ServerInstanceData) SetStaticFileServerData(fileServerDataMap map[strin
 }
 
 /*
+GetStaticPathForName get the path for a static name
+*/
+func (p *ServerInstanceData) GetStaticPathForName(name string) *FileServerContainer{
+	if p.fileServerData == nil {
+		ThrowPanic("E", 500, SCStaticFileInit, fmt.Sprintf("Name:%s Unsupported", name), "Static File Server Data has not been defined.")
+	}
+	return p.fileServerData.GetStaticPathForName(name)
+}
+/*
+GetStaticPathForURL get the path for a static url
+*/
+func (p *ServerInstanceData) GetStaticPathForURL(url string) *FileServerContainer{
+	if p.fileServerData == nil {
+		ThrowPanic("E", 500, SCStaticFileInit, fmt.Sprintf("URL:%s Unsupported", url), "Static File Server Data has not been defined.")
+	}
+	return p.fileServerData.GetStaticPathForURL(url)
+}
+
+/*
 SetPathToTemplates initialise the template system
 */
 func (p *ServerInstanceData) SetPathToTemplates(pathToTemplates string) {

@@ -10,12 +10,13 @@ import (
 )
 
 /*
-RequestTools contains details of url parameters
+RequestHandlerHelper contains details of url parameters
 
 Dont fetch anything until asked (lazy load)
 */
-type RequestTools struct {
+type RequestHandlerHelper struct {
 	request  *http.Request
+	response  *Response
 	url      string
 	urlParts []string
 	urlPartsCount int
@@ -23,11 +24,12 @@ type RequestTools struct {
 }
 
 /*
-NewRequestTools create a new url details with a url
+NewRequestHandlerHelper create a new url details with a url
 */
-func NewRequestTools(r *http.Request) *RequestTools {
-	return &RequestTools{
+func NewRequestHandlerHelper(r *http.Request, response *Response) *RequestHandlerHelper {
+	return &RequestHandlerHelper{
 		request:  r,
+		response: response,
 		url:      "",
 		urlParts: nil,
 		urlPartsCount: 0,
@@ -36,25 +38,46 @@ func NewRequestTools(r *http.Request) *RequestTools {
 }
 
 /*
+GetServer returns the server instance
+*/
+func (p *RequestHandlerHelper) GetServer() (*ServerInstanceData) {
+	return p.response.GetWrappedServer()
+}
+
+/*
+GetStaticPathForName get the path for a static name
+*/
+func (p *RequestHandlerHelper) GetStaticPathForName(name string) string {
+	return p.GetServer().fileServerData.GetStaticPathForName(name).FsPath
+}
+
+/*
+GetStaticPathForURL get the path for a static url
+*/
+func (p *RequestHandlerHelper) GetStaticPathForURL(url string) string {
+	return p.GetServer().fileServerData.GetStaticPathForURL(url).FsPath
+}
+/*
 GetJSONBodyAsObject return an object, populated from a known JSON structure. This can only be done ONCE!
 Example: (see RequestTools_test.go)
 	testStruct := &TestStruct{}
 	err = d.GetJSONBodyAsObject(testStruct)
 */
-func (p *RequestTools) GetJSONBodyAsObject(configObject interface{}) {
+func (p *RequestHandlerHelper) GetJSONBodyAsObject(configObject interface{}) {
 	jsonBytes := p.GetBody()
 	err := json.Unmarshal(jsonBytes, configObject)
 	if err != nil {
 		ThrowPanic("E", 400, SCInvalidJSONRequest, "Invalid JSON in request body", err.Error())
 	}
 }
+
 /*
 GetJSONBodyAsMap read the body from the request. This can only be done ONCE!
 Use this method if the expected Json starts with {
 Example: (see RequestTools_test.go)
 	aMap, err := d.GetJSONBodyAsMap()
 */
-func (p *RequestTools) GetJSONBodyAsMap() (map[string]interface{}) {
+func (p *RequestHandlerHelper) GetJSONBodyAsMap() (map[string]interface{}) {
 	jsonBytes := p.GetBody()
 	var v interface{}
 	err := json.Unmarshal(jsonBytes, &v)
@@ -68,7 +91,7 @@ GetJSONBodyAsList read the body from the request. This can only be done ONCE!
 Use this method if the expected Json starts with [
 	aList, err := d.GetJSONBodyAsList()
 */
-func (p *RequestTools) GetJSONBodyAsList() ([]interface{}) {
+func (p *RequestHandlerHelper) GetJSONBodyAsList() ([]interface{}) {
 	jsonBytes := p.GetBody()
 	var v interface{}
 	err := json.Unmarshal(jsonBytes, &v)
@@ -81,14 +104,14 @@ func (p *RequestTools) GetJSONBodyAsList() ([]interface{}) {
 /*
 GetBodyString read the body from the request. This can only be done ONCE!
 */
-func (p *RequestTools) GetBodyString() (string) {
+func (p *RequestHandlerHelper) GetBodyString() (string) {
 	return string(p.GetBody())
 }
 
 /*
 GetBody read the body from the request. This can only be done ONCE!
 */
-func (p *RequestTools) GetBody() ([]byte) {
+func (p *RequestHandlerHelper) GetBody() ([]byte) {
 	bodyBytes, err := ioutil.ReadAll(p.request.Body)
 	defer p.request.Body.Close()
 	if err != nil {
@@ -100,7 +123,7 @@ func (p *RequestTools) GetBody() ([]byte) {
 /*
 GetURL returns the URL (Cached in the in thos tool's instance)
 */
-func (p *RequestTools) GetURL() string {
+func (p *RequestHandlerHelper) GetURL() string {
 	if (p.url=="") {
 		p.url = p.request.URL.Path
 		if (strings.HasPrefix(p.url, "/")) {
@@ -113,7 +136,7 @@ func (p *RequestTools) GetURL() string {
 /*
 GetURLPart returns part by index or panics if not found and default is empty
 */
-func (p *RequestTools) GetURLPart(n int, defaultValue string) string {
+func (p *RequestHandlerHelper) GetURLPart(n int, defaultValue string) string {
 	list := p.readParts()
 	if ((n>=0 ) && (n<p.urlPartsCount)) {
 		return list[n]
@@ -127,7 +150,7 @@ func (p *RequestTools) GetURLPart(n int, defaultValue string) string {
 /*
 GetPartsCount returns the number of parts in the URL
 */
-func (p *RequestTools) GetPartsCount() int {
+func (p *RequestHandlerHelper) GetPartsCount() int {
 	p.readParts()
 	return p.urlPartsCount
 }
@@ -135,7 +158,7 @@ func (p *RequestTools) GetPartsCount() int {
 /*
 GetNamedURLPart returns part by name or panics if not found and default is empty
 */
-func (p *RequestTools) GetNamedURLPart(name string, defaultValue string) string {
+func (p *RequestHandlerHelper) GetNamedURLPart(name string, defaultValue string) string {
 	list := p.readParts()
 	for index, val := range list {
 		if (val == name) {
@@ -150,11 +173,11 @@ func (p *RequestTools) GetNamedURLPart(name string, defaultValue string) string 
 /*
 GetNamedQuery returns part by name
 */
-func (p *RequestTools) GetNamedQuery(name string) string {
+func (p *RequestHandlerHelper) GetNamedQuery(name string) string {
 	return p.readQueries().Get(name)
 }
 
-func (p *RequestTools) readParts() []string {
+func (p *RequestHandlerHelper) readParts() []string {
 	if (p.urlParts==nil) {
 		p.urlParts = strings.Split(strings.TrimSpace(p.GetURL()), "/")
 		p.urlPartsCount = len(p.urlParts)
@@ -162,7 +185,7 @@ func (p *RequestTools) readParts() []string {
 	return p.urlParts
 }
 
-func (p *RequestTools) readQueries() url.Values {
+func (p *RequestHandlerHelper) readQueries() url.Values {
 	if (p.queries==nil) {
 		p.queries = p.request.URL.Query()
 	}

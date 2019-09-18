@@ -62,6 +62,10 @@ GetStaticPathForURL - Get static path for the front of a url.
 	The url will have '\' added to start if not already there
 */
 func (p *FileServerData) GetStaticPathForURL(url string) *FileServerContainer {
+	container := p.FileServerContainerRoot
+	if container == nil {
+		ThrowPanic("E", 400, SCStaticFileInit, fmt.Sprintf("URL:%s Unsupported", url), "Static File Server Data - File Server List has not been defined.")
+	}
 	if strings.HasPrefix(url, "/") {
 		return p.GetStaticPathForName(url)
 	}
@@ -71,21 +75,24 @@ func (p *FileServerData) GetStaticPathForURL(url string) *FileServerContainer {
 /*
 GetStaticPathForName return the file server container for a given url prefix
 */
-func (p *FileServerData) GetStaticPathForName(url string) *FileServerContainer {
+func (p *FileServerData) GetStaticPathForName(name string) *FileServerContainer {
 	container := p.FileServerContainerRoot
 	if container == nil {
-		ThrowPanic("E", 400, SCStaticFileInit, fmt.Sprintf("URL:%s Unsupported", url), "Static File Server Data - File Server List has not been defined.")
+		ThrowPanic("E", 400, SCStaticFileInit, fmt.Sprintf("Name:%s Unsupported", name), "Static File Server Data - File Server List has not been defined.")
 	}
 	var resp *FileServerContainer
 	var l = 0
 	for container.next != nil {
-		if strings.HasPrefix(url, container.URLPrefix) {
+		if strings.HasPrefix(name, container.URLPrefix) {
 			if l <= len(container.URLPrefix) {
 				l = len(container.URLPrefix)
 				resp = container
 			}
 		}
 		container = container.next
+	}
+	if (resp == nil) {
+		ThrowPanic("W", 404, SCStaticPathNotFound, fmt.Sprintf("Entity:%s Not Found", name), fmt.Sprintf("Static File Server Data. Entity:%s is not defined", name))
 	}
 	return resp
 }

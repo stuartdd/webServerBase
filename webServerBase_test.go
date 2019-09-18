@@ -33,11 +33,11 @@ func TestServer(t *testing.T) {
 	/*
 		Test write file. Mainly to test POST processes
 	*/
-	testWriteFile := configData.GetConfigDataStaticFilePathForOS()["static"] + string(os.PathSeparator) + "testFile.txt"
+	testWriteFile := configData.GetConfigDataStaticFilePathForOS()["data"] + string(os.PathSeparator) + "testFile.txt"
 	defer deleteFile(t, testWriteFile) // Clean up the test data when done!
 	test.AssertStringContains(t, "", sendPost(t, 404, "status", "Hello", headers("json", "")), []string{"\"Status\":404", "\"Code\":" + strconv.Itoa(servermain.SCPathNotFound), "POST URL:/status"})
-	test.AssertStringContains(t, "", sendPost(t, 404, "path/god/file/testFile", "Hello", headers("json", "")), []string{"\"Status\":404", "\"Code\":" + strconv.Itoa(SCStaticPath), "Not Found", "Parameter 'god' Not Found"})
-	test.AssertStringContains(t, "", sendPost(t, 201, "path/static/file/testFile", "Hello", headers("json", "16")), []string{"\"Created\":\"OK\""})
+	test.AssertStringContains(t, "", sendPost(t, 201, "path/data/file/testFile", "Hello", headers("json", "16")), []string{"\"Created\":\"OK\""})
+	test.AssertStringContains(t, "", sendPost(t, 404, "path/god/file/testFile", "Hello", headers("json", "")), []string{"\"Status\":404", "\"Code\":" + strconv.Itoa(servermain.SCStaticPathNotFound), "Entity:god Not Found"})
 	test.AssertFileContains(t, "", testWriteFile, []string{"Hello"})
 	/*
 		Test GET functions
