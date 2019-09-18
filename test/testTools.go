@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"reflect"
 	"runtime/debug"
 	"strings"
 	"testing"
@@ -91,8 +92,11 @@ AssertNil assert object is (null) nil
 */
 func AssertNil(t *testing.T, info string, expected interface{}) {
 	if expected != nil {
-		logStackTraceAndFail(t, fmt.Sprintf("Expected (%T) should be nil", expected), info, debug.Stack())
+		if reflect.ValueOf(expected).IsNil() {
+			return
+		}
 	}
+	logStackTraceAndFail(t, fmt.Sprintf("Expected (%T) should be nil", expected), info, debug.Stack())
 }
 
 /*
@@ -102,6 +106,10 @@ func AssertNilNot(t *testing.T, info string, expected interface{}) {
 	if expected == nil {
 		logStackTraceAndFail(t, "Expected value should NOT be nil", info, debug.Stack())
 	}
+	if reflect.ValueOf(expected).IsNil() {
+		logStackTraceAndFail(t, "Expected value should NOT be nil", info, debug.Stack())
+	}
+
 }
 
 /*
