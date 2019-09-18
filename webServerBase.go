@@ -123,6 +123,7 @@ func RunWithConfig(configData *config.Data, executable string) {
 	serverInstance.AddMappedHandler("/calc/qube/?", http.MethodGet, qubeHandler)
 	serverInstance.AddMappedHandler("/calc/?/div/?", http.MethodGet, divHandler)
 	serverInstance.AddMappedHandler("/path/?/file/?", http.MethodPost, fileSaveHandler)
+	serverInstance.AddMappedHandler("/path/?/file/?/ext/?", http.MethodPost, fileSaveHandler)
 
 	serverInstance.AddAfterHandler(filterAfter)
 
@@ -134,9 +135,10 @@ Start of handlers section
 *************************************************/
 func fileSaveHandler(r *http.Request, response *servermain.Response) {
 	d := servermain.NewRequestHandlerHelper(r, response)
-	fileName := d.GetNamedURLPart("file", "")
-	pathName := d.GetNamedURLPart("path", "")
-	fullFile := filepath.Join(d.GetStaticPathForName(pathName).FilePath, fileName + ".txt") 
+	fileName := d.GetNamedURLPart("file", "") // Not optional
+	pathName := d.GetNamedURLPart("path", "") // Not optional
+	ext := d.GetNamedURLPart("ext", "txt") // Optional. Default value txt
+	fullFile := filepath.Join(d.GetStaticPathForName(pathName).FilePath, fileName + "." + ext) 
 	err := ioutil.WriteFile(fullFile, d.GetBody(), 0644)
 	if err != nil {
 		servermain.ThrowPanic("E", 400, SCWriteFile, fmt.Sprintf("fileSaveHandler: static path [%s], file [%s] could not write file", pathName, fileName), err.Error())

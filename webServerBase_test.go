@@ -33,12 +33,16 @@ func TestServer(t *testing.T) {
 	/*
 		Test write file. Mainly to test POST processes
 	*/
-	testWriteFile := configData.GetConfigDataStaticFilePathForOS()["data"] + string(os.PathSeparator) + "testFile.txt"
-	defer deleteFile(t, testWriteFile) // Clean up the test data when done!
-	test.AssertStringContains(t, "", sendPost(t, 404, "status", "Hello", headers("json", "")), []string{"\"Status\":404", "\"Code\":" + strconv.Itoa(servermain.SCPathNotFound), "POST URL:/status"})
-	test.AssertStringContains(t, "", sendPost(t, 201, "path/data/file/testFile", "Hello", headers("json", "16")), []string{"\"Created\":\"OK\""})
-	test.AssertStringContains(t, "", sendPost(t, 404, "path/god/file/testFile", "Hello", headers("json", "")), []string{"\"Status\":404", "\"Code\":" + strconv.Itoa(servermain.SCStaticPathNotFound), "Entity:god Not Found"})
-	test.AssertFileContains(t, "", testWriteFile, []string{"Hello"})
+	testWriteFile1 := configData.GetConfigDataStaticFilePathForOS()["data"] + string(os.PathSeparator) + "createTestFile1.txt"
+	testWriteFile2 := configData.GetConfigDataStaticFilePathForOS()["data"] + string(os.PathSeparator) + "createTestFile2.json"
+	defer deleteFile(t, testWriteFile1) // Clean up the test data when done!
+	defer deleteFile(t, testWriteFile2) // Clean up the test data when done!
+	test.AssertStringContains(t, "", sendPost(t, 404, "status", "Hello.txt", headers("json", "")), []string{"\"Status\":404", "\"Code\":" + strconv.Itoa(servermain.SCPathNotFound), "POST URL:/status"})
+	test.AssertStringContains(t, "", sendPost(t, 201, "path/data/file/createTestFile1", "Hello.txt", headers("json", "16")), []string{"\"Created\":\"OK\""})
+	test.AssertStringContains(t, "", sendPost(t, 201, "path/data/file/createTestFile2/ext/json", "Hello.json", headers("json", "16")), []string{"\"Created\":\"OK\""})
+	test.AssertStringContains(t, "", sendPost(t, 404, "path/god/file/createTestFile1", "Hello", headers("json", "")), []string{"\"Status\":404", "\"Code\":" + strconv.Itoa(servermain.SCStaticPathNotFound), "Entity:god Not Found"})
+	test.AssertFileContains(t, "", testWriteFile1, []string{"Hello.txt"})
+	test.AssertFileContains(t, "", testWriteFile2, []string{"Hello.json"})
 	/*
 		Test GET functions
 	*/
