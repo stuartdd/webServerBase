@@ -32,14 +32,14 @@ func TestStaticFileForUrlPrefix(t *testing.T) {
 
 }
 
-func notFound(t *testing.T, sfm *FileServerData,  name string) {
+func notFound(t *testing.T, sfm *StaticFileServerData, name string) {
 	defer test.AssertPanicAndRecover(t, "Entity:"+name+" is not defined")
 	test.AssertNil(t, "", sfm.GetStaticPathForName(name))
 }
 
-func createStaticFileServer() *FileServerData {
+func createStaticFileServer() *StaticFileServerData {
 	mapData := make(map[string]string)
 	mapData["/static/bmp/"] = "site/bmp"
 	mapData["/static/"] = "site/"
-	return NewStaticFileServer(mapData)
+	return NewStaticFileServerData(mapData)
 }

@@ -17,18 +17,17 @@ type FileServerContainer struct {
 }
 
 /*
-FileServerData contains a list of fileServerContainer's
+StaticFileServerData contains a list of fileServerContainer's
 */
-type FileServerData struct {
+type StaticFileServerData struct {
 	FileServerContainerRoot *FileServerContainer
 }
 
 /*
-NewStaticFileServer create a NEW static file server given a list of URL prefixs and root directories
+NewStaticFileServerData create a NEW static file server given a list of URL prefixs and root directories
 */
-func NewStaticFileServer(mappings map[string]string) *FileServerData {
-
-	sfs := &FileServerData{
+func NewStaticFileServerData(mappings map[string]string) *StaticFileServerData {
+	sfs := &StaticFileServerData{
 		FileServerContainerRoot: &FileServerContainer{
 			URLPrefix: "",
 			next:      nil,
@@ -43,7 +42,7 @@ func NewStaticFileServer(mappings map[string]string) *FileServerData {
 /*
 AddStaticFileServerData appends a URL prefix and a root directory
 */
-func (p *FileServerData) AddStaticFileServerData(urlPrefix string, root string) {
+func (p *StaticFileServerData) AddStaticFileServerData(urlPrefix string, root string) {
 	container := p.FileServerContainerRoot
 	for container.next != nil {
 		container = container.next
@@ -61,7 +60,7 @@ func (p *FileServerData) AddStaticFileServerData(urlPrefix string, root string) 
 GetStaticPathForURL - Get static path for the front of a url.
 	The url will have '\' added to start if not already there
 */
-func (p *FileServerData) GetStaticPathForURL(url string) *FileServerContainer {
+func (p *StaticFileServerData) GetStaticPathForURL(url string) *FileServerContainer {
 	container := p.FileServerContainerRoot
 	if container == nil {
 		ThrowPanic("E", 400, SCStaticFileInit, fmt.Sprintf("URL:%s Unsupported", url), "Static File Server Data - File Server List has not been defined.")
@@ -75,7 +74,7 @@ func (p *FileServerData) GetStaticPathForURL(url string) *FileServerContainer {
 /*
 GetStaticPathForName return the file server container for a given url prefix
 */
-func (p *FileServerData) GetStaticPathForName(name string) *FileServerContainer {
+func (p *StaticFileServerData) GetStaticPathForName(name string) *FileServerContainer {
 	container := p.FileServerContainerRoot
 	if container == nil {
 		ThrowPanic("E", 400, SCStaticFileInit, fmt.Sprintf("Name:%s Unsupported", name), "Static File Server Data - File Server List has not been defined.")
@@ -91,7 +90,7 @@ func (p *FileServerData) GetStaticPathForName(name string) *FileServerContainer 
 		}
 		container = container.next
 	}
-	if (resp == nil) {
+	if resp == nil {
 		ThrowPanic("W", 404, SCStaticPathNotFound, fmt.Sprintf("Entity:%s Not Found", name), fmt.Sprintf("Static File Server Data. Entity:%s is not defined", name))
 	}
 	return resp
