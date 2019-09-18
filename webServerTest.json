@@ -3,7 +3,7 @@
   "staticPaths"  : {
     "windows":{"/static/":"site\\", "data":"site\\"}, 
     "linux":{"/static/":"site/", "data":"site/"}
-  },
+  }, 
   "templatePaths"  : {
     "windows":"templates\\", 
     "linux":"templates/"

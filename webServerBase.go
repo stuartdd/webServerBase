@@ -136,9 +136,8 @@ func fileSaveHandler(r *http.Request, response *servermain.Response) {
 	d := servermain.NewRequestHandlerHelper(r, response)
 	fileName := d.GetNamedURLPart("file", "")
 	pathName := d.GetNamedURLPart("path", "")
-	bodyText := d.GetBody()
-	fullFile := filepath.Join(d.GetStaticPathForName(pathName), fileName + ".txt") 
-	err := ioutil.WriteFile(fullFile, bodyText, 0644)
+	fullFile := filepath.Join(d.GetStaticPathForName(pathName).FilePath, fileName + ".txt") 
+	err := ioutil.WriteFile(fullFile, d.GetBody(), 0644)
 	if err != nil {
 		servermain.ThrowPanic("E", 400, SCWriteFile, fmt.Sprintf("fileSaveHandler: static path [%s], file [%s] could not write file", pathName, fileName), err.Error())
 	}

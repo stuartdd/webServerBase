@@ -45,17 +45,32 @@ func (p *RequestHandlerHelper) GetServer() (*ServerInstanceData) {
 }
 
 /*
+GetResponseWriter returns the server instance
+*/
+func (p *RequestHandlerHelper) GetResponseWriter() (*ResponseWriterWrapper) {
+	return p.response.GetWrappedWriter()
+}
+
+
+/*
+GetStaticFileServerData get the path for a static name
+*/
+func (p *RequestHandlerHelper) GetStaticFileServerData() *StaticFileServerData {
+	return p.GetServer().GetStaticFileServerData()
+}
+
+/*
 GetStaticPathForName get the path for a static name
 */
-func (p *RequestHandlerHelper) GetStaticPathForName(name string) string {
-	return p.GetServer().fileServerData.GetStaticPathForName(name).FsPath
+func (p *RequestHandlerHelper) GetStaticPathForName(name string) *FileServerContainer {
+	return p.GetServer().GetStaticPathForName(name)
 }
 
 /*
 GetStaticPathForURL get the path for a static url
 */
-func (p *RequestHandlerHelper) GetStaticPathForURL(url string) string {
-	return p.GetServer().fileServerData.GetStaticPathForURL(url).FsPath
+func (p *RequestHandlerHelper) GetStaticPathForURL(url string) *FileServerContainer  {
+	return p.GetServer().GetStaticPathForURL(url)
 }
 /*
 GetJSONBodyAsObject return an object, populated from a known JSON structure. This can only be done ONCE!
@@ -126,9 +141,6 @@ GetURL returns the URL (Cached in the in thos tool's instance)
 func (p *RequestHandlerHelper) GetURL() string {
 	if (p.url=="") {
 		p.url = p.request.URL.Path
-		if (strings.HasPrefix(p.url, "/")) {
-			p.url = p.request.URL.Path[1:]
-		}
 	}
 	return p.url
 }
@@ -179,7 +191,11 @@ func (p *RequestHandlerHelper) GetNamedQuery(name string) string {
 
 func (p *RequestHandlerHelper) readParts() []string {
 	if (p.urlParts==nil) {
-		p.urlParts = strings.Split(strings.TrimSpace(p.GetURL()), "/")
+		url := p.GetURL()
+		if strings.HasPrefix(url, "/") {
+			url = url[1:]
+		}
+		p.urlParts = strings.Split(strings.TrimSpace(url), "/")
 		p.urlPartsCount = len(p.urlParts)
 	}
 	return p.urlParts

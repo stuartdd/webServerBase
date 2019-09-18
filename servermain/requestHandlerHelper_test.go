@@ -128,7 +128,7 @@ func TestWithUrl(t *testing.T) {
 		test.Fail(t, "", err.Error())
 	}
 	d := NewRequestHandlerHelper(req, NewResponse(nil, nil))
-	test.AssertStringEquals(t, "", "data1/1/data2/2", d.GetURL())
+	test.AssertStringEquals(t, "", "/data1/1/data2/2", d.GetURL())
 	test.AssertStringEquals(t, "", "data1", d.GetURLPart(0, ""))
 	test.AssertStringEquals(t, "", "1", d.GetURLPart(1, ""))
 	test.AssertStringEquals(t, "", "data2", d.GetURLPart(2, ""))

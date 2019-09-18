@@ -12,7 +12,7 @@ FileServerContainer contains the url prefix and associated file path
 */
 type FileServerContainer struct {
 	URLPrefix string
-	FsPath    string
+	FilePath    string
 	next      *FileServerContainer
 }
 
@@ -40,30 +40,30 @@ func NewStaticFileServerData(mappings map[string]string) *StaticFileServerData {
 }
 
 /*
-AddStaticFileServerData appends a URL prefix and a root directory
+AddStaticFileServerData appends a URL prefix (or name) and a path to file system directory
 */
-func (p *StaticFileServerData) AddStaticFileServerData(urlPrefix string, root string) {
+func (p *StaticFileServerData) AddStaticFileServerData(urlPrefix string, filePath string) {
 	container := p.FileServerContainerRoot
 	for container.next != nil {
 		container = container.next
 	}
 	container.URLPrefix = urlPrefix
-	container.FsPath = root
+	container.FilePath = filePath
 	container.next = &FileServerContainer{
 		URLPrefix: "",
-		FsPath:    "",
+		FilePath:    "",
 		next:      nil,
 	}
 }
 
 /*
-GetStaticPathForURL - Get static path for the front of a url.
-	The url will have '\' added to start if not already there
+GetStaticPathForURL - return the file server container (path and url) for a given url. Matches from the start of the url
+See tests for examples of matches
 */
 func (p *StaticFileServerData) GetStaticPathForURL(url string) *FileServerContainer {
 	container := p.FileServerContainerRoot
 	if container == nil {
-		ThrowPanic("E", 400, SCStaticFileInit, fmt.Sprintf("URL:%s Unsupported", url), "Static File Server Data - File Server List has not been defined.")
+		ThrowPanic("E", 500, SCStaticFileInit, fmt.Sprintf("URL:%s Unsupported", url), "Static File Server Data - File Server List has not been defined.")
 	}
 	if strings.HasPrefix(url, "/") {
 		return p.GetStaticPathForName(url)
@@ -72,12 +72,13 @@ func (p *StaticFileServerData) GetStaticPathForURL(url string) *FileServerContai
 }
 
 /*
-GetStaticPathForName return the file server container for a given url prefix
+GetStaticPathForName return the file server container (path and url) for a given name
+See tests for examples of matches
 */
 func (p *StaticFileServerData) GetStaticPathForName(name string) *FileServerContainer {
 	container := p.FileServerContainerRoot
 	if container == nil {
-		ThrowPanic("E", 400, SCStaticFileInit, fmt.Sprintf("Name:%s Unsupported", name), "Static File Server Data - File Server List has not been defined.")
+		ThrowPanic("E", 500, SCStaticFileInit, fmt.Sprintf("Name:%s Unsupported", name), "Static File Server Data - File Server List has not been defined.")
 	}
 	var resp *FileServerContainer
 	var l = 0
@@ -100,58 +101,50 @@ func (p *StaticFileServerData) GetStaticPathForName(name string) *FileServerCont
 ReasonableStaticFileHandler Read a file from a static file location and return it
 */
 func ReasonableStaticFileHandler(request *http.Request, response *Response) {
-	url := request.URL.Path
-	server := response.GetWrappedServer()
-	fileServerData := server.fileServerData
+	h := NewRequestHandlerHelper(request, response)
+	url := h.GetURL()
+	server := h.GetServer()
 	/*
-		If an there is no file server data then change the response to Not Found and return
+		get the file path for the url and the matched url. Panics if not found with 404 so no need to check.
 	*/
-	if fileServerData == nil {
-		ThrowPanic("E", 500, SCStaticFileInit, fmt.Sprintf("URL:%s Unsupported", url), "Static File Server Data has not been defined.")
+	container := h.GetStaticPathForURL(url)
+	/*
+		Forward the response headers in to the wrapped http.ResponseWriter
+	*/
+	ww := h.GetResponseWriter()
+	for name, value := range response.GetHeaders() {
+		ww.Header()[name] = value
 	}
 	/*
-		If an there is no file server list then change the response to Not Found and return
+		Work out the content type from the file name extension and add it to the wrapped http.ResponseWriter
+		Dont overwrite a content type that already exists!
 	*/
-	container := fileServerData.GetStaticPathForURL(url)
-	if container != nil {
-		/*
-			Forward the response headers in to the wrapped http.ResponseWriter
-		*/
-		ww := response.GetWrappedWriter()
-		for name, value := range response.GetHeaders() {
-			ww.Header()[name] = value
-		}
-		/*
-			Work out the content type from the file name extension and add it to the wrapped http.ResponseWriter
-			Dont overwrite a content type that already exists!
-		*/
-		contentType := LookupContentType(url)
-		if (contentType != "") && (ww.Header()[ContentTypeName] == nil) {
-			ww.Header()[ContentTypeName] = []string{contentType + "; charset=" + server.contentTypeCharset}
-		}
-		/*
-			derive the file name from the url and the path in the fileServerList
-		*/
-		fileShort := url[len(container.URLPrefix):]
-		filename := filepath.Join(container.FsPath, fileShort)
-		ServeContent(ww, request, filename)
-		/*
-			The file is being written to the response writer.
-			Close the response to prevent further writes to the response writer
-		*/
-		response.Close()
-		/*
-			Specific ACCESS log entry for data returned from a file. Dont echo the response as this is a stream. Just indicate the file.
-			Dont log the full file name as this reveals the server file system structure and can lead to vulnerabilities.
-		*/
-		if response.GetWrappedServer().GetServerLogger().IsAccess() {
-			response.GetWrappedServer().GetServerLogger().LogAccessf("<<< STATUS=%d: CODE=%d: RESP-FROM-FILE=%s: TYPE=%s", response.GetCode(), response.GetSubCode(), fileShort, contentType)
-			response.GetWrappedServer().logHeaderMap(response.GetHeaders(), "<-<")
-		}
-		return
+	contentType := LookupContentType(url)
+	if (contentType != "") && (ww.Header()[ContentTypeName] == nil) {
+		ww.Header()[ContentTypeName] = []string{contentType + "; charset=" + server.contentTypeCharset}
 	}
 	/*
-		If not matching file was found then change the response to Not Found and return
+		derive the file name from the url and the path in the fileServerList
 	*/
-	response.SetError404(url, SCContentNotFound)
+	fileShort := url[len(container.URLPrefix):]
+	filename := filepath.Join(container.FilePath, fileShort)
+	/*
+	Implemented in servermain/serverInstanceData.go. This wraps the http.ServeContent to return the file contents.
+	Panics 404 if file not found. Panics 500 if file cannot be read 
+	*/
+	ServeContent(ww, request, filename)
+	/*
+		The file is being written to the response writer.
+		Close the response to prevent further writes to the response writer
+	*/
+	response.Close()
+	/*
+		Specific ACCESS log entry for data returned from a file. Dont echo the response as this is a stream. Just indicate the file.
+		Dont log the full file name as this reveals the server file system structure and can lead to vulnerabilities.
+	*/
+	if response.GetWrappedServer().GetServerLogger().IsAccess() {
+		response.GetWrappedServer().GetServerLogger().LogAccessf("<<< STATUS=%d: CODE=%d: RESP-FROM-FILE=%s: TYPE=%s", response.GetCode(), response.GetSubCode(), fileShort, contentType)
+		response.GetWrappedServer().logHeaderMap(response.GetHeaders(), "<-<")
+	}
+	return
 }

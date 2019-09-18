@@ -257,23 +257,27 @@ func (p *ServerInstanceData) SetStaticFileServerData(fileServerDataMap map[strin
 }
 
 /*
+GetStaticFileServerData get the path for a static name
+*/
+func (p *ServerInstanceData) GetStaticFileServerData() *StaticFileServerData {
+	if p.fileServerData == nil {
+		ThrowPanic("E", 500, SCStaticFileInit, fmt.Sprintf("File Server Data is undefined"), "Static File Server Data has not been defined.")
+	}
+	return p.fileServerData
+}
+
+/*
 GetStaticPathForName get the path for a static name
 */
 func (p *ServerInstanceData) GetStaticPathForName(name string) *FileServerContainer {
-	if p.fileServerData == nil {
-		ThrowPanic("E", 500, SCStaticFileInit, fmt.Sprintf("Name:%s Unsupported", name), "Static File Server Data has not been defined.")
-	}
-	return p.fileServerData.GetStaticPathForName(name)
+	return p.GetStaticFileServerData().GetStaticPathForName(name)
 }
 
 /*
 GetStaticPathForURL get the path for a static url
 */
 func (p *ServerInstanceData) GetStaticPathForURL(url string) *FileServerContainer {
-	if p.fileServerData == nil {
-		ThrowPanic("E", 500, SCStaticFileInit, fmt.Sprintf("URL:%s Unsupported", url), "Static File Server Data has not been defined.")
-	}
-	return p.fileServerData.GetStaticPathForURL(url)
+	return p.GetStaticFileServerData().GetStaticPathForURL(url)
 }
 
 /*
