@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
 	"runtime"
 	"strings"
 )
@@ -37,7 +38,7 @@ LoadConfigData method loads the config data
 func LoadConfigData(configFileName string) error {
 
 	if configFileName == "" {
-		configFileName = "webServerBase.json"
+		configFileName = GetApplicationModuleName() + ".json"
 	}
 
 	configDataInstance = &Data{
@@ -49,6 +50,7 @@ func LoadConfigData(configFileName string) error {
 		Redirections:       make(map[string]string),
 		LoggerLevels:       make(map[string]string),
 	}
+
 	/*
 		load the config object
 	*/
@@ -102,6 +104,23 @@ GetConfigDataInstance get the confg data singleton
 */
 func GetConfigDataInstance() *Data {
 	return configDataInstance
+}
+
+/*
+GetApplicationModuleName returns the name of the application
+*/
+func GetApplicationModuleName() string {
+	exec, err := os.Executable()
+	if err != nil {
+		exec = "UnknownModule"
+	} else {
+		parts := strings.Split(exec, fmt.Sprintf("%c", os.PathSeparator))
+		exec = parts[len(parts)-1]
+		if exec == "debug" {
+			exec = parts[len(parts)-2]
+		}
+	}
+	return exec
 }
 
 /*

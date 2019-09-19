@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"path/filepath"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -28,6 +28,9 @@ var log *logging.LoggerDataReference
 var serverInstance *servermain.ServerInstanceData
 
 func main() {
+
+	exec := config.GetApplicationModuleName()
+
 	/*
 		Read the configuration file. If no name is given use the default name.
 	*/
@@ -41,17 +44,6 @@ func main() {
 	err := config.LoadConfigData(configFileName)
 	if err != nil {
 		log.Fatal(err)
-	}
-
-	exec, err := os.Executable()
-	if err != nil {
-		exec = "UnknownModule"
-	} else {
-		parts := strings.Split(exec, fmt.Sprintf("%c", os.PathSeparator))
-		exec = parts[len(parts)-1]
-		if exec == "debug" {
-			exec = parts[len(parts)-2]
-		}
 	}
 
 	configData := config.GetConfigDataInstance()
@@ -137,8 +129,8 @@ func fileSaveHandler(r *http.Request, response *servermain.Response) {
 	d := servermain.NewRequestHandlerHelper(r, response)
 	fileName := d.GetNamedURLPart("file", "") // Not optional
 	pathName := d.GetNamedURLPart("path", "") // Not optional
-	ext := d.GetNamedURLPart("ext", "txt") // Optional. Default value txt
-	fullFile := filepath.Join(d.GetStaticPathForName(pathName).FilePath, fileName + "." + ext) 
+	ext := d.GetNamedURLPart("ext", "txt")    // Optional. Default value txt
+	fullFile := filepath.Join(d.GetStaticPathForName(pathName).FilePath, fileName+"."+ext)
 	err := ioutil.WriteFile(fullFile, d.GetBody(), 0644)
 	if err != nil {
 		servermain.ThrowPanic("E", 400, SCWriteFile, fmt.Sprintf("fileSaveHandler: static path [%s], file [%s] could not write file", pathName, fileName), err.Error())

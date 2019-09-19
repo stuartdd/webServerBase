@@ -150,7 +150,7 @@ func stopServer(t *testing.T) {
 
 func startServer(t *testing.T) {
 	if configData == nil {
-		err := config.LoadConfigData("webServerTest.json")
+		err := config.LoadConfigData("")
 		if err != nil {
 			test.Fail(t, "Read response Failed", err.Error())
 		}

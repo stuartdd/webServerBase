@@ -16,13 +16,13 @@
         {
             "label": "clean",
             "type": "shell",
-            "command": "go clean webServerBase.go",
+            "command": "go clean webServerExample.go",
             "problemMatcher": []
         },
         {
             "label": "run",
             "type": "shell",
-            "command": "webServerBase",
+            "command": "webServerExample",
             "problemMatcher": []
         },
         {
