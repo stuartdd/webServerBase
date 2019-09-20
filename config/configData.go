@@ -56,12 +56,12 @@ func LoadConfigData(configFileName string) error {
 	*/
 	content, err := ioutil.ReadFile(configFileName)
 	if err != nil {
-		return err
+		panic(fmt.Sprintf("Failed to read config data file:%s. Error:%s", configFileName, err.Error()))
 	}
 
 	err = json.Unmarshal(content, &configDataInstance)
 	if err != nil {
-		return err
+		panic(fmt.Sprintf("Failed to understand the config data in the file:%s. Error:%s", configFileName, err.Error()))
 	}
 
 	configDataInstance.ConfigName = configFileName
@@ -111,15 +111,25 @@ GetApplicationModuleName returns the name of the application
 */
 func GetApplicationModuleName() string {
 	exec, err := os.Executable()
+	fmt.Println("****************** " + exec)
 	if err != nil {
 		exec = "UnknownModule"
 	} else {
 		parts := strings.Split(exec, fmt.Sprintf("%c", os.PathSeparator))
 		exec = parts[len(parts)-1]
-		if exec == "debug" {
+		if strings.Contains(strings.ToLower(exec), "debug.test") {
 			exec = parts[len(parts)-2]
 		}
 	}
+	fmt.Println("****************** " + exec)
+	if strings.HasSuffix(strings.ToLower(exec), ".exe") {
+		exec = exec[0 : len(exec)-4]
+	}
+	fmt.Println("****************** " + exec)
+	if strings.HasSuffix(strings.ToLower(exec), ".test") {
+		exec = exec[0 : len(exec)-5]
+	}
+	fmt.Println("****************** " + exec)
 	return exec
 }
 
