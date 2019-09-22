@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 	"time"
-	"webServerBase/test"
+	"github.com/stuartdd/webServerBase/test"
 )
 
 type TestStruct struct {

@@ -9,9 +9,10 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"webServerBase/config"
-	"webServerBase/logging"
-	"webServerBase/servermain"
+
+	"github.com/stuartdd/webServerBase/config"
+	"github.com/stuartdd/webServerBase/logging"
+	"github.com/stuartdd/webServerBase/servermain"
 )
 
 /*

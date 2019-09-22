@@ -11,7 +11,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"webServerBase/logging"
+	"github.com/stuartdd/webServerBase/logging"
 )
 
 type templateGroup struct {

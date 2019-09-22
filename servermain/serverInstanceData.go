@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"webServerBase/logging"
+	"github.com/stuartdd/webServerBase/logging"
 )
 
 /*

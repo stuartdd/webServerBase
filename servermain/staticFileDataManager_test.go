@@ -2,7 +2,7 @@ package servermain
 
 import (
 	"testing"
-	"webServerBase/test"
+	"github.com/stuartdd/webServerBase/test"
 )
 
 func TestStaticFileForUrlPrefix(t *testing.T) {

@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"html/template"
 	"testing"
-	"webServerBase/logging"
-	"webServerBase/test"
+	"github.com/stuartdd/webServerBase/logging"
+	"github.com/stuartdd/webServerBase/test"
 )
 
 type Data struct {
