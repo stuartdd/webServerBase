@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
+	"github.com/stuartdd/webServerBase/logging"
 )
 
 /*
@@ -142,7 +143,7 @@ func ReasonableStaticFileHandler(request *http.Request, response *Response) {
 		Specific ACCESS log entry for data returned from a file. Dont echo the response as this is a stream. Just indicate the file.
 		Dont log the full file name as this reveals the server file system structure and can lead to vulnerabilities.
 	*/
-	if response.GetWrappedServer().GetServerLogger().IsAccess() {
+	if logging.IsAccess() {
 		response.GetWrappedServer().GetServerLogger().LogAccessf("<<< STATUS=%d: CODE=%d: RESP-FROM-FILE=%s: TYPE=%s", response.GetCode(), response.GetSubCode(), fileShort, contentType)
 		response.GetWrappedServer().logHeaderMap(response.GetHeaders(), "<-<")
 	}

@@ -111,7 +111,6 @@ GetApplicationModuleName returns the name of the application
 */
 func GetApplicationModuleName() string {
 	exec, err := os.Executable()
-	fmt.Println("****************** " + exec)
 	if err != nil {
 		exec = "UnknownModule"
 	} else {
@@ -121,15 +120,12 @@ func GetApplicationModuleName() string {
 			exec = parts[len(parts)-2]
 		}
 	}
-	fmt.Println("****************** " + exec)
 	if strings.HasSuffix(strings.ToLower(exec), ".exe") {
 		exec = exec[0 : len(exec)-4]
 	}
-	fmt.Println("****************** " + exec)
 	if strings.HasSuffix(strings.ToLower(exec), ".test") {
 		exec = exec[0 : len(exec)-5]
 	}
-	fmt.Println("****************** " + exec)
 	return exec
 }
 

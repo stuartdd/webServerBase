@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	
 	"github.com/stuartdd/webServerBase/test"
 )
 
@@ -68,12 +69,12 @@ func TestFallback(t *testing.T) {
 	tstlog.LogErrorWithStackTrace("TRACE 11", "LINE 11")
 	tstlog.Fatal(fmt.Errorf("FATAL %d", 12))
 
-	test.AssertBoolFalse(t, "", tstlog.IsAccess())
-	test.AssertBoolFalse(t, "", tstlog.IsWarn())
-	test.AssertBoolFalse(t, "", tstlog.IsDebug())
-	test.AssertBoolFalse(t, "", tstlog.IsInfo())
-	test.AssertBoolTrue(t, "", tstlog.IsError())
-	test.AssertBoolTrue(t, "", tstlog.IsFatal())
+	test.AssertBoolFalse(t, "", IsAccess())
+	test.AssertBoolFalse(t, "", IsWarn())
+	test.AssertBoolFalse(t, "", IsDebug())
+	test.AssertBoolFalse(t, "", IsInfo())
+	test.AssertBoolTrue(t, "", IsError())
+	test.AssertBoolTrue(t, "", IsFatal())
 
 	w.Close()
 	out, _ := ioutil.ReadAll(r)
@@ -122,13 +123,12 @@ func TestCreateLogDefaults(t *testing.T) {
 	test.AssertStringEquals(t, "", "ERROR:Active note[SYSERR] error[YES]:Out=Console:", LoggerLevelDataString("ERROR"))
 	test.AssertStringEquals(t, "", "FATAL:Active note[SYSERR] error[YES]:Out=Console:", LoggerLevelDataString("FATAL"))
 
-	t1 := NewLogger("T1")
-	test.AssertBoolFalse(t, "IsAccess", t1.IsAccess())
-	test.AssertBoolFalse(t, "IsDebug", t1.IsDebug())
-	test.AssertBoolFalse(t, "IsWarn", t1.IsWarn())
-	test.AssertBoolFalse(t, "IsInfo", t1.IsInfo())
-	test.AssertBoolTrue(t, "IsError", t1.IsError())
-	test.AssertBoolTrue(t, "IsFatal", t1.IsFatal())
+	test.AssertBoolFalse(t, "IsAccess", IsAccess())
+	test.AssertBoolFalse(t, "IsDebug", IsDebug())
+	test.AssertBoolFalse(t, "IsWarn", IsWarn())
+	test.AssertBoolFalse(t, "IsInfo", IsInfo())
+	test.AssertBoolTrue(t, "IsError", IsError())
+	test.AssertBoolTrue(t, "IsFatal", IsFatal())
 }
 
 func TestDebugToSysErr(t *testing.T) {
@@ -144,13 +144,12 @@ func TestDebugToSysErr(t *testing.T) {
 	test.AssertStringEquals(t, "", "ERROR:Active note[SYSOUT] error[YES]:Out=Console:", LoggerLevelDataString("ERROR"))
 	test.AssertStringEquals(t, "", "FATAL:Active note[SYSERR] error[YES]:Out=Console:", LoggerLevelDataString("FATAL"))
 
-	t1 := NewLogger("T1")
-	test.AssertBoolFalse(t, "IsAccess", t1.IsAccess())
-	test.AssertBoolTrue(t, "IsDebug", t1.IsDebug())
-	test.AssertBoolFalse(t, "IsWarn", t1.IsWarn())
-	test.AssertBoolFalse(t, "IsInfo", t1.IsInfo())
-	test.AssertBoolTrue(t, "IsError", t1.IsError())
-	test.AssertBoolTrue(t, "IsFatal", t1.IsFatal())
+	test.AssertBoolFalse(t, "IsAccess", IsAccess())
+	test.AssertBoolTrue(t, "IsDebug", IsDebug())
+	test.AssertBoolFalse(t, "IsWarn", IsWarn())
+	test.AssertBoolFalse(t, "IsInfo", IsInfo())
+	test.AssertBoolTrue(t, "IsError", IsError())
+	test.AssertBoolTrue(t, "IsFatal", IsFatal())
 }
 
 func TestSwitchOffError(t *testing.T) {
@@ -166,12 +165,12 @@ func TestSwitchOffError(t *testing.T) {
 	test.AssertStringEquals(t, "", "FATAL:Active note[SYSERR] error[YES]:Out=Console:", LoggerLevelDataString("FATAL"))
 
 	t1 := NewLogger("T1")
-	test.AssertBoolFalse(t, "IsAccess", t1.IsAccess())
-	test.AssertBoolFalse(t, "IsDebug", t1.IsDebug())
-	test.AssertBoolFalse(t, "IsWarn", t1.IsWarn())
-	test.AssertBoolFalse(t, "IsInfo", t1.IsInfo())
-	test.AssertBoolFalse(t, "IsError", t1.IsError())
-	test.AssertBoolTrue(t, "IsFatal", t1.IsFatal())
+	test.AssertBoolFalse(t, "IsAccess", IsAccess())
+	test.AssertBoolFalse(t, "IsDebug", IsDebug())
+	test.AssertBoolFalse(t, "IsWarn", IsWarn())
+	test.AssertBoolFalse(t, "IsInfo", IsInfo())
+	test.AssertBoolFalse(t, "IsError", IsError())
+	test.AssertBoolTrue(t, "IsFatal", IsFatal())
 	t1.LogError(NewTrialError("SwitchOffError ended OK"))
 }
 
@@ -188,12 +187,12 @@ func TestSwitchOffFatal(t *testing.T) {
 	test.AssertStringEquals(t, "", "FATAL:In-Active note[OFF] error[YES]", LoggerLevelDataString("FATAL"))
 
 	t1 := NewLogger("T1")
-	test.AssertBoolFalse(t, "IsAccess", t1.IsAccess())
-	test.AssertBoolFalse(t, "IsDebug", t1.IsDebug())
-	test.AssertBoolFalse(t, "IsWarn", t1.IsWarn())
-	test.AssertBoolFalse(t, "IsInfo", t1.IsInfo())
-	test.AssertBoolTrue(t, "IsError", t1.IsError())
-	test.AssertBoolFalse(t, "IsFatal", t1.IsFatal())
+	test.AssertBoolFalse(t, "IsAccess", IsAccess())
+	test.AssertBoolFalse(t, "IsDebug", IsDebug())
+	test.AssertBoolFalse(t, "IsWarn", IsWarn())
+	test.AssertBoolFalse(t, "IsInfo", IsInfo())
+	test.AssertBoolTrue(t, "IsError", IsError())
+	test.AssertBoolFalse(t, "IsFatal", IsFatal())
 	t1.Fatal(NewTrialError("SwitchOffFatal ended OK"))
 }
 
@@ -217,12 +216,12 @@ func TestCreateLogDefaultsWithFile(t *testing.T) {
 	t1 := NewLogger("T1")
 	t2 := NewLogger("T2")
 
-	test.AssertBoolFalse(t, "IsAccess", t1.IsAccess())
-	test.AssertBoolTrue(t, "IsDebug", t1.IsDebug())
-	test.AssertBoolFalse(t, "IsWarn", t1.IsWarn())
-	test.AssertBoolFalse(t, "IsInfo", t1.IsInfo())
-	test.AssertBoolTrue(t, "IsError", t1.IsError())
-	test.AssertBoolTrue(t, "IsFatal", t1.IsFatal())
+	test.AssertBoolFalse(t, "IsAccess", IsAccess())
+	test.AssertBoolTrue(t, "IsDebug", IsDebug())
+	test.AssertBoolFalse(t, "IsWarn", IsWarn())
+	test.AssertBoolFalse(t, "IsInfo", IsInfo())
+	test.AssertBoolTrue(t, "IsError", IsError())
+	test.AssertBoolTrue(t, "IsFatal", IsFatal())
 	t1Data := strconv.Itoa(rand.Int())
 	t1.LogDebug(t1Data)
 	t1.LogError(NewTrialError(t1Data))

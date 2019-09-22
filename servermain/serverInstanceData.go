@@ -173,7 +173,7 @@ func (p *ServerInstanceData) ServeHTTP(rw http.ResponseWriter, httpRequest *http
 	*/
 	redirect := p.redirections[url]
 	if redirect != "" {
-		if p.logger.IsInfo() {
+		if logging.IsInfo() {
 			p.logger.LogInfof(">>> REDIRECT: %s --> %s", url, redirect)
 		}
 		http.Redirect(w, httpRequest, redirect, http.StatusSeeOther)
@@ -201,7 +201,7 @@ func (p *ServerInstanceData) ServeHTTP(rw http.ResponseWriter, httpRequest *http
 	*/
 	p.invokeAllVetoHandlersInList(httpRequest, actualResponse, &p.before)
 	if actualResponse.IsAnError() {
-		if p.logger.IsWarn() {
+		if logging.IsWarn() {
 			p.logger.LogWarnf("Request was Vetoed by 'Before' handler:%s", actualResponse.GetCSV())
 		}
 	} else {
@@ -217,7 +217,7 @@ func (p *ServerInstanceData) ServeHTTP(rw http.ResponseWriter, httpRequest *http
 		if actualResponse.IsNotAnError() {
 			p.invokeAllVetoHandlersInList(httpRequest, actualResponse, &p.after)
 			if actualResponse.IsAnError() {
-				if p.logger.IsWarn() {
+				if logging.IsWarn() {
 					p.logger.LogWarnf("Response was Vetoed by 'After' handler:%s", actualResponse.GetCSV())
 				}
 			}
@@ -452,7 +452,7 @@ Define ACCESS logging to see the response in the logs
 Define DEBUG and ACCESS to see the response and headers in the logs
 */
 func (p *ServerInstanceData) LogResponse(response *Response) {
-	if p.logger.IsAccess() {
+	if logging.IsAccess() {
 		errText := response.GetErrorMessage()
 		if errText != "" {
 			errText = ": ERROR=" + errText
@@ -510,22 +510,22 @@ func checkForPanicAndRecover(r *http.Request, response *Response) {
 			if (err1 == nil) && (err2 == nil) {
 				switch strings.ToUpper(parts[0]) {
 				case "I":
-					if server.logger.IsInfo() {
+					if logging.IsInfo() {
 						server.logger.LogInfo("--- PANIC|" + recStr[2:])
 					}
 					break
 				case "W":
-					if server.logger.IsWarn() {
+					if logging.IsWarn() {
 						server.logger.LogWarn("--- PANIC|" + recStr[2:])
 					}
 					break
 				case "E":
-					if server.logger.IsError() {
+					if logging.IsError() {
 						server.logger.LogError(fmt.Errorf("--- PANIC|%s", recStr[2:]))
 					}
 					break
 				default:
-					if server.logger.IsError() {
+					if logging.IsError() {
 						server.logger.LogError(fmt.Errorf("--- PANIC|%s", recStr))
 					}
 					break
@@ -592,7 +592,7 @@ func (p *ServerInstanceData) invokeAllVetoHandlersInList(httpRequest *http.Reque
 }
 
 func (p *ServerInstanceData) logFileServerResponse(response *ResponseWriterWrapper, path string, ext string, mime string, fileName string) {
-	if p.logger.IsAccess() {
+	if logging.IsAccess() {
 		p.logger.LogAccessf("<<< STATUS=%d staticPath:%s ext:%s Content-Type:%s file:%s", response.GetStatusCode(), path, ext, mime, fileName)
 		p.logHeaderMap(response.Header(), "<-<")
 	}
@@ -604,14 +604,14 @@ func (p *ServerInstanceData) logFileServerResponse(response *ResponseWriterWrapp
 	Define DEBUG and ACCESS to see the request and headers in the logs
 */
 func (p *ServerInstanceData) logRequest(r *http.Request) {
-	if p.logger.IsAccess() {
+	if logging.IsAccess() {
 		p.logger.LogAccessf(">>> METHOD=%s: REQUEST=%s", r.Method, r.URL.Path)
 		p.logHeaderMap(r.Header, ">->")
 	}
 }
 
 func (p *ServerInstanceData) logHeaderMap(headers map[string][]string, dir string) {
-	if p.logger.IsDebug() {
+	if logging.IsDebug() {
 		for k, v := range headers {
 			p.logger.LogDebugf("%s HEADER=%s=%s", dir, k, v)
 		}

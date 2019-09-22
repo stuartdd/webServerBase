@@ -41,7 +41,7 @@ const (
 
 /*
 Create default instances of each log level.
-This map is updated by CreateLogWithFilenameAndAppID. This can cause issues when test is run as teh state cannot be reset!
+This map is updated by CreateLogWithFilenameAndAppID.
 */
 var logLevelDataMapKnownState = map[string]*logLevelDataKnownState{
 	"INFO":   &logLevelDataKnownState{InfoLevel, offName, false, false},
@@ -90,7 +90,7 @@ For each logger level there MAY be a file. Indexed by file name. This is so we c
 var logLevelFileMap map[string]*logLevelFileData
 
 /*
-LoggerDataReference contains a ref to the single logger instance and the module name (id).
+LoggerDataReference contains a ref to the single (named) logger instance and the module name (id).
 
 Created via NewLogger
 */
@@ -179,10 +179,6 @@ func IsFallback() bool {
 	return fallBack
 }
 
-func clearFlags() {
-	loggerEnabled = true
-}
-
 /*
 GetLogLevelTypeIndexForLevelName get the index for the level name
 */
@@ -209,7 +205,7 @@ func GetLogLevelFileNameForLevelName(name string) string {
 }
 
 /*
-CloseLog close the log file
+CloseLog close ALL the log files
 */
 func CloseLog() {
 	for _, value := range logLevelDataMap {
@@ -221,7 +217,8 @@ func CloseLog() {
 }
 
 /*
-NewLogger created a new logger instance for a specific module
+NewLogger creats a new logger instance for a specific module name
+
 All log lines printed via the returned ref will contain the specific module name.
 */
 func NewLogger(moduleName string) *LoggerDataReference {
@@ -243,47 +240,51 @@ func NewLogger(moduleName string) *LoggerDataReference {
 /*
 IsDebug return true is the debug log function is enabled
 */
-func (p *LoggerDataReference) IsDebug() bool {
+func IsDebug() bool {
 	return logLevelDataIndexList[DebugLevel].active
 }
 
 /*
 IsAccess return true is the access log function is enabled
 */
-func (p *LoggerDataReference) IsAccess() bool {
+func IsAccess() bool {
 	return logLevelDataIndexList[AccessLevel].active
 }
 
 /*
 IsInfo return true is the info log function is enabled
 */
-func (p *LoggerDataReference) IsInfo() bool {
+func IsInfo() bool {
 	return logLevelDataIndexList[InfoLevel].active
 }
 
 /*
 IsError return true is the error log function is enabled
 */
-func (p *LoggerDataReference) IsError() bool {
+func IsError() bool {
 	return logLevelDataIndexList[ErrorLevel].active
 }
 
 /*
 IsFatal return true is the fatal log function is enabled
 */
-func (p *LoggerDataReference) IsFatal() bool {
+func IsFatal() bool {
 	return logLevelDataIndexList[FatalLevel].active
 }
 
 /*
-IsWarn return true is the info log function is enabled
+IsWarn return true is the warn log function is enabled
 */
-func (p *LoggerDataReference) IsWarn() bool {
+func IsWarn() bool {
 	return logLevelDataIndexList[WarnLevel].active
 }
 
 /*
 Fatal does the same as log.Fatal
+Prints to console if logging is disabled or level is inactive
+Fallback mode is true when logger configuration failed. It logs to the console
+
+If fatalRC is not 0 the application will exit with that return code
 */
 func (p *LoggerDataReference) Fatal(err error) {
 	if fallBack {
@@ -302,6 +303,8 @@ func (p *LoggerDataReference) Fatal(err error) {
 
 /*
 LogErrorf delegates to log.Printf
+Does nothing if logging is disabled or level is inactive
+Fallback mode is true when logger configuration failed. It logs to the console
 */
 func (p *LoggerDataReference) LogErrorf(format string, v ...interface{}) {
 	if fallBack {
@@ -315,6 +318,8 @@ func (p *LoggerDataReference) LogErrorf(format string, v ...interface{}) {
 
 /*
 LogError delegates to log.Print
+Does nothing if logging is disabled or level is inactive
+Fallback mode is true when logger configuration failed. It logs to the console
 */
 func (p *LoggerDataReference) LogError(message error) {
 	if fallBack {
@@ -328,6 +333,8 @@ func (p *LoggerDataReference) LogError(message error) {
 
 /*
 LogInfof delegates to log.Printf
+Does nothing if logging is disabled or level is inactive
+Fallback mode is true when logger configuration failed. It logs to the console
 */
 func (p *LoggerDataReference) LogInfof(format string, v ...interface{}) {
 	if fallBack {
@@ -341,6 +348,8 @@ func (p *LoggerDataReference) LogInfof(format string, v ...interface{}) {
 
 /*
 LogInfo delegates to log.Print
+Does nothing if logging is disabled or level is inactive
+Fallback mode is true when logger configuration failed. It logs to the console
 */
 func (p *LoggerDataReference) LogInfo(message string) {
 	if fallBack {
@@ -354,6 +363,8 @@ func (p *LoggerDataReference) LogInfo(message string) {
 
 /*
 LogAccessf delegates to log.Printf
+Does nothing if logging is disabled or level is inactive
+Fallback mode is true when logger configuration failed. It logs to the console
 */
 func (p *LoggerDataReference) LogAccessf(format string, v ...interface{}) {
 	if fallBack {
@@ -367,6 +378,8 @@ func (p *LoggerDataReference) LogAccessf(format string, v ...interface{}) {
 
 /*
 LogAccess delegates to log.Print
+Does nothing if logging is disabled or level is inactive
+Fallback mode is true when logger configuration failed. It logs to the console
 */
 func (p *LoggerDataReference) LogAccess(message string) {
 	if fallBack {
@@ -380,6 +393,8 @@ func (p *LoggerDataReference) LogAccess(message string) {
 
 /*
 LogWarnf delegates to log.Printf
+Does nothing if logging is disabled or level is inactive
+Fallback mode is true when logger configuration failed. It logs to the console
 */
 func (p *LoggerDataReference) LogWarnf(format string, v ...interface{}) {
 	if fallBack {
@@ -393,6 +408,8 @@ func (p *LoggerDataReference) LogWarnf(format string, v ...interface{}) {
 
 /*
 LogWarn delegates to log.Print
+Does nothing if logging is disabled or level is inactive
+Fallback mode is true when logger configuration failed. It logs to the console
 */
 func (p *LoggerDataReference) LogWarn(message string) {
 	if fallBack {
@@ -406,6 +423,8 @@ func (p *LoggerDataReference) LogWarn(message string) {
 
 /*
 LogDebugf delegates to log.Printf
+Does nothing if logging is disabled or level is inactive
+Fallback mode is true when logger configuration failed. It logs to the console
 */
 func (p *LoggerDataReference) LogDebugf(format string, v ...interface{}) {
 	if fallBack {
@@ -418,7 +437,9 @@ func (p *LoggerDataReference) LogDebugf(format string, v ...interface{}) {
 }
 
 /*
-LogDebug delegates to log.Print
+LogDebug delegates to log.Print. 
+Does nothing if logging is disabled or level is inactive
+Fallback mode is true when logger configuration failed. It logs to the console
 */
 func (p *LoggerDataReference) LogDebug(message string) {
 	if fallBack {
@@ -431,7 +452,7 @@ func (p *LoggerDataReference) LogDebug(message string) {
 }
 
 /*
-LogErrorWithStackTrace - Log an error and a stack trace
+LogErrorWithStackTrace - Log an error with a prefix and a stack trace. Each line of the stacktrace has the prefix.
 */
 func (p *LoggerDataReference) LogErrorWithStackTrace(prefix string, message string) {
 	if fallBack {
@@ -719,3 +740,9 @@ func padString2(i int) string {
 	}
 	return strconv.Itoa(i)
 }
+
+func clearFlags() {
+	loggerEnabled = true
+}
+
+
