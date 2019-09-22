@@ -81,6 +81,7 @@ func TestFallback(t *testing.T) {
 
 	captured := string(out)
 
+	t.Log("AA *******************************\n" + captured + "BB *********************************")
 	test.AssertStringContains(t, "", captured, []string{
 		"FALLBACK:ACCESS: LINE 1",
 		"FALLBACK:ACCESS: LINE 2",
@@ -93,7 +94,7 @@ func TestFallback(t *testing.T) {
 		"FALLBACK:ERROR: LINE 9",
 		"FALLBACK:ERROR: LINE 10",
 		"FALLBACK:ERROR: TRACE 11 LINE 11",
-		"webServerBase/logging.(*LoggerDataReference).LogErrorWithStackTrace",
+		"logging.(*LoggerDataReference).LogErrorWithStackTrace",
 		"FALLBACK:FATAL: type[*errors.errorString] FATAL 12",
 	})
 
