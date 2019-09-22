@@ -9,10 +9,10 @@ import (
 	"strings"
 	"testing"
 	"time"
-	"webServerBase/config"
-	"webServerBase/logging"
-	"webServerBase/servermain"
-	"webServerBase/test"
+	"github.com/stuartdd/webServerBase/config"
+	"github.com/stuartdd/webServerBase/logging"
+	"github.com/stuartdd/webServerBase/servermain"
+	"github.com/stuartdd/webServerBase/test"
 )
 
 var configData *config.Data

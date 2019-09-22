@@ -2,7 +2,7 @@ package config
 
 import (
 	"testing"
-	"webServerBase/test"
+	"github.com/stuartdd/webServerBase/test"
 )
 
 func TestConfigLoad(t *testing.T) {

@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-	"webServerBase/test"
+	"github.com/stuartdd/webServerBase/test"
 )
 
 var globalErr interface{}
