@@ -148,7 +148,7 @@ func buildMapData(r *http.Request, p *ServerInstanceData) interface{} {
 	return data
 }
 
-/*
+/***********************************************************************************************
 ServeHTTP handle ALL calls
 */
 func (p *ServerInstanceData) ServeHTTP(rw http.ResponseWriter, httpRequest *http.Request) {

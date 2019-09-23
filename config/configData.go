@@ -33,7 +33,14 @@ There should only ever be ONE of these
 var configDataInstance *Data
 
 /*
-LoadConfigData method loads the config data
+GetConfigDataInstance get the confg data singleton
+*/
+func GetConfigDataInstance() *Data {
+	return configDataInstance
+}
+
+/*
+LoadConfigData method loads the config data from a file
 */
 func LoadConfigData(configFileName string) error {
 
@@ -81,7 +88,7 @@ func GetOS() string {
 GetConfigDataStaticFilePathForOS Get the static path for the OS. If not found return the first one!
 */
 func (p *Data) GetConfigDataStaticFilePathForOS() map[string]string {
-	path := p.StaticPaths[runtime.GOOS]
+	path := p.StaticPaths[GetOS()]
 	if path == nil {
 		log.Fatalf("Unable to find staticPath in configuration file '%s' for operating system '%s'", GetConfigDataInstance().ConfigName, runtime.GOOS)
 	}
@@ -92,7 +99,7 @@ func (p *Data) GetConfigDataStaticFilePathForOS() map[string]string {
 GetConfigDataTemplateFilePathForOS Get the static path for the OS. If not found return the first one!
 */
 func (p *Data) GetConfigDataTemplateFilePathForOS() string {
-	path := p.TemplatePaths[runtime.GOOS]
+	path := p.TemplatePaths[GetOS()]
 	if path == "" {
 		log.Fatalf("Unable to find templatePath in configuration file '%s' for operating system '%s'", GetConfigDataInstance().ConfigName, runtime.GOOS)
 	}
@@ -100,14 +107,8 @@ func (p *Data) GetConfigDataTemplateFilePathForOS() string {
 }
 
 /*
-GetConfigDataInstance get the confg data singleton
-*/
-func GetConfigDataInstance() *Data {
-	return configDataInstance
-}
-
-/*
-GetApplicationModuleName returns the name of the application
+GetApplicationModuleName returns the name of the application. Testing and debugging changes this name so the code
+removes debug, test and .exe from the executable name. 
 */
 func GetApplicationModuleName() string {
 	exec, err := os.Executable()
