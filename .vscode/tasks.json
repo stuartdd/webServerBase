@@ -4,9 +4,9 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "install",
+            "label": "build",
             "type": "shell",
-            "command": "go install",
+            "command": "go build webServerExample.go",
             "group": {
                 "kind": "build",
                 "isDefault": true
