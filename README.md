@@ -1,8 +1,10 @@
 # webServerBase
 
-Crtl+Shift+v
+[comment]: <> (Use Crtl+Shift+v to view in Visual Code MD pluggin markdownlint)
 
 GoLang based ReST based Server
+
+For a full annotated example refer to **webServerExample.go** in the root directory
 
 ## Packages
 
@@ -27,7 +29,7 @@ GoLang based ReST based Server
 ## Files (in root dir)
 
 * **webServerBase.code-workspace** - File used by Visual Studio Code IDE
-* **webServerExample.go** - Web server for **TEST** purposes and as a model for other servers
+* **webServerExample.go** - Web server uses as an **Example** and **TEST** server
 * **webServerExample_test.go** - Tests for **webServerExample.go**:
   * Start server.
   * Do loads of tests.
@@ -72,9 +74,17 @@ serverInstance = servermain.NewServerInstanceData("MyServer", "utf-8)
 serverInstance.ListenAndServeOnPort(8080)
 ```
 
+## Config Package
+
+This reads a JSON file in to a structure that is then used to configure the server and the logger. However it is not a dependency of either.
+
+If you design the structure to contain the exact parameters required to configure the server and logger then your 'main' can load the configuration data from a JSON file (or any other type of file) and pass the componentes (values) contained in that structure in to the server and logger methods.
+
+See **webServerExample.go** for an example.
+
 ## Logger Configuration
 
-The logger (package "logger") is a wrapper for the Go 'log' package. This package manages to writes to all logs. The logger wrapper adds functionality to the standard go package.
+The logger (package "logger") is a wrapper for the Go 'log' package. This package manages writes to all logs. The logger wrapper adds functionality to the standard go package.
 
 The function **CreateLogWithFilenameAndAppID** is used to create the logger data structure. It does NOT return a reference to this data structure as the logger is a singleton and simply requires initialiasation.
 
@@ -119,6 +129,77 @@ The default state for each log level is as follows:
 
 The **CreateTestLogger()** function sets ALL log levels to **SYSOUT** except for **ERROR** and **FATAL** which remain as **SYSERR**
 
+This example sets DEBUG to active and all log lines will be written to the console.
+
 ``` Go
-CreateLogWithFilenameAndAppID
+levels := make(map[string]string)
+levels["DEBUG"] = "SYSOUT"
+CreateLogWithFilenameAndAppID("", "AppID", -1, levels)
 ```
+
+This example sets DEBUG to active and all log lines will be written to the file.
+
+``` Go
+levels := make(map[string]string)
+levels["DEBUG"] = "/logs/%ID-%YYYY-%MM-%DD-%HH-%MM-%SS.log"
+levels["WARN"] = "SYSOUT"
+CreateLogWithFilenameAndAppID("", "AppID", -1, levels)
+```
+
+### File Name substitutions
+
+* **%YYYY** - 4 digit year
+* **%MM** - 2 Digit month
+* **%DD** - 2 Digit dat of month
+* **%HH** - 2 Digit hour of the day (24 hour format)
+* **%mm** - 2 Digit minute of the hour
+* **%SS** - 2 Digit seconds of the minute
+* **%ID** - The application ID (**applicationID**)
+* **%PID** - The application process id
+* **%ENV.[name].ENV%** - The value of a named environment variable. E.g. %ENV.HOSTNAME.ENV% will return the host name of the system
+
+## Static files
+
+The web server is designed mainly fo ReST style services however it can also read static data from the file system and return it as a http response.
+
+This feature is supportted by the **staticFileDataManager.go** code in the servermain package.
+
+This works by mapping a URL prefix to a directory in th efile system. For example:
+
+http://localhost:8080/static/image.ico.
+
+Here the URL prefix is **/static/**.
+
+Now all we need is to tel the server where to get the file **image.ico*.
+
+We can set this up using the following:
+
+``` go
+serverInstance.AddMappedHandler("/static/?", http.MethodGet, servermain.ReasonableStaticFileHandler)
+```
+
+Where **servermain.ReasonableStaticFileHandler** is an existing hadler for this purpose. It is basic but sufficient for this function. Please feel free to use it as a basis for your own method.
+
+The '?' means 'any' so '/satic/fred' and '/static/Xxxxx/yyyy/image.ico' will both match.
+
+Now we need to tell the server where /static/ files are held:
+
+``` go
+serverInstance.SetStaticFileServerData(staticFileMap)
+```
+
+Where **staticFileMap** is a **map[string]string** read from configuration data or created in code as follows:
+
+``` go
+staticFileMap := make(map[string]string)
+staticFileMap["/static/pics/"] = "site/img"
+staticFileMap["/static/"] = "site/"
+```
+
+So URL prefix **/static/** will read files from **site/**
+
+And URL prefix **/static/pics/** will read files from **site/img**
+
+Note the example directory paths given in the example will be relative to the server directory.
+
+Also note that it is not a good idea to have an exact match wit URL prefix and directories on you file system as this reveals the directory structures via the paths and can lead to security issues. Hide the structure of your server file system from browsers using your server.
