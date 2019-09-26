@@ -25,6 +25,7 @@ type Data struct {
 	PanicResponseCode  int
 	StaticPaths        map[string]map[string]string
 	TemplatePaths      map[string]string
+	TemplateData       map[string]map[string]string
 }
 
 /*
@@ -53,9 +54,10 @@ func LoadConfigData(configFileName string) error {
 		ContentTypeCharset: "utf-8",
 		ContentTypes:       make(map[string]string),
 		StaticPaths:        make(map[string]map[string]string),
-		TemplatePaths:      make(map[string]string),
 		Redirections:       make(map[string]string),
 		LoggerLevels:       make(map[string]string),
+		TemplatePaths:      make(map[string]string),
+		TemplateData:       make(map[string]map[string]string),
 	}
 
 	/*

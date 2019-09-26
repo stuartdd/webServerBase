@@ -300,9 +300,9 @@ func (p *ServerInstanceData) SetPathToTemplates(pathToTemplates string) {
 /*
 AddTemplateDataProvider add a data provider for a template
 */
-func (p *ServerInstanceData) AddTemplateDataProvider(templateName string, provider func(*http.Request, string, interface{})) {
+func (p *ServerInstanceData) AddTemplateDataProvider(provider func(*http.Request, string, interface{})) {
 	if p.templates != nil {
-		p.templates.AddDataProvider(templateName, provider)
+		p.templates.AddDataProvider(provider)
 		return
 	}
 	panic("AddTemplateDataProvider: Templates have not been defined")

@@ -26,7 +26,6 @@ var groupList []templateGroup
 type templateData struct {
 	name         string
 	file         string
-	dataProvider func(*http.Request, string, interface{})
 	template     *template.Template
 }
 
@@ -35,6 +34,8 @@ Templates list of templates by ID
 */
 type Templates struct {
 	templates map[string]*templateData
+	dataProvider func(*http.Request, string, interface{})
+
 }
 
 var logger *logging.LoggerDataReference
@@ -195,12 +196,8 @@ func (p *Templates) HasAnyTemplates() bool {
 /*
 AddDataProvider - Add a method that will provide data to a template
 */
-func (p *Templates) AddDataProvider(templateName string, provider func(*http.Request, string, interface{})) {
-	if p.HasTemplate(templateName) {
-		p.templates[templateName].dataProvider = provider
-	} else {
-		panic("Add Template Provider: Template[" + templateName + "] not found")
-	}
+func (p *Templates) AddDataProvider(provider func(*http.Request, string, interface{})) {
+	p.dataProvider = provider
 }
 
 /*
@@ -242,9 +239,7 @@ func (p *Templates) executeString(templateName string, data interface{}) string 
 }
 
 func (p *Templates) executeDataProvider(templateName string, r *http.Request, data interface{}) {
-	if p.HasTemplate(templateName) {
-		if p.templates[templateName].dataProvider != nil {
-			p.templates[templateName].dataProvider(r, templateName, data)
-		}
+	if p.dataProvider != nil {
+		p.dataProvider(r, templateName, data)
 	}
 }

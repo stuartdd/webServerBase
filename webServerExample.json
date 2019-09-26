@@ -12,5 +12,8 @@
   "contentTypes" : {"ico": "image/x-icon"},
   "contentTypeCharset":"utf-8",
   "panicResponseCode" : 500,
-  "noResponseResponseCode" : 400
+  "noResponseResponseCode" : 400,
+  "templateData" : {
+    "index1.html" : {"Material":"Soot"}
+  }
 }

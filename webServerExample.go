@@ -95,7 +95,7 @@ func RunWithConfig(configData *config.Data, executable string) {
 	/*
 		When we return template "index1.html" we need to provide some data so provide a dataProvider
 	*/
-	serverInstance.AddTemplateDataProvider("index1.html", TemplateDataProviderForIndex1)
+	serverInstance.AddTemplateDataProvider(TemplateDataProvider)
 	/*
 		Add too or override the Default content types
 	*/
@@ -128,9 +128,10 @@ func RunWithConfig(configData *config.Data, executable string) {
 /************************************************
 Start of handlers section
 *************************************************/
+
 /*
-TemplateDataProviderOne - When template "index1.html" is executed this method is called.
-ref above: serverInstance.AddTemplateDataProvider("index1.html", TemplateDataProviderOne)
+TemplateDataProvider - When a template is executed this method is called.
+ref above: serverInstance.AddTemplateDataProvider(TemplateDataProviderOne)
 
 The data object is returned to the template for substitution.
 
@@ -140,13 +141,21 @@ from the URL as a map as the data object.
 In this method if it is a map we can assume ReasonableTemplateFileHandler has been invoked.
 
 The test in webServerExample_test.go sends 'site/index1.html?Material=LEAD' so Material would be LEAD.
-This data provider simply changes the value of Material to GOLD.
-The test asserts that GOLD is returned in the template confirming that this provider has been called.
+This data provider reads the confog TemplateData maps and merges the map associated with the template.
+The test asserts that Soot is returned in the template confirming that this provider has been called 
+and the config data has been read.
 */
-func TemplateDataProviderForIndex1(r *http.Request, templateName string, data interface{}) {
+func TemplateDataProvider(r *http.Request, templateName string, data interface{}) {
 	v, ok := data.(map[string]string)
 	if ok {
-		v["Material"] = "GOLD"
+		if (config.GetConfigDataInstance().TemplateData != nil) {
+			configData := config.GetConfigDataInstance().TemplateData[templateName]
+			if (configData != nil) {
+				for name, value := range configData {
+					v[name] = value
+				}
+			}
+		}
 		v["TemplateName"] = templateName
 	}
 }
