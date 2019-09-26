@@ -1,5 +1,20 @@
 # webServerBase
 
+* [Packages](#Packages)
+* [Directories](#Directories)
+* [Root Files](#Root%20Files)
+* [Configuration](#Configuration)
+* [Server Configuration](#Server%20Configuration)
+  * [Server start](#Server%20start)
+* [Config Package](#Config%20Package)
+* [Logger Configuration](#Logger%20Configuration)
+  * [File Name substitutions](#File%20Name%20substitutions)
+* [Static files](#Static%20files)
+* [Template Definitions](#Template%20Definitions)
+  * [What is a Template](#What%20is%20a%20Template)
+  * [Single Templates](#Single%20Templates)
+  * [Group Templates](#Group%20Templates)
+
 [comment]: <> (Use Crtl+Shift+v to view in Visual Code MD pluggin markdownlint)
 
 GoLang based ReST based Server
@@ -7,6 +22,8 @@ GoLang based ReST based Server
 For a full annotated example refer to **webServerExample.go** in the root directory
 
 ## Packages
+
+[Top](#webServerBase)
 
 * **servermain** - This is where all the server code resides
   * Dependends on **config** and **logging**
@@ -17,6 +34,8 @@ For a full annotated example refer to **webServerExample.go** in the root direct
 
 ## Directories
 
+[Top](#webServerBase)
+
 * **site** - Directory without code (TEST DATA ONLY).
   * This is for testing only and has test data files such as:
     * icons, html, json and even some xml. See webServerTest.json for paths to this diractory
@@ -26,7 +45,9 @@ For a full annotated example refer to **webServerExample.go** in the root direct
   * launch.json - for build and run (stand alone)
   * tasks.json for debugging (stand alone)
 
-## Files (in root dir)
+## Root Files
+
+[Top](#webServerBase)
 
 * **webServerBase.code-workspace** - File used by Visual Studio Code IDE
 * **webServerExample.go** - Web server uses as an **Example** and **TEST** server
@@ -41,9 +62,13 @@ For a full annotated example refer to **webServerExample.go** in the root direct
 
 ## Configuration
 
+[Top](#webServerBase)
+
 The server '**servermain**' and '**logging**' packages are NOT configured using the 'config' package. Creating a server and configuring the logs is done using standard Go types such as map and array. This separation is necessary so that '**servermain**' and '**logging**' can be used without constraining it to predefined configuration types and simplifies dependencies.
 
 ## Server Configuration
+
+[Top](#webServerBase)
 
 ### See webServerExample.go in the root directory for a complete example!
 
@@ -64,6 +89,8 @@ A factory method **NewServerInstanceData** is called to create and validate a **
 
 ## Server start
 
+[Top](#webServerBase)
+
 To start the server use the **ListenAndServeOnPort(port int)** method bound to **ServerInstanceData**
 
 For example:
@@ -76,6 +103,8 @@ serverInstance.ListenAndServeOnPort(8080)
 
 ## Config Package
 
+[Top](#webServerBase)
+
 This reads a JSON file in to a structure that is then used to configure the server and the logger. However it is not a dependency of either.
 
 If you design the structure to contain the exact parameters required to configure the server and logger then your 'main' can load the configuration data from a JSON file (or any other type of file) and pass the componentes (values) contained in that structure in to the server and logger methods.
@@ -83,6 +112,8 @@ If you design the structure to contain the exact parameters required to configur
 See **webServerExample.go** for an example.
 
 ## Logger Configuration
+
+[Top](#webServerBase)
 
 The logger (package "logger") is a wrapper for the Go 'log' package. This package manages writes to all logs. The logger wrapper adds functionality to the standard go package.
 
@@ -160,6 +191,8 @@ CreateLogWithFilenameAndAppID("", "AppID", -1, levels)
 
 ## Static files
 
+[Top](#webServerBase)
+
 The web server is designed mainly fo ReST style services however it can also read static data from the file system and return it as a http response.
 
 This feature is supportted by the **staticFileDataManager.go** code in the servermain package.
@@ -182,10 +215,16 @@ Where **servermain.ReasonableStaticFileHandler** is an existing hadler for this 
 
 The '?' means 'any' so '/satic/fred' and '/static/Xxxxx/yyyy/image.ico' will both match.
 
-Now we need to tell the server where /static/ files are held:
+Now we need to tell the server where /static/ files are held. We can add a map of name value pairs:
 
 ``` go
 serverInstance.SetStaticFileServerData(staticFileMap)
+```
+
+or just add a Url prefix and a path:
+
+``` go
+serverInstance.AddStaticFileServerData("/static/", "c:\\static")
 ```
 
 Where **staticFileMap** is a **map[string]string** read from configuration data or created in code as follows:
@@ -200,6 +239,93 @@ So URL prefix **/static/** will read files from **site/**
 
 And URL prefix **/static/pics/** will read files from **site/img**
 
-Note the example directory paths given in the example will be relative to the server directory.
+Note the directory paths given in the example will be relative to the server directory.
 
-Also note that it is not a good idea to have an exact match wit URL prefix and directories on you file system as this reveals the directory structures via the paths and can lead to security issues. Hide the structure of your server file system from browsers using your server.
+Also note that it is not a good idea to have an exact match witt URL prefix and directories on you file system as this reveals the directory structures via the URL's and can lead to security issues. Hide the structure of your server file system from browsers using your server.
+
+## Template Definitions
+
+[Top](#webServerBase)
+
+Support go the GO templating engin is included in the server .This can be used to return a html document that has a template
+
+Template support is in **templateManager.go** with examples in **webServerExample.go**
+
+First we need to tell the server where the templates are held in the file system:
+
+``` go
+serverInstance.SetPathToTemplates("templates/")
+```
+
+This will Load the templates in to a cache in memory and perform some validation of the syntax.
+
+We can then get a list of available templates and log it.
+
+``` go
+serverInstance.ListTemplateNames(", ")
+```
+
+Will list the templates with a ', ' between each name.
+
+## What is a Template
+
+[Top](#webServerBase)
+
+You will need to read the documentation (I had to!). You can define single templates or groups of templates that can generate a single document.
+
+## Single Templates
+
+[Top](#webServerBase)
+
+These are files in the templates directory that have the following file naming convention:
+
+\<**templateNme**\>.template\<**templateExtension**\>
+
+All files in the directory that have that naming convention will be picked up. For example:
+
+* myTemplate.template.html - Template name will be myTemplate.html
+* another.file.template.txt - Template name will be another.file.txt
+
+## Group Templates
+
+[Top](#webServerBase)
+
+A special file is used to define a group of templates as a single entity. It can define multiple entities. It should have the following file naming convention:
+
+\<prefix\>.template.groups.json
+
+For example:
+
+* super.template.groups.json - the prefix is ignored. It is used to enable multiple group definition files to be read
+
+The template name is defined in the JSON file. The format is as follows:
+
+``` json
+[
+    {
+        "name": "composite1.html",
+        "templates": [
+            "import1.html",
+            "part1.html",
+            "part2.html"
+        ]
+    }, {
+        "name": "composite2.html",
+        "templates": [
+            "import2.html",
+            "part3.html",
+            "part4.html"
+        ]
+    }
+]
+```
+
+This defines two templates composite1.html and composite2.html. 
+
+* composite1.html - is made up of  import1.html, part1.html and part2.html
+* composite2.html - is made up of  import2.html, part3.html and part4.html
+
+## Template Mapping
+
+[Top](#webServerBase)
+

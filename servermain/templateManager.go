@@ -2,15 +2,17 @@ package servermain
 
 import (
 	"bytes"
+	"encoding/json"
+	"fmt"
 	"html/template"
 	"io"
 	"io/ioutil"
-	"encoding/json"
-	"fmt"
+	"net/http"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
+
 	"github.com/stuartdd/webServerBase/logging"
 )
 
@@ -22,9 +24,10 @@ type templateGroup struct {
 var groupList []templateGroup
 
 type templateData struct {
-	name     string
-	file     string
-	template *template.Template
+	name         string
+	file         string
+	dataProvider func(*http.Request, string, interface{})
+	template     *template.Template
 }
 
 /*
@@ -37,6 +40,31 @@ type Templates struct {
 var logger *logging.LoggerDataReference
 
 /*
+ReasonableTemplateFileHandler - Response handler for basic template processing
+*/
+func ReasonableTemplateFileHandler(request *http.Request, response *Response) {
+	h := NewRequestHandlerHelper(request, response)
+	server := h.GetServer()
+	name := h.GetNamedURLPart("site", "")
+	if server.HasTemplate(name) {
+		ww := h.GetResponseWriter()
+		contentType := LookupContentType(name)
+		if (contentType != "") && (ww.Header()[ContentTypeName] == nil) {
+			ww.Header()[ContentTypeName] = []string{contentType + "; charset=" + server.contentTypeCharset}
+		}
+		m := h.GetQueries()
+		server.TemplateWithWriter(ww, name, request, m)
+		response.Close()
+		if logging.IsAccess() {
+			response.GetWrappedServer().GetServerLogger().LogAccessf("<<< STATUS=%d: CODE=%d: RESP-FROM-FILE=%s: TYPE=%s", response.GetCode(), response.GetSubCode(), name, contentType)
+			response.GetWrappedServer().logHeaderMap(response.GetHeaders(), "<-<")
+		}
+	} else {
+		response.SetError404(h.GetURL()+" "+server.ListTemplateNames("|"), SCTemplateNotFound)
+	}
+}
+
+/*
 LoadTemplates - Load the templates given the template paths. For example
 	"templates\\"
 
@@ -44,7 +72,7 @@ Templates should be named *.template.* in order to be parsed!
 
 The resulting template name is the name with '.template' removed
 */
-func LoadTemplates(templatePath string) (*Templates, error) {
+func loadTemplates(templatePath string) (*Templates, error) {
 	logger = logging.NewLogger("Template")
 	templateList := &Templates{
 		templates: make(map[string]*templateData),
@@ -76,7 +104,7 @@ func loadGroupOfTemplates(templatePath string, groupFile string, templateList *T
 		}
 
 		for _, group := range groupList {
-			
+
 			for index := range group.Templates {
 				pathTotemplate, err := filepath.Abs(path.Join(templatePath, group.Templates[index]))
 				if err != nil {
@@ -99,8 +127,7 @@ func loadGroupOfTemplates(templatePath string, groupFile string, templateList *T
 	return filePathErr
 }
 
-
-func loadJSONGroupList(fileName string, obj interface{})  error {
+func loadJSONGroupList(fileName string, obj interface{}) error {
 	content, err := ioutil.ReadFile(fileName)
 	if err != nil {
 		return err
@@ -143,6 +170,9 @@ func loadSingletemplate(path string, templateList *Templates) error {
 HasTemplate - return true is the template is loaded and available
 */
 func (p *Templates) HasTemplate(templateName string) bool {
+	if p.templates == nil {
+		return false
+	}
 	if p.templates[templateName] == nil {
 		return false
 	}
@@ -153,10 +183,24 @@ func (p *Templates) HasTemplate(templateName string) bool {
 HasAnyTemplates - return true is there are any templates
 */
 func (p *Templates) HasAnyTemplates() bool {
+	if p.templates == nil {
+		return false
+	}
 	if len(p.templates) == 0 {
 		return false
 	}
 	return true
+}
+
+/*
+AddDataProvider - Add a method that will provide data to a template
+*/
+func (p *Templates) AddDataProvider(templateName string, provider func(*http.Request, string, interface{})) {
+	if p.HasTemplate(templateName) {
+		p.templates[templateName].dataProvider = provider
+	} else {
+		panic("Add Template Provider: Template[" + templateName + "] not found")
+	}
 }
 
 /*
@@ -177,22 +221,30 @@ func ListTemplateNames(delim string, t map[string]*templateData) string {
 /*
 ExecuteWriter writes a template to a io.Writer object
 */
-func (p *Templates) ExecuteWriter(w io.Writer, templateName string, data interface{}) {
+func (p *Templates) executeWriter(w io.Writer, templateName string, data interface{}) {
 	tmpl := p.templates[templateName]
 	if tmpl == nil {
-		ThrowPanic("E",400,SCTemplateNotFound, fmt.Sprintf("Template '%s' not found", templateName),"")
+		ThrowPanic("E", 400, SCTemplateNotFound, fmt.Sprintf("Template '%s' not found", templateName), "")
 	}
 	err := tmpl.template.Execute(w, data)
 	if err != nil {
-		ThrowPanic("E",400,SCTemplateError, fmt.Sprintf("Template '%s' error", templateName),err.Error())
+		ThrowPanic("E", 400, SCTemplateError, fmt.Sprintf("Template '%s' error", templateName), err.Error())
 	}
 }
 
 /*
 ExecuteString writes a template to a string using ExecuteWriter
 */
-func (p *Templates) ExecuteString(templateName string, data interface{}) (string) {
+func (p *Templates) executeString(templateName string, data interface{}) string {
 	var buf bytes.Buffer
-	p.ExecuteWriter(&buf, templateName, data)
+	p.executeWriter(&buf, templateName, data)
 	return buf.String()
+}
+
+func (p *Templates) executeDataProvider(templateName string, r *http.Request, data interface{}) {
+	if p.HasTemplate(templateName) {
+		if p.templates[templateName].dataProvider != nil {
+			p.templates[templateName].dataProvider(r, templateName, data)
+		}
+	}
 }

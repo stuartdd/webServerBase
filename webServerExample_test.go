@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+
 	"github.com/stuartdd/webServerBase/config"
 	"github.com/stuartdd/webServerBase/logging"
 	"github.com/stuartdd/webServerBase/servermain"
@@ -23,6 +24,9 @@ Start server. Do loads of tests. Stop the server...
 */
 func TestServer(t *testing.T) {
 	startServer(t)
+	test.AssertStringContains(t, "", sendGet(t, 200, "site/index1.html?Material=LEAD", headers("html", "")), []string{"<title>GOLD</title>"})
+	test.AssertStringContains(t, "", sendGet(t, 404, "site/testfile", headers("json", "")), []string{"\"Status\":404", "\"Code\":" + strconv.Itoa(servermain.SCTemplateNotFound), "Not Found", "/site/testfile"})
+
 	/*
 		Test static file retrieval
 	*/

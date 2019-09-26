@@ -85,8 +85,17 @@ func RunWithConfig(configData *config.Data, executable string) {
 		Set the static file data paths for the given OS. When this is done we can add the handler.
 	*/
 	serverInstance.SetStaticFileServerData(configData.GetConfigDataStaticFilePathForOS())
+	/*
+		Set up the templates directory
+	*/
 	serverInstance.SetPathToTemplates(configData.GetConfigDataTemplateFilePathForOS())
+
 	log.LogInfof("Availiable Templates: %s\n", serverInstance.ListTemplateNames(", "))
+
+	/*
+		When we return template "index1.html" we need to provide some data so provide a dataProvider
+	*/
+	serverInstance.AddTemplateDataProvider("index1.html", TemplateDataProviderForIndex1)
 	/*
 		Add too or override the Default content types
 	*/
@@ -95,14 +104,6 @@ func RunWithConfig(configData *config.Data, executable string) {
 		Add redirections from the config data
 	*/
 	serverInstance.SetRedirections(config.GetConfigDataInstance().Redirections)
-	/*
-		Add static file paths.
-	*/
-	//	serverInstance.SetStaticFileDataFromMap(config.GetConfigDataStaticPathForOS())
-	/*
-		Add template file path (singular).
-	*/
-	//	serverInstance.SetTemplatesPath(config.GetConfigDataTemplatePathForOS())
 	/*
 		Set the http status code returned if a panic is thrown by any od the handlers
 	*/
@@ -113,6 +114,7 @@ func RunWithConfig(configData *config.Data, executable string) {
 	serverInstance.AddMappedHandler("/stop/?", http.MethodGet, stopServerInstance)
 	serverInstance.AddMappedHandler("/status", http.MethodGet, statusHandler)
 	serverInstance.AddMappedHandler("/static/?", http.MethodGet, servermain.ReasonableStaticFileHandler)
+	serverInstance.AddMappedHandler("/site/?", http.MethodGet, servermain.ReasonableTemplateFileHandler)
 	serverInstance.AddMappedHandler("/calc/qube/?", http.MethodGet, qubeHandler)
 	serverInstance.AddMappedHandler("/calc/?/div/?", http.MethodGet, divHandler)
 	serverInstance.AddMappedHandler("/path/?/file/?", http.MethodPost, fileSaveHandler)
@@ -126,6 +128,29 @@ func RunWithConfig(configData *config.Data, executable string) {
 /************************************************
 Start of handlers section
 *************************************************/
+/*
+TemplateDataProviderOne - When template "index1.html" is executed this method is called.
+ref above: serverInstance.AddTemplateDataProvider("index1.html", TemplateDataProviderOne)
+
+The data object is returned to the template for substitution.
+
+In this case the handler ReasonableTemplateFileHandler in file templateManager.go passes in the Query arguments
+from the URL as a map as the data object.
+
+In this method if it is a map we can assume ReasonableTemplateFileHandler has been invoked.
+
+The test in webServerExample_test.go sends 'site/index1.html?Material=LEAD' so Material would be LEAD.
+This data provider simply changes the value of Material to GOLD.
+The test asserts that GOLD is returned in the template confirming that this provider has been called.
+*/
+func TemplateDataProviderForIndex1(r *http.Request, templateName string, data interface{}) {
+	v, ok := data.(map[string]string)
+	if ok {
+		v["Material"] = "GOLD"
+		v["TemplateName"] = templateName
+	}
+}
+
 func fileSaveHandler(r *http.Request, response *servermain.Response) {
 	d := servermain.NewRequestHandlerHelper(r, response)
 	fileName := d.GetNamedURLPart("file", "") // Not optional

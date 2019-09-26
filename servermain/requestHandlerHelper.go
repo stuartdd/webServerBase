@@ -1,11 +1,11 @@
 package servermain
 
 import (
-	"fmt"
-	"net/url"
-	"net/http"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
+	"net/http"
+	"net/url"
 	"strings"
 )
 
@@ -15,12 +15,12 @@ RequestHandlerHelper contains details of url parameters
 Dont fetch anything until asked (lazy load)
 */
 type RequestHandlerHelper struct {
-	request  *http.Request
-	response  *Response
-	url      string
-	urlParts []string
+	request       *http.Request
+	response      *Response
+	url           string
+	urlParts      []string
 	urlPartsCount int
-	queries url.Values
+	queries       url.Values
 }
 
 /*
@@ -28,29 +28,28 @@ NewRequestHandlerHelper create a new url details with a url
 */
 func NewRequestHandlerHelper(r *http.Request, response *Response) *RequestHandlerHelper {
 	return &RequestHandlerHelper{
-		request:  r,
-		response: response,
-		url:      "",
-		urlParts: nil,
+		request:       r,
+		response:      response,
+		url:           "",
+		urlParts:      nil,
 		urlPartsCount: 0,
-		queries: nil,
+		queries:       nil,
 	}
 }
 
 /*
 GetServer returns the server instance
 */
-func (p *RequestHandlerHelper) GetServer() (*ServerInstanceData) {
+func (p *RequestHandlerHelper) GetServer() *ServerInstanceData {
 	return p.response.GetWrappedServer()
 }
 
 /*
 GetResponseWriter returns the server instance
 */
-func (p *RequestHandlerHelper) GetResponseWriter() (*ResponseWriterWrapper) {
+func (p *RequestHandlerHelper) GetResponseWriter() *ResponseWriterWrapper {
 	return p.response.GetWrappedWriter()
 }
-
 
 /*
 GetStaticFileServerData get the path for a static name
@@ -69,9 +68,10 @@ func (p *RequestHandlerHelper) GetStaticPathForName(name string) *FileServerCont
 /*
 GetStaticPathForURL get the path for a static url
 */
-func (p *RequestHandlerHelper) GetStaticPathForURL(url string) *FileServerContainer  {
+func (p *RequestHandlerHelper) GetStaticPathForURL(url string) *FileServerContainer {
 	return p.GetServer().GetStaticPathForURL(url)
 }
+
 /*
 GetJSONBodyAsObject return an object, populated from a known JSON structure. This can only be done ONCE!
 Example: (see RequestTools_test.go)
@@ -92,7 +92,7 @@ Use this method if the expected Json starts with {
 Example: (see RequestTools_test.go)
 	aMap, err := d.GetJSONBodyAsMap()
 */
-func (p *RequestHandlerHelper) GetJSONBodyAsMap() (map[string]interface{}) {
+func (p *RequestHandlerHelper) GetJSONBodyAsMap() map[string]interface{} {
 	jsonBytes := p.GetBody()
 	var v interface{}
 	err := json.Unmarshal(jsonBytes, &v)
@@ -101,12 +101,13 @@ func (p *RequestHandlerHelper) GetJSONBodyAsMap() (map[string]interface{}) {
 	}
 	return v.(map[string]interface{})
 }
+
 /*
 GetJSONBodyAsList read the body from the request. This can only be done ONCE!
 Use this method if the expected Json starts with [
 	aList, err := d.GetJSONBodyAsList()
 */
-func (p *RequestHandlerHelper) GetJSONBodyAsList() ([]interface{}) {
+func (p *RequestHandlerHelper) GetJSONBodyAsList() []interface{} {
 	jsonBytes := p.GetBody()
 	var v interface{}
 	err := json.Unmarshal(jsonBytes, &v)
@@ -119,14 +120,14 @@ func (p *RequestHandlerHelper) GetJSONBodyAsList() ([]interface{}) {
 /*
 GetBodyString read the body from the request. This can only be done ONCE!
 */
-func (p *RequestHandlerHelper) GetBodyString() (string) {
+func (p *RequestHandlerHelper) GetBodyString() string {
 	return string(p.GetBody())
 }
 
 /*
 GetBody read the body from the request. This can only be done ONCE!
 */
-func (p *RequestHandlerHelper) GetBody() ([]byte) {
+func (p *RequestHandlerHelper) GetBody() []byte {
 	bodyBytes, err := ioutil.ReadAll(p.request.Body)
 	defer p.request.Body.Close()
 	if err != nil {
@@ -139,7 +140,7 @@ func (p *RequestHandlerHelper) GetBody() ([]byte) {
 GetURL returns the URL (Cached in the in thos tool's instance)
 */
 func (p *RequestHandlerHelper) GetURL() string {
-	if (p.url=="") {
+	if p.url == "" {
 		p.url = p.request.URL.Path
 	}
 	return p.url
@@ -150,11 +151,11 @@ GetURLPart returns part by index or panics if not found and default is empty
 */
 func (p *RequestHandlerHelper) GetURLPart(n int, defaultValue string) string {
 	list := p.readParts()
-	if ((n>=0 ) && (n<p.urlPartsCount)) {
+	if (n >= 0) && (n < p.urlPartsCount) {
 		return list[n]
 	}
-	if (defaultValue == "") {
-		ThrowPanic("E", 400, SCMissingURLParam, fmt.Sprintf("URL parameter '%d' missing", n), fmt.Sprintf("URL parameter at position '%d' returned an empty value.",n))
+	if defaultValue == "" {
+		ThrowPanic("E", 400, SCMissingURLParam, fmt.Sprintf("URL parameter '%d' missing", n), fmt.Sprintf("URL parameter at position '%d' returned an empty value.", n))
 	}
 	return defaultValue
 }
@@ -173,15 +174,16 @@ GetNamedURLPart returns part by name or panics if not found and default is empty
 func (p *RequestHandlerHelper) GetNamedURLPart(name string, defaultValue string) string {
 	list := p.readParts()
 	for index, val := range list {
-		if (val == name) {
+		if val == name {
 			return p.GetURLPart(index+1, defaultValue)
 		}
 	}
-	if (defaultValue == "") {
-		ThrowPanic("E", 400, SCMissingURLParam, fmt.Sprintf("URL parameter '%s' missing", name), fmt.Sprintf("URL parameter '%s' returned an empty value.",name))
+	if defaultValue == "" {
+		ThrowPanic("E", 400, SCMissingURLParam, fmt.Sprintf("URL parameter '%s' missing", name), fmt.Sprintf("URL parameter '%s' returned an empty value.", name))
 	}
 	return defaultValue
 }
+
 /*
 GetNamedQuery returns part by name
 */
@@ -189,8 +191,16 @@ func (p *RequestHandlerHelper) GetNamedQuery(name string) string {
 	return p.readQueries().Get(name)
 }
 
+func (p *RequestHandlerHelper) GetQueries() map[string]string {
+	m := make(map[string]string)
+	for name, val := range p.readQueries() {
+		m[name] = val[0]
+	}
+	return m
+}
+
 func (p *RequestHandlerHelper) readParts() []string {
-	if (p.urlParts==nil) {
+	if p.urlParts == nil {
 		url := p.GetURL()
 		if strings.HasPrefix(url, "/") {
 			url = url[1:]
@@ -202,7 +212,7 @@ func (p *RequestHandlerHelper) readParts() []string {
 }
 
 func (p *RequestHandlerHelper) readQueries() url.Values {
-	if (p.queries==nil) {
+	if p.queries == nil {
 		p.queries = p.request.URL.Query()
 	}
 	return p.queries

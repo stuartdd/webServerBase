@@ -3,11 +3,13 @@ package servermain
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
 	"github.com/stuartdd/webServerBase/logging"
 )
 
@@ -284,7 +286,7 @@ func (p *ServerInstanceData) GetStaticPathForURL(url string) *FileServerContaine
 SetPathToTemplates initialise the template system
 */
 func (p *ServerInstanceData) SetPathToTemplates(pathToTemplates string) {
-	templ, err := LoadTemplates(pathToTemplates)
+	templ, err := loadTemplates(pathToTemplates)
 	if err != nil {
 		panic(err)
 	}
@@ -296,6 +298,17 @@ func (p *ServerInstanceData) SetPathToTemplates(pathToTemplates string) {
 }
 
 /*
+AddTemplateDataProvider add a data provider for a template
+*/
+func (p *ServerInstanceData) AddTemplateDataProvider(templateName string, provider func(*http.Request, string, interface{})) {
+	if p.templates != nil {
+		p.templates.AddDataProvider(templateName, provider)
+		return
+	}
+	panic("AddTemplateDataProvider: Templates have not been defined")
+}
+
+/*
 ListTemplateNames list template names
 */
 func (p *ServerInstanceData) ListTemplateNames(delim string) string {
@@ -303,6 +316,51 @@ func (p *ServerInstanceData) ListTemplateNames(delim string) string {
 		return ListTemplateNames(", ", p.templates.templates)
 	}
 	return ""
+}
+
+/*
+HasAnyTemplates list template names
+*/
+func (p *ServerInstanceData) HasAnyTemplates() bool {
+	if p.templates != nil {
+		return p.templates.HasAnyTemplates()
+	}
+	return false
+}
+
+/*
+HasTemplate list template names
+*/
+func (p *ServerInstanceData) HasTemplate(templateName string) bool {
+	if p.templates != nil {
+		return p.templates.HasTemplate(templateName)
+	}
+	return false
+}
+
+/*
+TemplateAsString list template names
+*/
+func (p *ServerInstanceData) TemplateAsString(templateName string, r *http.Request, data interface{}) string {
+	if p.HasTemplate(templateName) {
+		p.templates.executeDataProvider(templateName, r, data)
+		return p.templates.executeString(templateName, data)
+	}
+	ThrowPanic("W", 404, SCTemplateNotFound, "Not Found", "Template "+templateName+" was not found")
+	return ""
+}
+
+/*
+TemplateWithWriter write a template to the writer
+*/
+func (p *ServerInstanceData) TemplateWithWriter(w io.Writer, templateName string, r *http.Request, data interface{}) {
+	if p.HasTemplate(templateName) {
+		p.templates.executeDataProvider(templateName, r, data)
+		p.templates.executeWriter(w, templateName, data)
+		return
+	}
+	ThrowPanic("W", 404, SCTemplateNotFound, "Not Found", "Template "+templateName+" was not found")
+
 }
 
 /*

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
+
 	"github.com/stuartdd/webServerBase/logging"
 )
 
@@ -13,7 +14,7 @@ FileServerContainer contains the url prefix and associated file path
 */
 type FileServerContainer struct {
 	URLPrefix string
-	FilePath    string
+	FilePath  string
 	next      *FileServerContainer
 }
 
@@ -52,7 +53,7 @@ func (p *StaticFileServerData) AddStaticFileServerData(urlPrefix string, filePat
 	container.FilePath = filePath
 	container.next = &FileServerContainer{
 		URLPrefix: "",
-		FilePath:    "",
+		FilePath:  "",
 		next:      nil,
 	}
 }
@@ -130,8 +131,8 @@ func ReasonableStaticFileHandler(request *http.Request, response *Response) {
 	fileShort := url[len(container.URLPrefix):]
 	filename := filepath.Join(container.FilePath, fileShort)
 	/*
-	Implemented in servermain/serverInstanceData.go. This wraps the http.ServeContent to return the file contents.
-	Panics 404 if file not found. Panics 500 if file cannot be read 
+		Implemented in servermain/serverInstanceData.go. This wraps the http.ServeContent to return the file contents.
+		Panics 404 if file not found. Panics 500 if file cannot be read
 	*/
 	ServeContent(ww, request, filename)
 	/*
