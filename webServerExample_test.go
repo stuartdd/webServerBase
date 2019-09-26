@@ -18,6 +18,7 @@ import (
 
 var configData *config.Data
 var testLog = logging.CreateTestLogger("Test-Logger")
+var port string
 
 /*
 Start server. Do loads of tests. Stop the server...
@@ -90,7 +91,7 @@ func headers(ct string, cl string) map[string]string {
 }
 
 func sendGet(t *testing.T, st int, url string, headers map[string]string) string {
-	resp, err := http.Get("http://localhost:8080/" + url)
+	resp, err := http.Get("http://localhost:" + port + "/" + url)
 	if err != nil {
 		test.Fail(t, "Get Failed", err.Error())
 	}
@@ -114,7 +115,7 @@ func sendGet(t *testing.T, st int, url string, headers map[string]string) string
 }
 
 func sendPost(t *testing.T, st int, url string, postBody string, headers map[string]string) string {
-	resp, err := http.Post("http://localhost:8080/"+url, "application/json", strings.NewReader(postBody))
+	resp, err := http.Post("http://localhost:" + port + "/"+url, "application/json", strings.NewReader(postBody))
 	if err != nil {
 		test.Fail(t, "Post Failed", err.Error())
 	}
@@ -159,6 +160,7 @@ func startServer(t *testing.T) {
 			test.Fail(t, "Read response Failed", err.Error())
 		}
 		configData = config.GetConfigDataInstance()
+		port = fmt.Sprintf("%d",configData.Port)
 		go RunWithConfig(configData, "TestExe")
 		time.Sleep(time.Millisecond * time.Duration(500))
 	}
