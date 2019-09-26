@@ -3,10 +3,6 @@
 * [Packages](#Packages)
 * [Directories](#Directories)
 * [Root Files](#Root%20Files)
-* [Configuration](#Configuration)
-* [Server Configuration](#Server%20Configuration)
-  * [Server start](#Server%20start)
-* [Config Package](#Config%20Package)
 * [Logger Configuration](#Logger%20Configuration)
   * [File Name substitutions](#File%20Name%20substitutions)
 * [Static files](#Static%20files)
@@ -14,8 +10,9 @@
   * [What is a Template](#What%20is%20a%20Template)
   * [Single Templates](#Single%20Templates)
   * [Group Templates](#Group%20Templates)
+  * [Template Data](#Template%20Data)
 
-[comment]: <> (Use Crtl+Shift+v to view in Visual Code MD pluggin markdownlint)
+[comment]: <> (Use Crtl+Shift+v | Crtl+k+v to view in Visual Code MD pluggin markdownlint)
 
 GoLang based ReST based Server
 
@@ -273,13 +270,21 @@ Will list the templates with a ', ' between each name.
 
 You will need to read the documentation (I had to!). You can define single templates or groups of templates that can generate a single document.
 
+The template directory is defined using:
+
+``` go
+serverInstance.SetPathToTemplates("templates/)
+```
+
+The directory is parsed and all qualifying templates are added.
+
 ## Single Templates
 
 [Top](#webServerBase)
 
 These are files in the templates directory that have the following file naming convention:
 
-\<**templateNme**\>.template\<**templateExtension**\>
+\<**templateNme**\>.template.\<**templateExtension**\>
 
 All files in the directory that have that naming convention will be picked up. For example:
 
@@ -290,15 +295,17 @@ All files in the directory that have that naming convention will be picked up. F
 
 [Top](#webServerBase)
 
-A special file is used to define a group of templates as a single entity. It can define multiple entities. It should have the following file naming convention:
+A special JSON file is used to define a group of templates as a single entity. It can define multiple entities and there can be multiple files. 
 
-\<prefix\>.template.groups.json
+It should have the following file naming convention:
+
+\<**prefix**\>.template.groups.json
 
 For example:
 
-* super.template.groups.json - the prefix is ignored. It is used to enable multiple group definition files to be read
+* super.template.groups.json - Note the prefix is ignored. It is used to enable multiple group definition files to be read
 
-The template name is defined in the JSON file. The format is as follows:
+The template name is defined in the JSON file not the file name of the group file. The format is as follows:
 
 ``` json
 [
@@ -320,7 +327,7 @@ The template name is defined in the JSON file. The format is as follows:
 ]
 ```
 
-This defines two templates composite1.html and composite2.html. 
+This defines two templates composite1.html and composite2.html.
 
 * composite1.html - is made up of  import1.html, part1.html and part2.html
 * composite2.html - is made up of  import2.html, part3.html and part4.html
@@ -329,3 +336,40 @@ This defines two templates composite1.html and composite2.html.
 
 [Top](#webServerBase)
 
+A Mapping Handler is required to process templates. There is an example in **webServerExample.go**:
+
+``` go
+serverInstance.AddMappedHandler("/site/?", http.MethodGet, servermain.ReasonableTemplateFileHandler)
+```
+
+A reasonable template handler is defined in **templateManager.go**. You can use this as it is or use it to base your own version on.
+
+## Template Data
+
+[Top](#webServerBase)
+
+To derive data for your templates you need a data object (or data set). This is an interface{} and is often a map of type **map[string]string**.
+
+However if you read the GO documentation for templates it can be all sorts of things that contain data for substitution in templates.
+
+You can delegate to a function to create a data set for any template. Create a function like this one:
+
+``` go
+func templateDataProvider(r *http.Request, templateName string, data interface{})
+```
+
+There is an example defined in **webServerExample.go**.
+
+Then add that function to the server:
+
+``` go
+serverInstance.AddTemplateDataProvider(templateDataProvider)
+```
+
+Any template that is executed will call that function before it is resolved. This is your opportunity to define some data for the template
+
+The example **templateDataProvider** in **webServerExample.go** reads a map from the config data and based on the template name adds the values in the map to the data.
+
+Based on the template name you could call a data base or read a file and add the data that way.
+
+The reasonable template handler defined in **templateManager.go** adds the URL Query data to a map before calling **templateDataProvider** so the map already has some data in it.

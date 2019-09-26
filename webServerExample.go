@@ -30,6 +30,9 @@ var serverInstance *servermain.ServerInstanceData
 
 func main() {
 
+	/*
+		derive the name of the application
+	*/ 
 	exec := config.GetApplicationModuleName()
 
 	/*
@@ -89,13 +92,14 @@ func RunWithConfig(configData *config.Data, executable string) {
 		Set up the templates directory
 	*/
 	serverInstance.SetPathToTemplates(configData.GetConfigDataTemplateFilePathForOS())
-
+	/*
+	Add the list of templates to the log
+	*/
 	log.LogInfof("Availiable Templates: %s\n", serverInstance.ListTemplateNames(", "))
-
 	/*
 		When we return template "index1.html" we need to provide some data so provide a dataProvider
 	*/
-	serverInstance.AddTemplateDataProvider(TemplateDataProvider)
+	serverInstance.AddTemplateDataProvider(templateDataProvider)
 	/*
 		Add too or override the Default content types
 	*/
@@ -108,8 +112,17 @@ func RunWithConfig(configData *config.Data, executable string) {
 		Set the http status code returned if a panic is thrown by any od the handlers
 	*/
 	serverInstance.SetPanicStatusCode(configData.PanicResponseCode)
-
+	/*
+	A before handler is executed before ALL requests are passed to Mapped handlers
+	You can add multiple before handlers. These are usefull for access control and other global checks
+	If the before handler vetos the request then the Mapped handlers are not called
+	*/
 	serverInstance.AddBeforeHandler(filterBefore)
+	/*
+	Add a function for all URL mappings. A ? matches ANY value. A * indicates any value after the match 
+	E.G. /x/y/* will activate for x/y/1/d/3/4/5/
+	E.G. /x/?/y wil activate for /x/1/y
+	*/
 	serverInstance.AddMappedHandler("/stop", http.MethodGet, stopServerInstance)
 	serverInstance.AddMappedHandler("/stop/?", http.MethodGet, stopServerInstance)
 	serverInstance.AddMappedHandler("/status", http.MethodGet, statusHandler)
@@ -119,6 +132,11 @@ func RunWithConfig(configData *config.Data, executable string) {
 	serverInstance.AddMappedHandler("/calc/?/div/?", http.MethodGet, divHandler)
 	serverInstance.AddMappedHandler("/path/?/file/?", http.MethodPost, fileSaveHandler)
 	serverInstance.AddMappedHandler("/path/?/file/?/ext/?", http.MethodPost, fileSaveHandler)
+	/*
+	An after handler is executed after ALL requests have been handles
+	You can add multiple after handlers. 
+	If the after handler vetos the request then the after handler response is returned not the mapped handler's response
+	*/
 
 	serverInstance.AddAfterHandler(filterAfter)
 
@@ -130,7 +148,7 @@ Start of handlers section
 *************************************************/
 
 /*
-TemplateDataProvider - When a template is executed this method is called.
+templateDataProvider (example method) - When a template is executed this method is called.
 ref above: serverInstance.AddTemplateDataProvider(TemplateDataProviderOne)
 
 The data object is returned to the template for substitution.
@@ -145,37 +163,69 @@ This data provider reads the confog TemplateData maps and merges the map associa
 The test asserts that Soot is returned in the template confirming that this provider has been called 
 and the config data has been read.
 */
-func TemplateDataProvider(r *http.Request, templateName string, data interface{}) {
+func templateDataProvider(r *http.Request, templateName string, data interface{}) {
+	/*
+	Only get involved if the data is a map
+	*/
 	v, ok := data.(map[string]string)
 	if ok {
+		/*
+		Look up a data map in the configuration data using the template name 
+		*/
 		if (config.GetConfigDataInstance().TemplateData != nil) {
 			configData := config.GetConfigDataInstance().TemplateData[templateName]
 			if (configData != nil) {
+				/*
+				Merge the existing data and the config data. 
+				Duplicate values in config data will take presedence.
+				*/
 				for name, value := range configData {
 					v[name] = value
 				}
 			}
 		}
+		/*
+		Add the template name in for good measure!
+		*/
 		v["TemplateName"] = templateName
 	}
 }
 
+/*
+fileSaveHandler (example handler) will save the POST message body in a file
+defined by the URL parameters
+/path/?/file/? - Save the body at the static path ? with the file name ?
+/path/?/file/?/ext/? - Save the body at the static path ? with the file name ? and extension ?
+both URLs invoke this function
+
+Note the path MUST be found in the static file mappings (via GetStaticPathForName)
+So if the value is /path/data/file/fn/ext/txt and the mapping is defined as 
+{"/static/":"site\\", "data":"saved\\"}
+Then the file is saved as saved\\fn.txt. Otherwise a file not found is returned
+*/
 func fileSaveHandler(r *http.Request, response *servermain.Response) {
-	d := servermain.NewRequestHandlerHelper(r, response)
-	fileName := d.GetNamedURLPart("file", "") // Not optional
-	pathName := d.GetNamedURLPart("path", "") // Not optional
-	ext := d.GetNamedURLPart("ext", "txt")    // Optional. Default value txt
-	fullFile := filepath.Join(d.GetStaticPathForName(pathName).FilePath, fileName+"."+ext)
-	err := ioutil.WriteFile(fullFile, d.GetBody(), 0644)
+	h := servermain.NewRequestHandlerHelper(r, response)
+	fileName := h.GetNamedURLPart("file", "") // Not optional
+	pathName := h.GetNamedURLPart("path", "") // Not optional
+	ext := h.GetNamedURLPart("ext", "txt")    // Optional. Default value txt
+	fullFile := filepath.Join(h.GetStaticPathForName(pathName).FilePath, fileName+"."+ext)
+	err := ioutil.WriteFile(fullFile, h.GetBody(), 0644)
 	if err != nil {
 		servermain.ThrowPanic("E", 400, SCWriteFile, fmt.Sprintf("fileSaveHandler: static path [%s], file [%s] could not write file", pathName, fileName), err.Error())
 	}
 	response.SetResponse(201, "{\"Created\":\"OK\"}", "application/json")
 }
 
+/*
+stopServerInstance - Stops the server in N seconds defined by optional URL parameter.
+Note that the delay is so the response can be processed and returned to the client (or browser)
+/stop
+/stop/?
+both invoke this function
+*/
 func stopServerInstance(r *http.Request, response *servermain.Response) {
-	d := servermain.NewRequestHandlerHelper(r, response)
-	count, err := strconv.Atoi(d.GetNamedURLPart("stop", "2"))
+	h := servermain.NewRequestHandlerHelper(r, response)
+	count, err := strconv.Atoi(h.GetNamedURLPart("stop", "2")) // Optional. Default value 2
 	if err != nil {
 		servermain.ThrowPanic("E", 400, SCParamValidation, "Invalid stop period", err.Error())
 	} else {
@@ -184,9 +234,12 @@ func stopServerInstance(r *http.Request, response *servermain.Response) {
 	}
 }
 
+/*
+qubeHandler (example function) - return the qube of the number. E.G. qube of 5 "/calc/qube/5"
+*/
 func qubeHandler(r *http.Request, response *servermain.Response) {
-	d := servermain.NewRequestHandlerHelper(r, response)
-	p1 := d.GetNamedURLPart("qube", "")
+	h := servermain.NewRequestHandlerHelper(r, response)
+	p1 := h.GetNamedURLPart("qube", "")
 	a1, err := strconv.Atoi(p1)
 	if err != nil {
 		servermain.ThrowPanic("E", 400, SCParamValidation, "invalid number "+p1, err.Error())
@@ -194,10 +247,15 @@ func qubeHandler(r *http.Request, response *servermain.Response) {
 	response.SetResponse(200, strconv.Itoa(a1*a1*a1*a1), "")
 }
 
+/*
+divHandler (example function) - return the a / b of the number. E.G. /calc/?/div/?
+For example /calc/10/div/2 returns 5
+This is used to test the exception (panic) handling by using /calc/10/div/0
+*/
 func divHandler(r *http.Request, response *servermain.Response) {
-	d := servermain.NewRequestHandlerHelper(r, response)
-	p1 := d.GetNamedURLPart("calc", "")
-	p2 := d.GetNamedURLPart("div", "")
+	h := servermain.NewRequestHandlerHelper(r, response)
+	p1 := h.GetNamedURLPart("calc", "")
+	p2 := h.GetNamedURLPart("div", "")
 	a1, err := strconv.Atoi(p1)
 	if err != nil {
 		servermain.ThrowPanic("E", 400, SCParamValidation, "invalid number "+p1, err.Error())
