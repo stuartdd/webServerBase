@@ -8,7 +8,7 @@
     "windows":"templates\\", 
     "linux":"templates/"
   },
-  "port" : 8081,
+  "port" : 8080,
   "redirections" : {"/":"/static/index.html"},
   "contentTypes" : {"ico": "image/x-icon"},
   "contentTypeCharset":"utf-8",

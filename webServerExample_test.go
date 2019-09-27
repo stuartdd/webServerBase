@@ -25,6 +25,8 @@ Start server. Do loads of tests. Stop the server...
 */
 func TestServer(t *testing.T) {
 	startServer(t)
+	defer stopServer(t)
+
 	test.AssertStringContains(t, "", sendGet(t, 200, "site/index1.html?Material=LEAD", headers("html", "")), []string{"<title>Soot</title>"})
 	test.AssertStringContains(t, "", sendGet(t, 404, "site/testfile", headers("json", "")), []string{"\"Status\":404", "\"Code\":" + strconv.Itoa(servermain.SCTemplateNotFound), "Not Found", "/site/testfile"})
 
@@ -76,7 +78,6 @@ func TestServer(t *testing.T) {
 	prc := configData.PanicResponseCode
 	test.AssertStringContains(t, "", sendGet(t, prc, "calc/10/div/0", headers("json", "")), []string{"\"Status\":" + strconv.Itoa(prc), "\"Code\":" + strconv.Itoa(servermain.SCRuntimeError), "integer divide by zero", "Internal Server Error"})
 
-	stopServer(t)
 }
 
 func headers(ct string, cl string) map[string]string {
@@ -115,7 +116,7 @@ func sendGet(t *testing.T, st int, url string, headers map[string]string) string
 }
 
 func sendPost(t *testing.T, st int, url string, postBody string, headers map[string]string) string {
-	resp, err := http.Post("http://localhost:" + port + "/"+url, "application/json", strings.NewReader(postBody))
+	resp, err := http.Post("http://localhost:"+port+"/"+url, "application/json", strings.NewReader(postBody))
 	if err != nil {
 		test.Fail(t, "Post Failed", err.Error())
 	}
@@ -160,7 +161,7 @@ func startServer(t *testing.T) {
 			test.Fail(t, "Read response Failed", err.Error())
 		}
 		configData = config.GetConfigDataInstance()
-		port = fmt.Sprintf("%d",configData.Port)
+		port = fmt.Sprintf("%d", configData.Port)
 		go RunWithConfig(configData, "TestExe")
 		time.Sleep(time.Millisecond * time.Duration(500))
 	}
