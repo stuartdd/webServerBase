@@ -5,69 +5,105 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/stuartdd/webServerBase/test"
 )
 
-func TestCreateWithWC(t *testing.T) {
-	ResetMappingElementTree()
-	AddPathMappingElement("a1/b3", "GET4", statusHandler)
-	AddPathMappingElement("/a1/b1/c1", "GET1", statusHandler)
-	AddPathMappingElement("/a1/?/c3", "GET2", statusHandler)
-	AddPathMappingElement("a1/?/c1", "GET3", statusHandler)
-	AddPathMappingElement("a2/b1/c1", "GET5", statusHandler)
-	AddPathMappingElement("a3/b1/?", "GET6", statusHandler)
-	AddPathMappingElement("a3/b2/?/", "GET7", statusHandler)
-	AddPathMappingElement("a3//b3//?//", "GET8", statusHandler)
-	AddPathMappingElement("a4/*", "GET98", statusHandler)
-	AddPathMappingElement("a5", "GET99", statusHandler)
-	fmt.Println(GetMappingElementTreeString("----------------- TestCreateWithWC -----------------"))
-	assertFound(t, "a4/xx/aa", "GET98")
-	assertFound(t, "a4/xx", "GET98")
-	assertFound(t, "a4/1/2/3/4/5/6", "GET98")
-	assertFound(t, "a5", "GET99")
-	assertNotFound(t, "a5/a6", "")
-	assertNotFound(t, "a3/b1/xx/aa", "")
-	assertFound(t, "a3/b1/xx", "GET6")
-	assertFound(t, "a3/b2/123", "GET7")
-	assertFound(t, "a3/b3/1234", "GET8")
-	assertNotFound(t, "a3/b3/xx/aa", "")
-	assertFound(t, "/a1/xx/c3", "GET2")
-	assertFound(t, "/a1/b1/c1", "GET1")
-	assertFound(t, "a1/xx/c1", "GET3")
-	assertFound(t, "a1/b2/c1", "GET3")
-	assertFound(t, "a1/b3", "GET4")
-	assertFound(t, "a2/b1/c1", "GET5")
-	assertNotFound(t, "a1/b5", "")
-}
+// func TestCreateWithWC(t *testing.T) {
+// 	ResetMappingElementTree()
+// 	AddPathMappingElement("a1/b3", "GET4", statusHandler)
+// 	AddPathMappingElement("/a1/b1/c1", "GET1", statusHandler)
+// 	AddPathMappingElement("/a1/?/c3", "GET2", statusHandler)
+// 	AddPathMappingElement("a1/?/c1", "GET3", statusHandler)
+// 	AddPathMappingElement("a2/b1/c1", "GET5", statusHandler)
+// 	AddPathMappingElement("a3/b1/?", "GET6", statusHandler)
+// 	AddPathMappingElement("a3/b2/?/", "GET7", statusHandler)
+// 	AddPathMappingElement("a3//b3//?//", "GET8", statusHandler)
+// 	AddPathMappingElement("a4/*", "GET98", statusHandler)
+// 	AddPathMappingElement("a5", "GET99", statusHandler)
+// 	fmt.Println(GetMappingElementTreeString("----------------- TestCreateWithWC -----------------"))
+// 	assertFound(t, "a4/xx/aa", "GET98")
+// 	assertFound(t, "a4/xx", "GET98")
+// 	assertFound(t, "a4/1/2/3/4/5/6", "GET98")
+// 	assertFound(t, "a5", "GET99")
+// 	assertNotFound(t, "a5/a6", "")
+// 	assertNotFound(t, "a3/b1/xx/aa", "")
+// 	assertFound(t, "a3/b1/xx", "GET6")
+// 	assertFound(t, "a3/b2/123", "GET7")
+// 	assertFound(t, "a3/b3/1234", "GET8")
+// 	assertNotFound(t, "a3/b3/xx/aa", "")
+// 	assertFound(t, "/a1/xx/c3", "GET2")
+// 	assertFound(t, "/a1/b1/c1", "GET1")
+// 	assertFound(t, "a1/xx/c1", "GET3")
+// 	assertFound(t, "a1/b2/c1", "GET3")
+// 	assertFound(t, "a1/b3", "GET4")
+// 	assertFound(t, "a2/b1/c1", "GET5")
+// 	assertNotFound(t, "a1/b5", "")
+// }
 
 /*
 TestCreateSimple test simple (no wildcard) lookup creation
 */
 func TestCreateSimple(t *testing.T) {
-	ResetMappingElementTree()
-	AddPathMappingElement("/a1/b1/c1", http.MethodGet, statusHandler)
-	AddPathMappingElement("/a1/b1/c3/", http.MethodGet, statusHandler)
-	AddPathMappingElement("/a1/b2/c1", "post", statusHandler)
-	AddPathMappingElement("/a1/b3", http.MethodPost, statusHandler)
-	AddPathMappingElement("a2/b1/c1", "get", statusHandler)
-	fmt.Println(GetMappingElementTreeString("----------------- TestCreateSimple -----------------"))
-	assertNotFound(t, "/a1/b5", "")
-	assertNotFound(t, "/a1/b5", http.MethodGet)
-	assertNotFound(t, "/a1/b5", http.MethodPost)
-	assertNotFound(t, "/a1/b1/c1", "Post")
-	assertFound(t, "/a1/b1/c1", http.MethodGet)
-	assertFound(t, "/a1/b1/c3", http.MethodGet)
-	assertFound(t, "/a1/b2/c1", http.MethodPost)
-	assertFound(t, "a1/b3", "Post")
-	assertNotFound(t, "a1/b3", http.MethodGet)
-	assertFound(t, "a2/b1/c1", http.MethodGet)
-	assertNotFound(t, "a1/b1/c5", "")
-	assertNotFound(t, "a1/b3/b6", "")
-	assertNotFound(t, "a2/b3/b6", "")
-	assertNotFound(t, "a2/b1/b6", "")
+	m := NewMappingElements(nil)
+	m.AddPathMappingElement("/a1/b1/c1", http.MethodGet, statusHandler)
+	m.AddPathMappingElement("/a1/b1/c3/", http.MethodPost, statusHandler)
+	m.AddPathMappingElement("/a1/b2/c1", "post", statusHandler)
+	m.AddPathMappingElement("/a1/b3", http.MethodGet, statusHandler)
+	m.AddPathMappingElement("a2/b1/c1", "get", statusHandler)
+	fmt.Println(m.GetMappingElementTreeString("----------------- TestCreateSimple -----------------"))
+	assertFound(t, m, "/a1/b1/c1", http.MethodGet)
+	assertNotFound(t, m, "/a1/b1/c1", http.MethodPost)
+	assertNotFound(t, m, "/a1/b1/c1", "")
+	assertNotFound(t, m, "/a1/b5", http.MethodGet)
+	assertNotFound(t, m, "/a1/b5", http.MethodPost)
+	assertNotFound(t, m, "/a1/b5", "")
+
+	assertFound(t, m, "/a1/b1/c3", http.MethodPost)
+	assertNotFound(t, m, "/a1/b1/c3", http.MethodGet)
+	assertFound(t, m, "/a1/b1/c3", "post") // Test not case sensitive
+	assertFound(t, m, "/a1/b1/c3", "Post") // Test not case sensitive
+
+	assertNotFound(t, m, "a1/b3", http.MethodPost)
+	assertFound(t, m, "a1/b3", "Get")
+	assertFound(t, m, "a1/b3", http.MethodGet)
+	assertFound(t, m, "a2/b1/c1", http.MethodGet)
+
+	assertNotFound(t, m, "a1/b6", http.MethodPost)
+
 }
 
-func assertFound(t *testing.T, url string, method string) {
-	me, found := GetPathMappingElement(url, method)
+func TestFindRoot(t *testing.T) {
+	meRoot := NewMappingElements(nil)
+	meRoot.RequestMethod = "ROOT"
+	test.AssertNil(t, "", meRoot.parent)
+	test.AssertStringEquals(t, "", "ROOT", meRoot.RequestMethod)
+	test.AssertStringEquals(t, "", "ROOT", meRoot.findRoot().RequestMethod)
+	test.AssertNil(t, "", meRoot.findRoot().parent)
+
+	meNext := NewMappingElements(meRoot)
+	meNext.RequestMethod = "NEXT"
+	test.AssertStringEquals(t, "", "NEXT", meNext.RequestMethod)
+	test.AssertNil(t, "", meRoot.parent)
+	test.AssertStringEquals(t, "", "ROOT", meNext.parent.RequestMethod)
+	test.AssertStringEquals(t, "", "ROOT", meNext.findRoot().RequestMethod)
+	test.AssertNil(t, "", meNext.findRoot().parent)
+
+	meLast := NewMappingElements(meNext)
+	meLast.RequestMethod = "LAST"
+	test.AssertStringEquals(t, "", "LAST", meLast.RequestMethod)
+	test.AssertNil(t, "", meRoot.parent)
+	test.AssertStringEquals(t, "", "ROOT", meRoot.RequestMethod)
+	test.AssertStringEquals(t, "", "ROOT", meNext.parent.RequestMethod)
+	test.AssertStringEquals(t, "", "NEXT", meLast.parent.RequestMethod)
+	test.AssertStringEquals(t, "", "ROOT", meLast.findRoot().RequestMethod)
+	test.AssertNil(t, "", meLast.findRoot().parent)
+}
+
+func assertFound(t *testing.T, p *MappingElements, url string, method string) {
+	root := p.findRoot()
+
+	me, found := root.GetPathMappingElement(url, method)
 	if !found {
 		t.Fatalf("Mapping Not found! %s", url)
 	}
@@ -82,8 +118,10 @@ func assertFound(t *testing.T, url string, method string) {
 	}
 }
 
-func assertNotFound(t *testing.T, url string, method string) {
-	me, found := GetPathMappingElement(url, method)
+func assertNotFound(t *testing.T, p *MappingElements, url string, method string) {
+	root := p.findRoot()
+
+	me, found := root.GetPathMappingElement(url, method)
 	if me != nil {
 		t.Fatalf("Mapping Not Found! %s but returned element is NOT nil", url)
 	}

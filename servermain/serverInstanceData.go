@@ -31,6 +31,9 @@ const (
 	SCTemplateNotFound
 	SCTemplateError
 	SCRuntimeError
+	SCStaticPath
+	SCWriteFile
+	SCParamValidation
 	SCMax
 )
 
@@ -53,6 +56,7 @@ type vetoHandlerListData struct {
 ServerInstanceData is the state of the server
 */
 type ServerInstanceData struct {
+	mappingElements    *MappingElements
 	before             vetoHandlerListData
 	after              vetoHandlerListData
 	errorHandler       func(*http.Request, *Response)
@@ -91,6 +95,7 @@ func NewServerInstanceData(baseHandlerNameIn string, contentTypeCharsetIn string
 	}
 
 	return &ServerInstanceData{
+		mappingElements: NewMappingElements(nil),
 		before: vetoHandlerListData{
 			handlerFunc: nil,
 			next:        nil,
@@ -188,7 +193,7 @@ func (p *ServerInstanceData) ServeHTTP(rw http.ResponseWriter, httpRequest *http
 	/*
 		Find the mapping for the url (ReST style)
 	*/
-	mapping, found := GetPathMappingElement(url, httpRequest.Method)
+	mapping, found := p.mappingElements.GetPathMappingElement(url, httpRequest.Method)
 	if !found {
 		/*
 			Mapping not found,
@@ -434,7 +439,7 @@ func (p *ServerInstanceData) AddContentTypeFromMap(mimeTypeMap map[string]string
 AddMappedHandler creates a route to a function given a path
 */
 func (p *ServerInstanceData) AddMappedHandler(path string, method string, handlerFunc func(*http.Request, *Response)) {
-	AddPathMappingElement(path, method, handlerFunc)
+	p.mappingElements.AddPathMappingElement(path, method, handlerFunc)
 }
 
 /*
@@ -516,7 +521,7 @@ func (p *ServerInstanceData) LogResponse(response *Response) {
 			errText = ": ERROR=" + errText
 		}
 		p.logger.LogAccessf("<<< STATUS=%d: CODE=%d: RESP=%s%s", response.GetCode(), response.GetSubCode(), response.GetResp(), errText)
-		p.logHeaderMap(response.GetHeaders(), "<-<")
+		p.LogHeaderMap(response.GetHeaders(), "<-<")
 	}
 }
 
@@ -554,6 +559,19 @@ func ServeContent(w *ResponseWriterWrapper, r *http.Request, name string) {
 	}
 	defer file.Close()
 	http.ServeContent(w, r, name, time.Now(), file)
+}
+
+/*
+LogHeaderMap logs the header data.
+
+dir will usually be '<-<' or '>->'. Keep it to 3 chars or the logs will look untidy!
+*/
+func (p *ServerInstanceData) LogHeaderMap(headers map[string][]string, dir string) {
+	if logging.IsDebug() {
+		for k, v := range headers {
+			p.logger.LogDebugf("%s HEADER=%s=%s", dir, k, v)
+		}
+	}
 }
 
 func checkForPanicAndRecover(r *http.Request, response *Response) {
@@ -652,7 +670,7 @@ func (p *ServerInstanceData) invokeAllVetoHandlersInList(httpRequest *http.Reque
 func (p *ServerInstanceData) logFileServerResponse(response *ResponseWriterWrapper, path string, ext string, mime string, fileName string) {
 	if logging.IsAccess() {
 		p.logger.LogAccessf("<<< STATUS=%d staticPath:%s ext:%s Content-Type:%s file:%s", response.GetStatusCode(), path, ext, mime, fileName)
-		p.logHeaderMap(response.Header(), "<-<")
+		p.LogHeaderMap(response.Header(), "<-<")
 	}
 }
 
@@ -664,14 +682,6 @@ func (p *ServerInstanceData) logFileServerResponse(response *ResponseWriterWrapp
 func (p *ServerInstanceData) logRequest(r *http.Request) {
 	if logging.IsAccess() {
 		p.logger.LogAccessf(">>> METHOD=%s: REQUEST=%s", r.Method, r.URL.Path)
-		p.logHeaderMap(r.Header, ">->")
-	}
-}
-
-func (p *ServerInstanceData) logHeaderMap(headers map[string][]string, dir string) {
-	if logging.IsDebug() {
-		for k, v := range headers {
-			p.logger.LogDebugf("%s HEADER=%s=%s", dir, k, v)
-		}
+		p.LogHeaderMap(r.Header, ">->")
 	}
 }

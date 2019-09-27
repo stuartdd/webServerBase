@@ -205,10 +205,10 @@ Now all we need is to tel the server where to get the file **image.ico*.
 We can set this up using the following:
 
 ``` go
-serverInstance.AddMappedHandler("/static/?", http.MethodGet, servermain.ReasonableStaticFileHandler)
+serverInstance.AddMappedHandler("/static/?", http.MethodGet, servermain.DefaultStaticFileHandler)
 ```
 
-Where **servermain.ReasonableStaticFileHandler** is an existing hadler for this purpose. It is basic but sufficient for this function. Please feel free to use it as a basis for your own method.
+Where **servermain.DefaultStaticFileHandler** is an existing handler for this purpose defined in **requestHandlers.go**. It is basic but sufficient for this function. Please feel free to use it as a basis for your own method.
 
 The '?' means 'any' so '/satic/fred' and '/static/Xxxxx/yyyy/image.ico' will both match.
 
@@ -339,10 +339,10 @@ This defines two templates composite1.html and composite2.html.
 A Mapping Handler is required to process templates. There is an example in **webServerExample.go**:
 
 ``` go
-serverInstance.AddMappedHandler("/site/?", http.MethodGet, servermain.ReasonableTemplateFileHandler)
+serverInstance.AddMappedHandler("/site/?", http.MethodGet, servermain.DefaultTemplateFileHandler)
 ```
 
-A reasonable template handler is defined in **templateManager.go**. You can use this as it is or use it to base your own version on.
+A default template handler is defined in **requestHandlers.go**. You can use this as it is or use it to base your own version on.
 
 ## Template Data
 

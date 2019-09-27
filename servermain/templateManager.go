@@ -40,30 +40,6 @@ type Templates struct {
 
 var logger *logging.LoggerDataReference
 
-/*
-ReasonableTemplateFileHandler - Response handler for basic template processing
-*/
-func ReasonableTemplateFileHandler(request *http.Request, response *Response) {
-	h := NewRequestHandlerHelper(request, response)
-	server := h.GetServer()
-	name := h.GetNamedURLPart("site", "")
-	if server.HasTemplate(name) {
-		ww := h.GetResponseWriter()
-		contentType := LookupContentType(name)
-		if (contentType != "") && (ww.Header()[ContentTypeName] == nil) {
-			ww.Header()[ContentTypeName] = []string{contentType + "; charset=" + server.contentTypeCharset}
-		}
-		m := h.GetQueries()
-		server.TemplateWithWriter(ww, name, request, m)
-		response.Close()
-		if logging.IsAccess() {
-			response.GetWrappedServer().GetServerLogger().LogAccessf("<<< STATUS=%d: CODE=%d: RESP-FROM-FILE=%s: TYPE=%s", response.GetCode(), response.GetSubCode(), name, contentType)
-			response.GetWrappedServer().logHeaderMap(response.GetHeaders(), "<-<")
-		}
-	} else {
-		response.SetError404(h.GetURL()+" "+server.ListTemplateNames("|"), SCTemplateNotFound)
-	}
-}
 
 /*
 LoadTemplates - Load the templates given the template paths. For example
