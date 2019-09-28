@@ -191,6 +191,9 @@ func (p *RequestHandlerHelper) GetNamedQuery(name string) string {
 	return p.readQueries().Get(name)
 }
 
+/*
+GetQueries - return the URL Query parameters as a map
+*/
 func (p *RequestHandlerHelper) GetQueries() map[string]string {
 	m := make(map[string]string)
 	for name, val := range p.readQueries() {
