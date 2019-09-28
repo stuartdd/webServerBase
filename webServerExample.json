@@ -2,11 +2,13 @@
   "loggerLevels" : {"DEBUG":"SYSOUT","INFO":"SYSOUT", "WARN":"SYSOUT", "ACCESS":"SYSOUT"},
   "staticPaths"  : {
     "windows":{"/static/":"site\\", "data":"site\\"}, 
-    "linux":{"/static/":"site/", "data":"site/"}
+    "linux":{"/static/":"site/", "data":"site/"},
+    "darwin":{"/static/":"site/", "data":"site/"}
   }, 
   "templatePaths"  : {
     "windows":"templates\\", 
-    "linux":"templates/"
+    "linux":"templates/",
+    "darwin":"templates/"
   },
   "port" : 8080,
   "redirections" : {"/":"/static/index.html"},

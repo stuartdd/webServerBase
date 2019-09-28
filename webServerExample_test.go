@@ -65,13 +65,13 @@ func TestServer(t *testing.T) {
 	test.AssertStringContains(t, "", sendGet(t, 404, "calc/10", headers("json", "")), []string{"\"Status\":404"})
 	test.AssertStringContains(t, "", sendGet(t, 404, "calc/10/div", headers("json", "")), []string{"\"Status\":404"})
 	test.AssertStringContains(t, "", sendGet(t, 404, "calc/10/div/", headers("json", "")), []string{"\"Status\":404"})
-	test.AssertStringContains(t, "", sendGet(t, 400, "calc/10/div/ten", headers("json", "")), []string{"\"Status\":400", "\"Code\":" + strconv.Itoa(SCParamValidation), "invalid number ten"})
-	test.AssertStringContains(t, "", sendGet(t, 400, "calc/five/div/ten", headers("json", "")), []string{"\"Status\":400", "\"Code\":" + strconv.Itoa(SCParamValidation), "invalid number five"})
+	test.AssertStringContains(t, "", sendGet(t, 400, "calc/10/div/ten", headers("json", "")), []string{"\"Status\":400", "\"Code\":" + strconv.Itoa(servermain.SCParamValidation), "invalid number ten"})
+	test.AssertStringContains(t, "", sendGet(t, 400, "calc/five/div/ten", headers("json", "")), []string{"\"Status\":400", "\"Code\":" + strconv.Itoa(servermain.SCParamValidation), "invalid number five"})
 
 	test.AssertStringEquals(t, "", "16", sendGet(t, 200, "calc/qube/2", headers("txt", "2")))
 	test.AssertStringContains(t, "", sendGet(t, 404, "calc/qube", headers("json", "")), []string{"\"Status\":404"})
 	test.AssertStringContains(t, "", sendGet(t, 404, "calc/qube/div/10", headers("json", "")), []string{"\"Status\":404"})
-	test.AssertStringContains(t, "", sendGet(t, 400, "calc/qube/div", headers("json", "")), []string{"\"Status\":400", "\"Code\":" + strconv.Itoa(SCParamValidation), "invalid number div"})
+	test.AssertStringContains(t, "", sendGet(t, 400, "calc/qube/div", headers("json", "")), []string{"\"Status\":400", "\"Code\":" + strconv.Itoa(servermain.SCParamValidation), "invalid number div"})
 	/*
 		Test PANIC responses
 	*/
