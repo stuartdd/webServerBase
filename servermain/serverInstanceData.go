@@ -446,7 +446,7 @@ func (p *ServerInstanceData) AddMappedHandler(path string, method string, handle
 }
 
 /*
-AddMappedHandlerWithNames creates a route to a function given a path
+AddMappedHandlerWithNames creates a route to a function given a path and a set of names for each ? in the mapping
 */
 func (p *ServerInstanceData) AddMappedHandlerWithNames(path string, method string, handlerFunc func(*http.Request, *Response), names []string) {
 	p.mappingElements.AddPathMappingElementWithNames(path, method, handlerFunc, names)

@@ -48,6 +48,12 @@ func DefaultTemplateFileHandler(request *http.Request, response *Response) {
 			ww.Header()[ContentTypeName] = []string{contentType + "; charset=" + server.contentTypeCharset}
 		}
 		m := h.GetQueries()
+		for name, index := range response.names {
+			val := h.GetURLPart(index, "?")
+			if val != "?" {
+				m[name] = val
+			}
+		}
 		server.TemplateWithWriter(ww, name, request, m)
 		response.Close()
 		if logging.IsAccess() {
@@ -69,7 +75,7 @@ func DefaultStaticFileHandler(request *http.Request, response *Response) {
 	/*
 		get the file path for the url and the matched url. Panics if not found with 404 so no need to check.
 	*/
-	container := h.GetStaticPathForURL(url)
+	pathData := h.GetStaticPathForURL(url)
 	/*
 		Forward the response headers in to the wrapped http.ResponseWriter
 	*/
@@ -88,8 +94,8 @@ func DefaultStaticFileHandler(request *http.Request, response *Response) {
 	/*
 		derive the file name from the url and the path in the fileServerList
 	*/
-	fileShort := url[len(container.URLPrefix):]
-	filename := filepath.Join(container.FilePath, fileShort)
+	fileShort := url[len(pathData.URLPrefix):]
+	filename := filepath.Join(pathData.FilePath, fileShort)
 	/*
 		Implemented in servermain/serverInstanceData.go. This wraps the http.ServeContent to return the file contents.
 		Panics 404 if file not found. Panics 500 if file cannot be read

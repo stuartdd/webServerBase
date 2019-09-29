@@ -116,7 +116,7 @@ func RunWithConfig(configData *config.Data, executable string) {
 	serverInstance.AddMappedHandler("/stop", http.MethodGet, servermain.StopServerInstance)
 	serverInstance.AddMappedHandlerWithNames("/stop/?", http.MethodGet, servermain.StopServerInstance, []string{"seconds"})
 	serverInstance.AddMappedHandler("/status", http.MethodGet, servermain.StatusHandler)
-	serverInstance.AddMappedHandlerWithNames("/static/?", http.MethodGet, servermain.DefaultStaticFileHandler, []string{"static"})
+	serverInstance.AddMappedHandler("/static/*", http.MethodGet, servermain.DefaultStaticFileHandler)
 	serverInstance.AddMappedHandlerWithNames("/site/?", http.MethodGet, servermain.DefaultTemplateFileHandler, []string{"template"})
 	serverInstance.AddMappedHandlerWithNames("/calc/qube/?", http.MethodGet, qubeHandler, []string{"qube"})
 	serverInstance.AddMappedHandlerWithNames("/calc/?/div/?", http.MethodGet, divHandler, []string{"calc", "div"})
