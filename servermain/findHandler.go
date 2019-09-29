@@ -14,6 +14,7 @@ type MappingElements struct {
 	elements      map[string]*MappingElements
 	HandlerFunc   func(*http.Request, *Response)
 	RequestMethod string
+	names         map[string]int
 	parent        *MappingElements
 }
 
@@ -25,6 +26,7 @@ func NewMappingElements(parent *MappingElements) *MappingElements {
 		elements:      make(map[string]*MappingElements),
 		HandlerFunc:   nil,
 		RequestMethod: "",
+		names:         make(map[string]int),
 		parent:        parent,
 	}
 }
@@ -45,10 +47,43 @@ func (p *MappingElements) ResetMappingElementTree() {
 	p.RequestMethod = ""
 }
 
+func validateNames(urlParts []string, names []string) map[string]int {
+	noNames := ((names == nil) || (len(names) == 0))
+	m := make(map[string]int)
+	namePos := 0
+	for urlPos, str := range urlParts {
+		if str == "?" {
+			if noNames {
+				panic("AddPathMappingElementWithNames: No names were provided for the url parameters")
+			}
+			if namePos >= len(names) {
+				panic("AddPathMappingElementWithNames: Not enough names for the number of url parameters")
+			}
+			_, ok := m[names[namePos]]
+			if ok {
+				panic("AddPathMappingElementWithNames: Duplicate names for url parameters")
+			}
+			m[names[namePos]] = urlPos
+			namePos++
+		}
+	}
+	if len(m) != len(names) {
+		panic("AddPathMappingElementWithNames: Too many names for the number of url parameters")
+	}
+	return m
+}
+
 /*
 AddPathMappingElement Add a path to the mapping
 */
 func (p *MappingElements) AddPathMappingElement(url string, method string, handlerFunc func(*http.Request, *Response)) {
+	p.AddPathMappingElementWithNames(url, method, handlerFunc, nil)
+}
+
+/*
+AddPathMappingElement Add a path to the mapping
+*/
+func (p *MappingElements) AddPathMappingElementWithNames(url string, method string, handlerFunc func(*http.Request, *Response), names []string) {
 	var me *MappingElements
 	var found bool
 	parts := strings.Split(strings.Trim(url, "/"), "/")
@@ -73,6 +108,7 @@ func (p *MappingElements) AddPathMappingElement(url string, method string, handl
 		}
 	}
 	currentElement.HandlerFunc = handlerFunc
+	currentElement.names = validateNames(parts, names)
 	currentElement.RequestMethod = strings.ToUpper(method)
 }
 

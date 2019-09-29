@@ -9,16 +9,77 @@ import (
 	"github.com/stuartdd/webServerBase/test"
 )
 
+func TestUrlParamNamesNotEnoughNames(t *testing.T) {
+	url := []string{"a", "?", "c", "?"}
+	names := []string{"namea"}
+	defer test.AssertPanicAndRecover(t, "Not enough names")
+	validateNames(url, names)
+}
+
+func TestUrlParamNamesNilNames(t *testing.T) {
+	url := []string{"a", "?", "c", "?"}
+	defer test.AssertPanicAndRecover(t, "No names")
+	validateNames(url, nil)
+}
+
+func TestUrlParamNamesNoNames(t *testing.T) {
+	url := []string{"a", "?"}
+	names := []string{}
+	defer test.AssertPanicAndRecover(t, "No names")
+	validateNames(url, names)
+}
+
+func TestUrlParamNamesNoQM(t *testing.T) {
+	url := []string{"a", "b", "c", "d"}
+	names := []string{"namea"}
+	defer test.AssertPanicAndRecover(t, "Too many names")
+	validateNames(url, names)
+}
+
+func TestUrlParamNamesTooManyNames(t *testing.T) {
+	url := []string{"a", "?", "c", "?"}
+	names := []string{"namea", "nameb", "namec"}
+	defer test.AssertPanicAndRecover(t, "Too many names")
+	validateNames(url, names)
+}
+
+func TestUrlParamNamesDuplicates(t *testing.T) {
+	url := []string{"a", "?", "c", "?", "d", "?"}
+	names := []string{"namea", "nameb", "namea"}
+	defer test.AssertPanicAndRecover(t, "Duplicate names")
+	validateNames(url, names)
+}
+
+func TestUrlParamNames(t *testing.T) {
+	url := []string{"a", "?", "c", "?"}
+	names := []string{"namea", "namec"}
+	m := validateNames(url, names)
+	test.AssertIntEqual(t, "", 2, len(m))
+	test.AssertIntEqual(t, "", 1, m["namea"])
+	test.AssertIntEqual(t, "", 3, m["namec"])
+}
+
+func TestUrlParamNames3(t *testing.T) {
+	url := []string{"a", "?", "c", "?", "?"}
+	names := []string{"namea", "namec", "named"}
+	m := validateNames(url, names)
+	test.AssertIntEqual(t, "", 3, len(m))
+	test.AssertIntEqual(t, "", 1, m["namea"])
+	test.AssertIntEqual(t, "", 3, m["namec"])
+	test.AssertIntEqual(t, "", 4, m["named"])
+}
+
 func TestCreateWithWC(t *testing.T) {
+	names := []string{"ABC"}
 	m := NewMappingElements(nil)
 	m.AddPathMappingElement("a1/b3", "GET4", statusHandler)
 	m.AddPathMappingElement("/a1/b1/c1", "GET1", statusHandler)
-	m.AddPathMappingElement("/a1/?/c3", "GET2", statusHandler)
-	m.AddPathMappingElement("a1/?/c1", "GET3", statusHandler)
+	m.AddPathMappingElementWithNames("/a1/?/c3", "GET2", statusHandler, names)
+	m.AddPathMappingElementWithNames("a1/?/c1", "GET3", statusHandler, names)
 	m.AddPathMappingElement("a2/b1/c1", "GET5", statusHandler)
-	m.AddPathMappingElement("a3/b1/?", "GET6", statusHandler)
-	m.AddPathMappingElement("a3/b2/?/", "GET7", statusHandler)
-	m.AddPathMappingElement("a3//b3//?//", "GET8", statusHandler)
+	m.AddPathMappingElementWithNames("a3/b1/?", "GET6", statusHandler, names)
+	m.AddPathMappingElementWithNames("a3/b2/?/", "GET7", statusHandler, names)
+	m.AddPathMappingElementWithNames("a3//b3//?//", "GET8", statusHandler, names)
 	m.AddPathMappingElement("a4/*", "GET98", statusHandler)
 	m.AddPathMappingElement("a5", "GET99", statusHandler)
 	fmt.Println(m.GetMappingElementTreeString("----------------- TestCreateWithWC -----------------"))

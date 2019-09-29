@@ -172,11 +172,9 @@ func (p *RequestHandlerHelper) GetPartsCount() int {
 GetNamedURLPart returns part by name or panics if not found and default is empty
 */
 func (p *RequestHandlerHelper) GetNamedURLPart(name string, defaultValue string) string {
-	list := p.readParts()
-	for index, val := range list {
-		if val == name {
-			return p.GetURLPart(index+1, defaultValue)
-		}
+	i, ok := p.response.names[name]
+	if ok {
+		return p.GetURLPart(i, defaultValue)
 	}
 	if defaultValue == "" {
 		ThrowPanic("E", 400, SCMissingURLParam, fmt.Sprintf("URL parameter '%s' missing", name), fmt.Sprintf("URL parameter '%s' returned an empty value.", name))

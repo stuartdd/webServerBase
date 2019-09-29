@@ -25,7 +25,7 @@ both invoke this function
 */
 func StopServerInstance(request *http.Request, response *Response) {
 	h := NewRequestHandlerHelper(request, response)
-	count, err := strconv.Atoi(h.GetNamedURLPart("stop", "2")) // Optional. Default value 2
+	count, err := strconv.Atoi(h.GetNamedURLPart("seconds", "2")) // Optional. Default value 2
 	if err != nil {
 		ThrowPanic("E", 400, SCParamValidation, "Invalid stop period", err.Error())
 	} else {
@@ -40,7 +40,7 @@ DefaultTemplateFileHandler - Response handler for basic template processing
 func DefaultTemplateFileHandler(request *http.Request, response *Response) {
 	h := NewRequestHandlerHelper(request, response)
 	server := h.GetServer()
-	name := h.GetNamedURLPart("site", "")
+	name := h.GetNamedURLPart("template", "")
 	if server.HasTemplate(name) {
 		ww := h.GetResponseWriter()
 		contentType := LookupContentType(name)

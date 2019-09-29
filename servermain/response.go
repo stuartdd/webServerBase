@@ -1,10 +1,10 @@
 package servermain
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
-	"encoding/json"
 )
 
 /*
@@ -34,6 +34,7 @@ type Response struct {
 	response *responseState
 	context  *responseContext
 	headers  map[string][]string
+	names    map[string]int
 }
 
 /*
@@ -183,6 +184,7 @@ func NewResponse(w *ResponseWriterWrapper, s *ServerInstanceData) *Response {
 			server: s,
 		},
 		headers: make(map[string][]string),
+		names:   make(map[string]int),
 	}
 }
 

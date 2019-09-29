@@ -114,16 +114,16 @@ func RunWithConfig(configData *config.Data, executable string) {
 		E.G. /x/?/y wil activate for /x/1/y
 	*/
 	serverInstance.AddMappedHandler("/stop", http.MethodGet, servermain.StopServerInstance)
-	serverInstance.AddMappedHandler("/stop/?", http.MethodGet, servermain.StopServerInstance)
+	serverInstance.AddMappedHandlerWithNames("/stop/?", http.MethodGet, servermain.StopServerInstance, []string{"seconds"})
 	serverInstance.AddMappedHandler("/status", http.MethodGet, servermain.StatusHandler)
-	serverInstance.AddMappedHandler("/static/?", http.MethodGet, servermain.DefaultStaticFileHandler)
-	serverInstance.AddMappedHandler("/site/?", http.MethodGet, servermain.DefaultTemplateFileHandler)
-	serverInstance.AddMappedHandler("/calc/qube/?", http.MethodGet, qubeHandler)
-	serverInstance.AddMappedHandler("/calc/?/div/?", http.MethodGet, divHandler)
-	serverInstance.AddMappedHandler("/path/?/file/?", http.MethodPost, fileSaveHandler)
-	serverInstance.AddMappedHandler("/path/?/file/?/ext/?", http.MethodPost, fileSaveHandler)
+	serverInstance.AddMappedHandlerWithNames("/static/?", http.MethodGet, servermain.DefaultStaticFileHandler, []string{"static"})
+	serverInstance.AddMappedHandlerWithNames("/site/?", http.MethodGet, servermain.DefaultTemplateFileHandler, []string{"template"})
+	serverInstance.AddMappedHandlerWithNames("/calc/qube/?", http.MethodGet, qubeHandler, []string{"qube"})
+	serverInstance.AddMappedHandlerWithNames("/calc/?/div/?", http.MethodGet, divHandler, []string{"calc", "div"})
+	serverInstance.AddMappedHandlerWithNames("/path/?/file/?", http.MethodPost, fileSaveHandler, []string{"path", "filename"})
+	serverInstance.AddMappedHandlerWithNames("/path/?/file/?/ext/?", http.MethodPost, fileSaveHandler, []string{"path", "filename", "ext"})
 	/*
-		An after handler is executed after ALL requests have been handles
+		An after handler is executed after ALL requests have been handled
 		You can add multiple after handlers.
 		If the after handler vetos the request then the after handler response is returned not the mapped handler's response
 	*/
@@ -194,9 +194,9 @@ Then the file is saved as saved\\fn.txt. Otherwise a file not found is returned
 */
 func fileSaveHandler(r *http.Request, response *servermain.Response) {
 	h := servermain.NewRequestHandlerHelper(r, response)
-	fileName := h.GetNamedURLPart("file", "") // Not optional
-	pathName := h.GetNamedURLPart("path", "") // Not optional
-	ext := h.GetNamedURLPart("ext", "txt")    // Optional. Default value txt
+	fileName := h.GetNamedURLPart("filename", "") // Not optional
+	pathName := h.GetNamedURLPart("path", "")     // Not optional
+	ext := h.GetNamedURLPart("ext", "txt")        // Optional. Default value txt
 	fullFile := filepath.Join(h.GetStaticPathForName(pathName).FilePath, fileName+"."+ext)
 	err := ioutil.WriteFile(fullFile, h.GetBody(), 0644)
 	if err != nil {

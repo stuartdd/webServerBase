@@ -201,7 +201,10 @@ func (p *ServerInstanceData) ServeHTTP(rw http.ResponseWriter, httpRequest *http
 		*/
 		ThrowPanic("W", 404, SCPathNotFound, fmt.Sprintf("%s URL:%s", httpRequest.Method, url), fmt.Sprintf("METHOD:%s URL:%s is not mapped", httpRequest.Method, url))
 	}
-
+	/*
+		Add any url parameter names and indexes to the response so we can get ? values
+	*/
+	actualResponse.names = mapping.names
 	/*
 		We found a matching function for the request so lets check each before handler to see if we can procceed.
 		If a before handler changes the response to an error then we abandon the request and return it's response.
@@ -440,6 +443,13 @@ AddMappedHandler creates a route to a function given a path
 */
 func (p *ServerInstanceData) AddMappedHandler(path string, method string, handlerFunc func(*http.Request, *Response)) {
 	p.mappingElements.AddPathMappingElement(path, method, handlerFunc)
+}
+
+/*
+AddMappedHandlerWithNames creates a route to a function given a path
+*/
+func (p *ServerInstanceData) AddMappedHandlerWithNames(path string, method string, handlerFunc func(*http.Request, *Response), names []string) {
+	p.mappingElements.AddPathMappingElementWithNames(path, method, handlerFunc, names)
 }
 
 /*

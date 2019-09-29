@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+
 	"github.com/stuartdd/webServerBase/test"
 )
 
@@ -127,7 +128,12 @@ func TestWithUrl(t *testing.T) {
 	if err != nil {
 		test.Fail(t, "", err.Error())
 	}
-	d := NewRequestHandlerHelper(req, NewResponse(nil, nil))
+	resp := NewResponse(nil, nil)
+	resp.names = make(map[string]int)
+	resp.names["data1"] = 1
+	resp.names["data2"] = 3
+
+	d := NewRequestHandlerHelper(req, resp)
 	test.AssertStringEquals(t, "", "/data1/1/data2/2", d.GetURL())
 	test.AssertStringEquals(t, "", "data1", d.GetURLPart(0, ""))
 	test.AssertStringEquals(t, "", "1", d.GetURLPart(1, ""))
