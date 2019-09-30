@@ -84,6 +84,52 @@ A factory method **NewServerInstanceData** is called to create and validate a **
     * The application/json is derived from the code. See later for details
     * The charset=utf-8 is derive from "charset=" + contentTypeCharsetIn.
 
+## Web Server Modes
+
+A web server can function in two modes.
+
+* A Web application, serving html pages, images icons etc..
+* A ReST server returning pure data as JSON or XML to a browser running JavaScript (or any application for that matter).
+* OR BOTH. There is no reason why not other than design.
+
+This web server (WebServerBase) can do both. It uses URL Mappings for ReST style responses and Static files (or Templates) for html and other web resources.
+
+Note BOTH modes requests require URL Mappings, they just change where teh data comes from.
+
+## Static files
+
+Static files are 'files' in the file system that are returned unchanged. The server just needs to know where they are held. To set the root of the static file to a specific directory, use the following:
+
+``` go
+servermain.SetStaticFileServerData("myfiles/path")
+```
+
+Add a mapping to the **DefaultStaticFileHandler** and your done.
+
+``` go
+serverInstance.AddMappedHandler("/static/*", http.MethodGet, servermain.DefaultStaticFileHandler)
+```
+
+The following request Will return the contents of **myfiles/path/index.html**
+
+``` http
+http://localhost:8080/static/index.html
+```
+
+If you add a redirection as follows (Note redirections ALWAYS take presedence):
+
+``` go
+m := make(map[string]string)
+m["/"] = "static/index.html"
+serverInstance.SetRedirections(m)
+```
+
+Then ```http://localhost:8080/``` will also return the contents of **myfiles/path/index.html**
+
+## Template files
+
+Template files are 'files' in the file system that are returned after they have been updated by the required data. Again the server just needs to know where they are held.
+
 ## Server start
 
 [Top](#webServerBase)

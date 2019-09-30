@@ -180,6 +180,12 @@ func (p *ServerInstanceData) ServeHTTP(rw http.ResponseWriter, httpRequest *http
 	*/
 	redirect := p.redirections[url]
 	if redirect != "" {
+		s := httpRequest.URL.RawQuery
+		if s != "" {
+			redirect = redirect + "?redirect=true&" + s
+		} else {
+			redirect = redirect + "?redirect=true"
+		}
 		if logging.IsInfo() {
 			p.logger.LogInfof(">>> REDIRECT: %s --> %s", url, redirect)
 		}

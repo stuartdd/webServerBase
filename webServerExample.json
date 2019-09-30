@@ -11,7 +11,7 @@
     "darwin":"templates/"
   },
   "port" : 8080,
-  "redirections" : {"/":"/site/index.html"},
+  "redirections" : {"/":"/static/index.html"},
   "contentTypes" : {"ico": "image/x-icon"},
   "contentTypeCharset":"utf-8",
   "panicResponseCode" : 500,
