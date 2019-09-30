@@ -5,8 +5,11 @@
 * [Root Files](#Root%20Files)
 * [Logger Configuration](#Logger%20Configuration)
   * [File Name substitutions](#File%20Name%20substitutions)
-* [Static files](#Static%20files)
-* [Template Definitions](#Template%20Definitions)
+* [Web Server Modes](#Web%20Server%20Modes)
+  * [Static files](#Static%20files)
+  * [Redirection](#Redirection)
+  * [Template files](#Template%20files)
+* [Templates](#Templates)
   * [What is a Template](#What%20is%20a%20Template)
   * [Single Templates](#Single%20Templates)
   * [Group Templates](#Group%20Templates)
@@ -86,6 +89,8 @@ A factory method **NewServerInstanceData** is called to create and validate a **
 
 ## Web Server Modes
 
+[Top](#webServerBase)
+
 A web server can function in two modes.
 
 * A Web application, serving html pages, images icons etc..
@@ -98,9 +103,16 @@ Note BOTH modes requests require URL Mappings, they just change where teh data c
 
 ## Static files
 
+[Top](#webServerBase)
+
+This feature is supportted by the **staticFileDataManager.go** code in the servermain package.
+
 Static files are 'files' in the file system that are returned unchanged. The server just needs to know where they are held. To set the root of the static file to a specific directory, use the following:
 
 ``` go
+m := make(map[string]string)
+m["/static/"] = "my/Static/files"
+m["data"] = "site/"
 servermain.SetStaticFileServerData("myfiles/path")
 ```
 
@@ -110,25 +122,71 @@ Add a mapping to the **DefaultStaticFileHandler** and your done.
 serverInstance.AddMappedHandler("/static/*", http.MethodGet, servermain.DefaultStaticFileHandler)
 ```
 
-The following request Will return the contents of **myfiles/path/index.html**
+* Note - The '*' in the above mapping indicates match ANY text after */static/*
+
+* Note - **servermain.DefaultStaticFileHandler** is an existing handler for this purpose defined in **requestHandlers.go**. It is basic but sufficient for this function. Please feel free to use it as a basis for your own method.
+
+* Note - the directory paths given in the example will be relative to the server directory.
+
+The following request Will return the contents of **my/Static/files/index.html**
 
 ``` http
 http://localhost:8080/static/index.html
 ```
 
-If you add a redirection as follows (Note redirections ALWAYS take presedence):
+If you add a [Redirection](#Redirection) (See below) as follows:
 
 ``` go
 m := make(map[string]string)
-m["/"] = "static/index.html"
+m["/"] = "/static/index.html"
 serverInstance.SetRedirections(m)
 ```
 
-Then ```http://localhost:8080/``` will also return the contents of **myfiles/path/index.html**
+Then ```http://localhost:8080/``` and ```http://localhost:8080``` will also return the contents of **my/Static/files/index.html**
+
+This is really usefull fo setting a home page.
+
+## Redirection
+
+Redirection allows you to recognise a url, substitute another and send it.
+
+So as in the above example the URL */* is redirected to */static/index.html*. 
+
+Note *Redirections* are always processes first and might cause an infinite loop. For example if you redirect '/' to '/'
+
+Create a map of redirections and call *SetRedirections*
+
+``` go
+m := make(map[string]string)
+m["/"] = "/static/index.html"
+serverInstance.SetRedirections(m)
+```
+
+Query parameters are copied over to the redirected URL. For example with the following redirect:
+
+``` go
+m["/a/b"] = "/d/XYZ"
+```
+
+So ```/a/b?q1=A&Q2=B``` will be mapped to ```/a/XYZ?redirect=true&q1=A&Q2=B```
+
+Note the additional query parameter that indicates a redirect has taken place. This should not impact any requests unless the handler look for the query value 'redirect'.
 
 ## Template files
 
+[Top](#webServerBase)
+
 Template files are 'files' in the file system that are returned after they have been updated by the required data. Again the server just needs to know where they are held.
+
+``` go
+serverInstance.SetPathToTemplates("my/templates)
+```
+
+In this example 'my/templates' is a relative directory path.
+
+* This Loads all templates from that path and caches them in memory!
+
+Please refer to the section on [Templates](#Templates) for further details.
 
 ## Server start
 
@@ -232,77 +290,31 @@ CreateLogWithFilenameAndAppID("", "AppID", -1, levels)
 * **%PID** - The application process id
 * **%ENV.[name].ENV%** - The value of a named environment variable. E.g. %ENV.HOSTNAME.ENV% will return the host name of the system
 
-## Static files
+## Templates
 
 [Top](#webServerBase)
 
-The web server is designed mainly fo ReST style services however it can also read static data from the file system and return it as a http response.
+Support for the GO templating engine is included in the server. You can implement this yourself or use the Default template processing provided.
 
-This feature is supportted by the **staticFileDataManager.go** code in the servermain package.
+This can be used for example to return a html document that has data values substituted in to it. Templating in GO is quite comples so I would recommend reading th documentation. 
 
-This works by mapping a URL prefix to a directory in th efile system. For example:
+The process in this server:
 
-http://localhost:8080/static/image.ico.
-
-Here the URL prefix is **/static/**.
-
-Now all we need is to tel the server where to get the file **image.ico*.
-
-We can set this up using the following:
-
-``` go
-serverInstance.AddMappedHandler("/static/?", http.MethodGet, servermain.DefaultStaticFileHandler)
-```
-
-Where **servermain.DefaultStaticFileHandler** is an existing handler for this purpose defined in **requestHandlers.go**. It is basic but sufficient for this function. Please feel free to use it as a basis for your own method.
-
-The '?' means 'any' so '/satic/fred' and '/static/Xxxxx/yyyy/image.ico' will both match.
-
-Now we need to tell the server where /static/ files are held. We can add a map of name value pairs:
-
-``` go
-serverInstance.SetStaticFileServerData(staticFileMap)
-```
-
-or just add a Url prefix and a path:
-
-``` go
-serverInstance.AddStaticFileServerData("/static/", "c:\\static")
-```
-
-Where **staticFileMap** is a **map[string]string** read from configuration data or created in code as follows:
-
-``` go
-staticFileMap := make(map[string]string)
-staticFileMap["/static/pics/"] = "site/img"
-staticFileMap["/static/"] = "site/"
-```
-
-So URL prefix **/static/** will read files from **site/**
-
-And URL prefix **/static/pics/** will read files from **site/img**
-
-Note the directory paths given in the example will be relative to the server directory.
-
-Also note that it is not a good idea to have an exact match witt URL prefix and directories on you file system as this reveals the directory structures via the URL's and can lead to security issues. Hide the structure of your server file system from browsers using your server.
-
-## Template Definitions
-
-[Top](#webServerBase)
-
-Support go the GO templating engin is included in the server .This can be used to return a html document that has a template
+* Loads ALL the templates in the template directory in to memory.
+* Maps HTTP requests to them.
+* Provided an oportunity to derive template data based on the template name.
 
 Template support is in **templateManager.go** with examples in **webServerExample.go**
 
-First we need to tell the server where the templates are held in the file system:
+First we need to tell the server where ALL the templates are held in the file system:
 
 ``` go
 serverInstance.SetPathToTemplates("templates/")
 ```
 
-This will Load the templates in to a cache in memory and perform some validation of the syntax.
+This will Load ALL the templates in to a cache in memory and perform some validation of the syntax.
 
-We can then get a list of available templates and log it.
+We can then get a list of available template name and log it.
 
 ``` go
 serverInstance.ListTemplateNames(", ")
@@ -314,15 +326,11 @@ Will list the templates with a ', ' between each name.
 
 [Top](#webServerBase)
 
-You will need to read the documentation (I had to!). You can define single templates or groups of templates that can generate a single document.
+You will need to read the documentation (I had to!).
 
-The template directory is defined using:
+You can define *single* templates or *groups* of templates that can generate a single document.
 
-``` go
-serverInstance.SetPathToTemplates("templates/)
-```
-
-The directory is parsed and all qualifying templates are added.
+The template directory is parsed and all qualifying templates are loaded.
 
 ## Single Templates
 
