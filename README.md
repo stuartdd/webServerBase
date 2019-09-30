@@ -14,6 +14,7 @@
   * [Single Templates](#Single%20Templates)
   * [Group Templates](#Group%20Templates)
   * [Template Data](#Template%20Data)
+* [Server start](#Server%20start)
 
 [comment]: <> (Use Crtl+Shift+v | Crtl+k+v to view in Visual Code MD pluggin markdownlint)
 
@@ -187,20 +188,6 @@ In this example 'my/templates' is a relative directory path.
 * This Loads all templates from that path and caches them in memory!
 
 Please refer to the section on [Templates](#Templates) for further details.
-
-## Server start
-
-[Top](#webServerBase)
-
-To start the server use the **ListenAndServeOnPort(port int)** method bound to **ServerInstanceData**
-
-For example:
-
-``` go
-serverInstance = servermain.NewServerInstanceData("MyServer", "utf-8)
-...
-serverInstance.ListenAndServeOnPort(8080)
-```
 
 ## Config Package
 
@@ -427,3 +414,23 @@ The example **templateDataProvider** in **webServerExample.go** reads a map from
 Based on the template name you could call a data base or read a file and add the data that way.
 
 The reasonable template handler defined in **templateManager.go** adds the URL Query data to a map before calling **templateDataProvider** so the map already has some data in it.
+
+## Server start
+
+[Top](#webServerBase)
+
+Once you have done all the setup the last thing to do is Start the server.
+
+To start the server use the **ListenAndServeOnPort(port int)** method bound to **ServerInstanceData**
+
+For example:
+
+``` go
+serverInstance = servermain.NewServerInstanceData("MyServer", "utf-8)
+/*
+Do all the setup!
+*/
+serverInstance.ListenAndServeOnPort(8080)
+```
+
+This command does not return until the server terminates!
