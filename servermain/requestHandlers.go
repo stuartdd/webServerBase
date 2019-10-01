@@ -42,17 +42,26 @@ func DefaultOSScriptHandler(request *http.Request, response *Response) {
 	server := h.GetServer()
 	logger := server.GetServerLogger()
 	scriptName := h.GetNamedURLPart("script", "")
-
 	data := server.GetOsScriptsData(scriptName)
-	osData := RunAndWait(server.GetOsScriptsPath(), data[0], data[1:]...)
+
+	m := h.GetQueries()
+	for name, index := range response.names {
+		val := h.GetURLPart(index, "?")
+		if val != "?" {
+			m[name] = val
+		}
+	}
+
+	osData := RunAndWait(server.GetOsScriptsPath(), data[0], m, data[1:]...)
 	if osData.retCode == 0 {
 		if logging.IsDebug() {
 			logger.LogDebugf("OS Script %s Executed OK", scriptName)
 		}
 		contentType := LookupContentType("txt")
-		response.SetResponse(200, osData.stdout, contentType + "; charset=" + server.contentTypeCharset)
+		response.SetResponse(200, osData.stdout, contentType+"; charset="+server.contentTypeCharset)
 		return
 	}
+
 	if logging.IsError() {
 		errText := ""
 		if osData.err != nil {

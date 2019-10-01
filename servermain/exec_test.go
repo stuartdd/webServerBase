@@ -15,7 +15,7 @@ var callBackResult *CmdStatus
 var testOS = runtime.GOOS
 
 func TestRunErr(t *testing.T) {
-	x := RunAndWait("", "sh", "-c", "ls fred")
+	x := RunAndWait("", "sh", nil, "-c", "ls fred")
 	test.AssertError(t, "", x.err)
 	test.AssertIntEqual(t, "", 2, x.retCode)
 	test.AssertStringContains(t, "", x.stderr, []string{"cannot access 'fred'"})
@@ -24,7 +24,7 @@ func TestRunErr(t *testing.T) {
 }
 
 func TestRunErrWithPath(t *testing.T) {
-	x := RunAndWait("fred", "sh", "-c", "ls")
+	x := RunAndWait("fred", "sh", nil, "-c", "ls")
 	test.AssertError(t, "", x.err)
 	test.AssertIntEqual(t, "", 1, x.retCode)
 	test.AssertStringEmpty(t, "", x.stderr)
@@ -33,7 +33,7 @@ func TestRunErrWithPath(t *testing.T) {
 }
 
 func TestRunOk(t *testing.T) {
-	x := RunAndWait("", "sh", "-c", "echo stdout; echo 1>&2 stderr")
+	x := RunAndWait("", "sh", nil, "-c", "echo stdout; echo 1>&2 stderr")
 	test.AssertErrorIsNil(t, "", x.err)
 	test.AssertIntEqual(t, "", 0, x.retCode)
 	test.AssertStringEquals(t, "", x.stderr, "stderr")
@@ -42,7 +42,7 @@ func TestRunOk(t *testing.T) {
 
 func TestRunDIR(t *testing.T) {
 	if testOS == "windows" {
-		x := RunAndWait("", "cmd", "/C", "dir", "c:\\Program Files")
+		x := RunAndWait("", "cmd", nil, "/C", "dir", "c:\\Program Files")
 		test.AssertErrorIsNil(t, "", x.err)
 		test.AssertIntEqual(t, "", 0, x.retCode)
 		test.AssertStringEmpty(t, "", x.stderr)
@@ -52,7 +52,7 @@ func TestRunDIR(t *testing.T) {
 
 func TestRunWithPath(t *testing.T) {
 	if testOS == "windows" {
-		x := RunAndWait("c:\\Program Files", "cmd", "/C", "dir")
+		x := RunAndWait("c:\\Program Files", "cmd", nil, "/C", "dir")
 		test.AssertErrorIsNil(t, "", x.err)
 		test.AssertIntEqual(t, "", 0, x.retCode)
 		test.AssertStringEmpty(t, "", x.stderr)
@@ -64,7 +64,7 @@ func TestRunDIRRunBackground(t *testing.T) {
 	if testOS == "windows" {
 		callbackNotDone = true
 		waitcount = 0
-		RunAndCallback(callbackFunction, "", "cmd", "/C", "dir", "c:\\Program Files")
+		RunAndCallback(callbackFunction, "", "cmd", nil, "/C", "dir", "c:\\Program Files")
 		for callbackNotDone {
 			time.Sleep(100 * time.Millisecond)
 			waitcount++

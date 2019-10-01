@@ -21,25 +21,31 @@ type CmdStatus struct {
 /*
 RunAndWait - run a command on the OS
 */
-func RunAndWait(path string, name string, args ...string) *CmdStatus {
-	return run(path, name, args...)
+func RunAndWait(path string, name string, data map[string]string, args ...string) *CmdStatus {
+	return run(path, name, data, args...)
 }
 
 /*
 RunAndCallback - run a command on the OS and call back when complete
 */
-func RunAndCallback(callback func(status *CmdStatus), path string, name string, args ...string) {
-	go callback(run(path, name, args...))
+func RunAndCallback(callback func(status *CmdStatus), path string, name string, data map[string]string, args ...string) {
+	go callback(run(path, name, data, args...))
 }
 
-func run(path string, name string, args ...string) *CmdStatus {
+func run(path string, name string, data map[string]string, args ...string) *CmdStatus {
 	state := &CmdStatus{
 		stdout:  "",
 		stderr:  "",
 		retCode: -1,
 		err:     nil,
 	}
-	cmd := exec.Command(name, args...)
+
+	zData := make([]string, len(args))
+	for index, value := range args {
+		zData[index] = ReplaceDollar(value, data, '$')
+	}
+
+	cmd := exec.Command(name, zData...)
 	if path != "" {
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			return captureError(state, errors.New("Path ["+path+"] does not exist"))

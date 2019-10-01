@@ -54,7 +54,7 @@ func AssertErrorString(t *testing.T, info string, expected string, actual error)
 AssertErrorIsNotExist assert that the error is a Not Found error
 */
 func AssertErrorIsNotExist(t *testing.T, info string, err error) {
-	if (os.IsNotExist(err)) {
+	if os.IsNotExist(err) {
 		return
 	}
 	logStackTraceAndFail(t, fmt.Sprintf("Error [%s] is NOT a 'Not Exist' error ", err.Error()), info, debug.Stack())
@@ -179,9 +179,9 @@ func AssertStringContains(t *testing.T, info string, content string, contains []
 }
 
 /*
-AssertStringNotContain see if all the strings are contained in the string
+AssertStringDoesNotContain see if all the strings are contained in the string
 */
-func AssertStringNotContain(t *testing.T, info string, content string, contains []string) {
+func AssertStringDoesNotContain(t *testing.T, info string, content string, contains []string) {
 	for _, val := range contains {
 		if strings.Contains(content, val) {
 			logStackTraceAndFail(t, fmt.Sprintf("String '%s' contains '%s'", content, val), info, debug.Stack())
