@@ -138,26 +138,26 @@ func TestFindRoot(t *testing.T) {
 	meRoot := NewMappingElements(nil)
 	meRoot.RequestMethod = "ROOT"
 	test.AssertNil(t, "", meRoot.parent)
-	test.AssertStringEquals(t, "", "ROOT", meRoot.RequestMethod)
-	test.AssertStringEquals(t, "", "ROOT", meRoot.findRoot().RequestMethod)
+	test.AssertStringEquals(t, "", meRoot.RequestMethod, "ROOT")
+	test.AssertStringEquals(t, "", meRoot.findRoot().RequestMethod, "ROOT")
 	test.AssertNil(t, "", meRoot.findRoot().parent)
 
 	meNext := NewMappingElements(meRoot)
 	meNext.RequestMethod = "NEXT"
-	test.AssertStringEquals(t, "", "NEXT", meNext.RequestMethod)
+	test.AssertStringEquals(t, "", meNext.RequestMethod, "NEXT")
 	test.AssertNil(t, "", meRoot.parent)
-	test.AssertStringEquals(t, "", "ROOT", meNext.parent.RequestMethod)
-	test.AssertStringEquals(t, "", "ROOT", meNext.findRoot().RequestMethod)
+	test.AssertStringEquals(t, "", meNext.parent.RequestMethod, "ROOT")
+	test.AssertStringEquals(t, "", meNext.findRoot().RequestMethod, "ROOT")
 	test.AssertNil(t, "", meNext.findRoot().parent)
 
 	meLast := NewMappingElements(meNext)
 	meLast.RequestMethod = "LAST"
-	test.AssertStringEquals(t, "", "LAST", meLast.RequestMethod)
+	test.AssertStringEquals(t, "", meLast.RequestMethod, "LAST")
 	test.AssertNil(t, "", meRoot.parent)
-	test.AssertStringEquals(t, "", "ROOT", meRoot.RequestMethod)
-	test.AssertStringEquals(t, "", "ROOT", meNext.parent.RequestMethod)
-	test.AssertStringEquals(t, "", "NEXT", meLast.parent.RequestMethod)
-	test.AssertStringEquals(t, "", "ROOT", meLast.findRoot().RequestMethod)
+	test.AssertStringEquals(t, "", meRoot.RequestMethod, "ROOT")
+	test.AssertStringEquals(t, "", meNext.parent.RequestMethod, "ROOT")
+	test.AssertStringEquals(t, "", meLast.parent.RequestMethod, "NEXT")
+	test.AssertStringEquals(t, "", meLast.findRoot().RequestMethod, "ROOT")
 	test.AssertNil(t, "", meLast.findRoot().parent)
 }
 

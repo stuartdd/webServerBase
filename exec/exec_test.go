@@ -18,7 +18,7 @@ func TestRunErr(t *testing.T) {
 	x := RunAndWait("", "sh", nil, "-c", "ls fred")
 	test.AssertError(t, "", x.Err)
 	test.AssertIntEqual(t, "", 2, x.RetCode)
-	test.AssertStringContains(t, "", x.Stderr, []string{"cannot access 'fred'"})
+	test.AssertStringContains(t, "", x.Stderr, "cannot access 'fred'")
 	test.AssertStringEmpty(t, "", x.Stdout)
 	test.AssertErrorTextContains(t, "", x.Err, "exit status 2")
 }
@@ -36,8 +36,8 @@ func TestRunOk(t *testing.T) {
 	x := RunAndWait("", "sh", nil, "-c", "echo stdout; echo 1>&2 stderr")
 	test.AssertErrorIsNil(t, "", x.Err)
 	test.AssertIntEqual(t, "", 0, x.RetCode)
-	test.AssertStringEquals(t, "", x.Stderr, "stderr")
-	test.AssertStringEquals(t, "", x.Stdout, "stdout")
+	test.AssertStringEquals(t, "", "stderr", x.Stderr)
+	test.AssertStringEquals(t, "", "stdout", x.Stdout)
 }
 
 func TestRunDIR(t *testing.T) {
@@ -46,7 +46,7 @@ func TestRunDIR(t *testing.T) {
 		test.AssertErrorIsNil(t, "", x.Err)
 		test.AssertIntEqual(t, "", 0, x.RetCode)
 		test.AssertStringEmpty(t, "", x.Stderr)
-		test.AssertStringContains(t, "", x.Stdout, []string{"<DIR>", "Directory of c:\\Program Files"})
+		test.AssertStringContains(t, "", x.Stdout, "<DIR>", "Directory of c:\\Program Files")
 	}
 }
 
@@ -56,7 +56,7 @@ func TestRunWithPath(t *testing.T) {
 		test.AssertErrorIsNil(t, "", x.Err)
 		test.AssertIntEqual(t, "", 0, x.RetCode)
 		test.AssertStringEmpty(t, "", x.Stderr)
-		test.AssertStringContains(t, "", x.Stdout, []string{"<DIR>", "Directory of c:\\Program Files"})
+		test.AssertStringContains(t, "", x.Stdout, "<DIR>", "Directory of c:\\Program Files")
 	}
 }
 
@@ -80,7 +80,7 @@ func TestRunDIRRunBackground(t *testing.T) {
 		test.AssertErrorIsNil(t, "", callBackResult.Err)
 		test.AssertIntEqual(t, "", 0, callBackResult.RetCode)
 		test.AssertStringEmpty(t, "", callBackResult.Stderr)
-		test.AssertStringContains(t, "", callBackResult.Stdout, []string{"<DIR>"})
+		test.AssertStringContains(t, "", callBackResult.Stdout, "<DIR>")
 	}
 }
 

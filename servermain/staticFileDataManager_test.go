@@ -2,33 +2,34 @@ package servermain
 
 import (
 	"testing"
+
 	"github.com/stuartdd/webServerBase/test"
 )
 
 func TestStaticFileForUrlPrefix(t *testing.T) {
 	sfm := createStaticFileServer()
-	test.AssertStringEquals(t, "", "site/", sfm.GetStaticPathForURL("/static/name").FilePath)
-	test.AssertStringEquals(t, "", "site/", sfm.GetStaticPathForURL("static/name").FilePath)
-	test.AssertStringEquals(t, "", "site/bmp", sfm.GetStaticPathForURL("/static/bmp/name").FilePath)
-	test.AssertStringEquals(t, "", "site/bmp", sfm.GetStaticPathForURL("static/bmp/name").FilePath)
-	test.AssertStringEquals(t, "", "site/", sfm.GetStaticPathForURL("/static/xmp/name").FilePath)
-	test.AssertStringEquals(t, "", "site/bmp", sfm.GetStaticPathForURL("/static/bmp/").FilePath)
-	test.AssertStringEquals(t, "", "site/", sfm.GetStaticPathForURL("/static/bmp").FilePath)
+	test.AssertStringEquals(t, "", sfm.GetStaticPathForURL("/static/name").FilePath, "site/")
+	test.AssertStringEquals(t, "", sfm.GetStaticPathForURL("static/name").FilePath, "site/")
+	test.AssertStringEquals(t, "", sfm.GetStaticPathForURL("/static/bmp/name").FilePath, "site/bmp")
+	test.AssertStringEquals(t, "", sfm.GetStaticPathForURL("static/bmp/name").FilePath, "site/bmp")
+	test.AssertStringEquals(t, "", sfm.GetStaticPathForURL("/static/xmp/name").FilePath, "site/")
+	test.AssertStringEquals(t, "", sfm.GetStaticPathForURL("/static/bmp/").FilePath, "site/bmp")
+	test.AssertStringEquals(t, "", sfm.GetStaticPathForURL("/static/bmp").FilePath, "site/")
 
 	notFound(t, sfm, "/statxc/xmp/name")
 	notFound(t, sfm, "statxc/xmp/name")
 	notFound(t, sfm, "/main/name")
 
 	sfm.AddStaticFileServerData("/main/", "local")
-	test.AssertStringEquals(t, "", "local", sfm.GetStaticPathForURL("/main/name").FilePath)
-	test.AssertStringEquals(t, "", "local", sfm.GetStaticPathForURL("main/name").FilePath)
+	test.AssertStringEquals(t, "", sfm.GetStaticPathForURL("/main/name").FilePath, "local")
+	test.AssertStringEquals(t, "", sfm.GetStaticPathForURL("main/name").FilePath, "local")
 
 	notFound(t, sfm, "/statxc/xmp/name")
 	notFound(t, sfm, "statxc")
 	notFound(t, sfm, "static")
 
 	sfm.AddStaticFileServerData("static", "xxxx")
-	test.AssertStringEquals(t, "", "xxxx", sfm.GetStaticPathForName("static").FilePath)
+	test.AssertStringEquals(t, "", sfm.GetStaticPathForName("static").FilePath, "xxxx")
 
 }
 

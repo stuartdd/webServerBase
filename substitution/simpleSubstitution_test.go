@@ -21,7 +21,7 @@ func TestReplaceFound(t *testing.T) {
 
 	test.AssertStringEquals(t, "", "x1x 2 ${yyyy}", DoSubstitution("x${a}x ${b} ${yyyy}", ma, '$'))
 	yyyy, _, _ := time.Now().Date()
-	test.AssertStringDoesNotContain(t, "", DoSubstitution("x${a}x ${b} "+strconv.Itoa(yyyy), ma, '$'), []string{"${YYYY}"})
+	test.AssertStringDoesNotContain(t, "", DoSubstitution("x${a}x ${b} "+strconv.Itoa(yyyy), ma, '$'), "${YYYY}")
 
 }
 

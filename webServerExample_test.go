@@ -27,20 +27,20 @@ func TestServer(t *testing.T) {
 	startServer(t)
 	defer stopServer(t)
 
-	test.AssertStringContains(t, "", sendGet(t, 200, "script/list?abc=123&xxx=ABC", headers("txt", "")), []string{"ARG 0: echop.sh", "ARG 1: 123-ABC"})
-	test.AssertStringContains(t, "", sendGet(t, 200, "script/list?abc=123", headers("txt", "")), []string{"ARG 0: echop.sh", "ARG 1: 123-${xxx}"})
-	test.AssertStringContains(t, "", sendGet(t, 404, "script/abc", headers("json", "")), []string{"\"Status\":404,\"Code\":" + strconv.Itoa(servermain.SCScriptNotFound) + ""})
+	test.AssertStringContains(t, "", sendGet(t, 200, "script/list?abc=123&xxx=ABC", headers("txt", "")), "ARG 0: echop.sh", "ARG 1: 123-ABC")
+	test.AssertStringContains(t, "", sendGet(t, 200, "script/list?abc=123", headers("txt", "")), "ARG 0: echop.sh", "ARG 1: 123-${xxx}")
+	test.AssertStringContains(t, "", sendGet(t, 404, "script/abc", headers("json", "")), "\"Status\":404,\"Code\":"+strconv.Itoa(servermain.SCScriptNotFound)+"")
 
-	test.AssertStringContains(t, "", sendGet(t, 200, "site/index1.html?Material=LEAD", headers("html", "")), []string{"<title>Soot</title>"})
-	test.AssertStringContains(t, "", sendGet(t, 404, "site/testfile", headers("json", "")), []string{"\"Status\":404", "\"Code\":" + strconv.Itoa(servermain.SCTemplateNotFound), "Not Found", "/site/testfile"})
+	test.AssertStringContains(t, "", sendGet(t, 200, "site/index1.html?Material=LEAD", headers("html", "")), "<title>Soot</title>")
+	test.AssertStringContains(t, "", sendGet(t, 404, "site/testfile", headers("json", "")), "\"Status\":404", "\"Code\":"+strconv.Itoa(servermain.SCTemplateNotFound), "Not Found", "/site/testfile")
 
 	/*
 		Test static file retrieval
 	*/
-	test.AssertStringContains(t, "", sendGet(t, 404, "static/testfile", headers("json", "")), []string{"\"Status\":404", "\"Code\":" + strconv.Itoa(servermain.SCContentNotFound), "Not Found", "URL:/static/testfile"})
-	test.AssertStringContains(t, "", sendGet(t, 200, "static/testfile.json", headers("json", "13")), []string{"{\"test\":true}"})
-	test.AssertStringContains(t, "", sendGet(t, 200, "static/testfile.xml", headers("xml", "17")), []string{"<test>true</test>"})
-	test.AssertStringContains(t, "", sendGet(t, 200, "static/arduino.ico", headers("ico", "367958")), []string{})
+	test.AssertStringContains(t, "", sendGet(t, 404, "static/testfile", headers("json", "")), "\"Status\":404", "\"Code\":"+strconv.Itoa(servermain.SCContentNotFound), "Not Found", "URL:/static/testfile")
+	test.AssertStringContains(t, "", sendGet(t, 200, "static/testfile.json", headers("json", "13")), "{\"test\":true}")
+	test.AssertStringContains(t, "", sendGet(t, 200, "static/testfile.xml", headers("xml", "17")), "<test>true</test>")
+	test.AssertStringContains(t, "", sendGet(t, 200, "static/arduino.ico", headers("ico", "367958")))
 	/*
 		Test write file. Mainly to test POST processes
 	*/
@@ -48,39 +48,39 @@ func TestServer(t *testing.T) {
 	testWriteFile2 := configData.GetConfigDataStaticFilePathForOS()["data"] + string(os.PathSeparator) + "createTestFile2.json"
 	defer deleteFile(t, testWriteFile1) // Clean up the test data when done!
 	defer deleteFile(t, testWriteFile2) // Clean up the test data when done!
-	test.AssertStringContains(t, "", sendPost(t, 404, "status", "Hello.txt", headers("json", "")), []string{"\"Status\":404", "\"Code\":" + strconv.Itoa(servermain.SCPathNotFound), "POST URL:/status"})
-	test.AssertStringContains(t, "", sendPost(t, 201, "path/data/file/createTestFile1", "Hello.txt", headers("json", "16")), []string{"\"Created\":\"OK\""})
-	test.AssertStringContains(t, "", sendPost(t, 201, "path/data/file/createTestFile2/ext/json", "Hello.json", headers("json", "16")), []string{"\"Created\":\"OK\""})
-	test.AssertStringContains(t, "", sendPost(t, 404, "path/god/file/createTestFile1", "Hello", headers("json", "")), []string{"\"Status\":404", "\"Code\":" + strconv.Itoa(servermain.SCStaticPathNotFound), "Entity:god Not Found"})
-	test.AssertFileContains(t, "", testWriteFile1, []string{"Hello.txt"})
-	test.AssertFileContains(t, "", testWriteFile2, []string{"Hello.json"})
+	test.AssertStringContains(t, "", sendPost(t, 404, "status", "Hello.txt", headers("json", "")), "\"Status\":404", "\"Code\":"+strconv.Itoa(servermain.SCPathNotFound), "POST URL:/status")
+	test.AssertStringContains(t, "", sendPost(t, 201, "path/data/file/createTestFile1", "Hello.txt", headers("json", "16")), "\"Created\":\"OK\"")
+	test.AssertStringContains(t, "", sendPost(t, 201, "path/data/file/createTestFile2/ext/json", "Hello.json", headers("json", "16")), "\"Created\":\"OK\"")
+	test.AssertStringContains(t, "", sendPost(t, 404, "path/god/file/createTestFile1", "Hello", headers("json", "")), "\"Status\":404", "\"Code\":"+strconv.Itoa(servermain.SCStaticPathNotFound), "Entity:god Not Found")
+	test.AssertFileContains(t, "", testWriteFile1, "Hello.txt")
+	test.AssertFileContains(t, "", testWriteFile2, "Hello.json")
 	/*
 		Test GET functions
 	*/
-	test.AssertStringContains(t, "", sendGet(t, 200, "status", headers("json", "")), []string{"\"State\":\"RUNNING\"", "\"Executable\":\"TestExe\"", "\"Panics\":0"})
-	test.AssertStringContains(t, "", sendGet(t, 404, "not-fo", headers("json", "")), []string{"\"Status\":404", "\"Code\":" + strconv.Itoa(servermain.SCPathNotFound), "GET URL:/not-fo"})
+	test.AssertStringContains(t, "", sendGet(t, 200, "status", headers("json", "")), "\"State\":\"RUNNING\"", "\"Executable\":\"TestExe\"", "\"Panics\":0")
+	test.AssertStringContains(t, "", sendGet(t, 404, "not-fo", headers("json", "")), "\"Status\":404", "\"Code\":"+strconv.Itoa(servermain.SCPathNotFound), "GET URL:/not-fo")
 	/*
 		Test GET functions with calc
 	*/
-	test.AssertStringEquals(t, "", "2", sendGet(t, 200, "calc/10/div/5", headers("txt", "1")))
-	test.AssertStringEquals(t, "", "50", sendGet(t, 200, "calc/100/div/2", headers("txt", "2")))
-	test.AssertStringEquals(t, "", "50", sendGet(t, 200, "calc/100/div/2", headers("txt", "2")))
-	test.AssertStringContains(t, "", sendGet(t, 404, "calc", headers("json", "")), []string{"\"Status\":404", "\"Code\":" + strconv.Itoa(servermain.SCPathNotFound), "GET URL:/calc"})
-	test.AssertStringContains(t, "", sendGet(t, 404, "calc/10", headers("json", "")), []string{"\"Status\":404"})
-	test.AssertStringContains(t, "", sendGet(t, 404, "calc/10/div", headers("json", "")), []string{"\"Status\":404"})
-	test.AssertStringContains(t, "", sendGet(t, 404, "calc/10/div/", headers("json", "")), []string{"\"Status\":404"})
-	test.AssertStringContains(t, "", sendGet(t, 400, "calc/10/div/ten", headers("json", "")), []string{"\"Status\":400", "\"Code\":" + strconv.Itoa(servermain.SCParamValidation), "invalid number ten"})
-	test.AssertStringContains(t, "", sendGet(t, 400, "calc/five/div/ten", headers("json", "")), []string{"\"Status\":400", "\"Code\":" + strconv.Itoa(servermain.SCParamValidation), "invalid number five"})
+	test.AssertStringEquals(t, "", sendGet(t, 200, "calc/10/div/5", headers("txt", "1")), "2")
+	test.AssertStringEquals(t, "", sendGet(t, 200, "calc/100/div/2", headers("txt", "2")), "50")
+	test.AssertStringEquals(t, "", sendGet(t, 200, "calc/100/div/2", headers("txt", "2")), "50")
+	test.AssertStringContains(t, "", sendGet(t, 404, "calc", headers("json", "")), "\"Status\":404", "\"Code\":"+strconv.Itoa(servermain.SCPathNotFound), "GET URL:/calc")
+	test.AssertStringContains(t, "", sendGet(t, 404, "calc/10", headers("json", "")), "\"Status\":404")
+	test.AssertStringContains(t, "", sendGet(t, 404, "calc/10/div", headers("json", "")), "\"Status\":404")
+	test.AssertStringContains(t, "", sendGet(t, 404, "calc/10/div/", headers("json", "")), "\"Status\":404")
+	test.AssertStringContains(t, "", sendGet(t, 400, "calc/10/div/ten", headers("json", "")), "\"Status\":400", "\"Code\":"+strconv.Itoa(servermain.SCParamValidation), "invalid number ten")
+	test.AssertStringContains(t, "", sendGet(t, 400, "calc/five/div/ten", headers("json", "")), "\"Status\":400", "\"Code\":"+strconv.Itoa(servermain.SCParamValidation), "invalid number five")
 
-	test.AssertStringEquals(t, "", "16", sendGet(t, 200, "calc/qube/2", headers("txt", "2")))
-	test.AssertStringContains(t, "", sendGet(t, 404, "calc/qube", headers("json", "")), []string{"\"Status\":404"})
-	test.AssertStringContains(t, "", sendGet(t, 404, "calc/qube/div/10", headers("json", "")), []string{"\"Status\":404"})
-	test.AssertStringContains(t, "", sendGet(t, 400, "calc/qube/div", headers("json", "")), []string{"\"Status\":400", "\"Code\":" + strconv.Itoa(servermain.SCParamValidation), "invalid number div"})
+	test.AssertStringEquals(t, "", sendGet(t, 200, "calc/qube/2", headers("txt", "2")), "16")
+	test.AssertStringContains(t, "", sendGet(t, 404, "calc/qube", headers("json", "")), "\"Status\":404")
+	test.AssertStringContains(t, "", sendGet(t, 404, "calc/qube/div/10", headers("json", "")), "\"Status\":404")
+	test.AssertStringContains(t, "", sendGet(t, 400, "calc/qube/div", headers("json", "")), "\"Status\":400", "\"Code\":"+strconv.Itoa(servermain.SCParamValidation), "invalid number div")
 	/*
 		Test PANIC responses
 	*/
 	prc := configData.PanicResponseCode
-	test.AssertStringContains(t, "", sendGet(t, prc, "calc/10/div/0", headers("json", "")), []string{"\"Status\":" + strconv.Itoa(prc), "\"Code\":" + strconv.Itoa(servermain.SCRuntimeError), "integer divide by zero", "Internal Server Error"})
+	test.AssertStringContains(t, "", sendGet(t, prc, "calc/10/div/0", headers("json", "")), "\"Status\":"+strconv.Itoa(prc), "\"Code\":"+strconv.Itoa(servermain.SCRuntimeError), "integer divide by zero", "Internal Server Error")
 
 }
 
@@ -155,7 +155,7 @@ func deleteFile(t *testing.T, name string) {
 }
 
 func stopServer(t *testing.T) {
-	test.AssertStringContains(t, "", sendGet(t, 200, "stop", nil), []string{"\"State\":\"STOPPING\"", "\"Executable\":\"TestExe\"", "\"Panics\":1"})
+	test.AssertStringContains(t, "", sendGet(t, 200, "stop", nil), "\"State\":\"STOPPING\"", "\"Executable\":\"TestExe\"", "\"Panics\":1")
 }
 
 func startServer(t *testing.T) {

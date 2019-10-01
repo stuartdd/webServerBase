@@ -161,7 +161,7 @@ func AssertBoolFalse(t *testing.T, info string, actual bool) {
 /*
 AssertStringEquals assert strings are equal
 */
-func AssertStringEquals(t *testing.T, info string, expected string, actual string) {
+func AssertStringEquals(t *testing.T, info string, actual string, expected string) {
 	if expected != actual {
 		logStackTraceAndFail(t, fmt.Sprintf("Expected '%s' actual '%s'", expected, actual), info, debug.Stack())
 	}
@@ -170,7 +170,7 @@ func AssertStringEquals(t *testing.T, info string, expected string, actual strin
 /*
 AssertStringContains see if all the strings are contained in the string
 */
-func AssertStringContains(t *testing.T, info string, content string, contains []string) {
+func AssertStringContains(t *testing.T, info string, content string, contains ...string) {
 	for _, val := range contains {
 		if !strings.Contains(content, val) {
 			logStackTraceAndFail(t, fmt.Sprintf("String '%s' does not contain '%s'", content, val), info, debug.Stack())
@@ -181,7 +181,7 @@ func AssertStringContains(t *testing.T, info string, content string, contains []
 /*
 AssertStringDoesNotContain see if all the strings are contained in the string
 */
-func AssertStringDoesNotContain(t *testing.T, info string, content string, contains []string) {
+func AssertStringDoesNotContain(t *testing.T, info string, content string, contains ...string) {
 	for _, val := range contains {
 		if strings.Contains(content, val) {
 			logStackTraceAndFail(t, fmt.Sprintf("String '%s' contains '%s'", content, val), info, debug.Stack())
@@ -242,7 +242,7 @@ func AssertFileRemoved(t *testing.T, info string, path string) {
 /*
 AssertFileContains see if all the strings are contained in the file
 */
-func AssertFileContains(t *testing.T, info string, fileName string, contains []string) {
+func AssertFileContains(t *testing.T, info string, fileName string, contains ...string) {
 	b, err := ioutil.ReadFile(fileName)
 	if err != nil {
 		logStackTraceAndFail(t, fmt.Sprintf("File '%s' could not read. Error:%s", fileName, err.Error()), info, debug.Stack())
@@ -252,13 +252,13 @@ func AssertFileContains(t *testing.T, info string, fileName string, contains []s
 			logStackTraceAndFail(t, fmt.Sprintf("File '%s' does not contain the string '%s'", fileName, val), info, debug.Stack())
 		}
 	}
-	AssertStringContains(t, info, string(b), contains)
+	AssertStringContains(t, info, string(b), contains...)
 }
 
 /*
 AssertFileDoesNotContain read a file ans see if any if the strings are contained in it
 */
-func AssertFileDoesNotContain(t *testing.T, info string, fileName string, contains []string) {
+func AssertFileDoesNotContain(t *testing.T, info string, fileName string, contains ...string) {
 	b, err := ioutil.ReadFile(fileName)
 	if err != nil {
 		logStackTraceAndFail(t, fmt.Sprintf("File %s could not read. Error:%s", fileName, err.Error()), info, debug.Stack())

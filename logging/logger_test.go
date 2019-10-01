@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-	
+
 	"github.com/stuartdd/webServerBase/test"
 )
 
@@ -83,8 +83,7 @@ func TestFallback(t *testing.T) {
 	captured := string(out)
 
 	t.Log("AA *******************************\n" + captured + "BB *********************************")
-	test.AssertStringContains(t, "", captured, []string{
-		"FALLBACK:ACCESS: LINE 1",
+	test.AssertStringContains(t, "", captured,
 		"FALLBACK:ACCESS: LINE 2",
 		"FALLBACK:DEBUG: LINE 3",
 		"FALLBACK:DEBUG: LINE 4",
@@ -97,7 +96,7 @@ func TestFallback(t *testing.T) {
 		"FALLBACK:ERROR: TRACE 11 LINE 11",
 		"logging.(*LoggerDataReference).LogErrorWithStackTrace",
 		"FALLBACK:FATAL: type[*errors.errorString] FATAL 12",
-	})
+	)
 
 }
 
@@ -235,19 +234,19 @@ func TestCreateLogDefaultsWithFile(t *testing.T) {
 	t2.LogAccess(t2Data)
 	t2.LogInfo(t2Data)
 	fileName := GetLogLevelFileNameForLevelName("DEBUG")
-	test.AssertFileContains(t, "", fileName, []string{
-		"AppID T1 [-]  DEBUG " + t1Data,
-		"AppID T2 [-]  DEBUG " + t2Data,
-		"AppID T1 [-]  ERROR 10:20: Trial error: " + t1Data,
-		"AppID T2 [-]  ERROR 10:20: Trial error: " + t2Data,
-	})
-	test.AssertFileDoesNotContain(t, "", fileName, []string{
+	test.AssertFileContains(t, "", fileName,
+		"AppID T1 [-]  DEBUG "+t1Data,
+		"AppID T2 [-]  DEBUG "+t2Data,
+		"AppID T1 [-]  ERROR 10:20: Trial error: "+t1Data,
+		"AppID T2 [-]  ERROR 10:20: Trial error: "+t2Data,
+	)
+	test.AssertFileDoesNotContain(t, "", fileName,
 		"INFO",
 		"ACCESS",
 		"WARN",
 		"INFO",
 		"FATAL",
-	})
+	)
 
 }
 
