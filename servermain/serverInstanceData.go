@@ -34,6 +34,8 @@ const (
 	SCStaticPath
 	SCWriteFile
 	SCParamValidation
+	SCScriptNotFound
+	SCScriptError
 	SCMax
 )
 
@@ -71,6 +73,8 @@ type ServerInstanceData struct {
 	templates          *Templates
 	serverReturnCode   int
 	serverClosedReason string
+	osScriptsPath      string
+	osScripts          map[string][]string
 }
 
 /*
@@ -263,6 +267,46 @@ func (p *ServerInstanceData) StopServerLater(waitForSeconds int, reason string) 
 	p.serverClosedReason = reason
 	p.serverReturnCode = 0
 	go p.stopServerThread(waitForSeconds)
+}
+
+/*
+SetOsScriptsData - Configure and Validate OS script data
+*/
+func (p *ServerInstanceData) SetOsScriptsData(path string, scriptsData map[string][]string) {
+	if path == "" {
+		panic("SetOsScriptsData: A path is required if any OS scripts or applications are to be executed!")
+	}
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		panic("SetOsScriptsData: The path [" + path + "] for OS scripts or applications could not be found: " + err.Error())
+	}
+	p.osScriptsPath = path
+	if (scriptsData == nil) || (len(scriptsData) == 0) {
+		panic("SetOsScriptsData: OS scripts or applications data cannot be empty")
+	}
+	for name, value := range scriptsData {
+		if (value == nil) || (len(value) == 0) {
+			panic("SetOsScriptsData: OS scripts or applications data for script [" + name + "]. Parameters cannot be empty")
+		}
+	}
+	p.osScripts = scriptsData
+}
+
+/*
+GetOsScriptsData - Get the OS Script data for a specific script name
+*/
+func (p *ServerInstanceData) GetOsScriptsData(scriptName string) []string {
+	data := p.osScripts[scriptName]
+	if data == nil {
+		ThrowPanic("E", 404, SCScriptNotFound, "Not found", "GetOsScriptsData: OS Script ["+scriptName+"] was not found")
+	}
+	return data
+}
+
+/*
+GetOsScriptsPath - Get the OS Script data path. This is where all the scripts are.
+*/
+func (p *ServerInstanceData) GetOsScriptsPath() string {
+	return p.osScriptsPath
 }
 
 /*

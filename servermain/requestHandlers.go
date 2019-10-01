@@ -37,6 +37,35 @@ func StopServerInstance(request *http.Request, response *Response) {
 /*
 DefaultTemplateFileHandler - Response handler for basic template processing
 */
+func DefaultOSScriptHandler(request *http.Request, response *Response) {
+	h := NewRequestHandlerHelper(request, response)
+	server := h.GetServer()
+	logger := server.GetServerLogger()
+	scriptName := h.GetNamedURLPart("script", "")
+
+	data := server.GetOsScriptsData(scriptName)
+	osData := RunAndWait(server.GetOsScriptsPath(), data[0], data[1:]...)
+	if osData.retCode == 0 {
+		if logging.IsDebug() {
+			logger.LogDebugf("OS Script %s Executed OK", scriptName)
+		}
+		contentType := LookupContentType("txt")
+		response.SetResponse(200, osData.stdout, contentType + "; charset=" + server.contentTypeCharset)
+		return
+	}
+	if logging.IsError() {
+		errText := ""
+		if osData.err != nil {
+			errText = osData.err.Error()
+		}
+		logger.LogErrorf("OS Script %s Failed. RC:%d. stderr[%s] error[%s]", scriptName, osData.retCode, osData.stderr, errText)
+	}
+	response.SetErrorResponse(417, SCScriptError, "Expectation Failed")
+}
+
+/*
+DefaultTemplateFileHandler - Response handler for basic template processing
+*/
 func DefaultTemplateFileHandler(request *http.Request, response *Response) {
 	h := NewRequestHandlerHelper(request, response)
 	server := h.GetServer()

@@ -18,5 +18,25 @@
   "noResponseResponseCode" : 400,
   "templateData" : {
     "index1.html" : {"Material":"Soot"}
+  },
+  "scriptData" : {
+    "windows" : {
+      "path" : "site\\scripts\\",
+      "data" : {
+        "list" : ["cmd", "/C", "dir"]
+      }
+    },
+    "linux":{
+      "path" : "site/scripts/",
+      "data" : {
+        "list" : ["sh", "-C", "ls"]
+      }
+    },
+    "darwin":{
+      "path" : "site/scripts/",
+      "data" : {
+        "list" : ["sh", "-c", "ls"]
+      }
+    }
   }
 }

@@ -102,6 +102,9 @@ func RunWithConfig(configData *config.Data, executable string) {
 		Set the http status code returned if a panic is thrown by any od the handlers
 	*/
 	serverInstance.SetPanicStatusCode(configData.PanicResponseCode)
+
+	scriptData := config.GetConfigDataInstance().GetScriptDataForOS()
+	serverInstance.SetOsScriptsData(scriptData.Path, scriptData.Data)
 	/*
 		A before handler is executed before ALL requests are passed to Mapped handlers
 		You can add multiple before handlers. These are usefull for access control and other global checks
@@ -117,6 +120,7 @@ func RunWithConfig(configData *config.Data, executable string) {
 	serverInstance.AddMappedHandlerWithNames("/stop/?", http.MethodGet, servermain.StopServerInstance, []string{"seconds"})
 	serverInstance.AddMappedHandler("/status", http.MethodGet, servermain.StatusHandler)
 	serverInstance.AddMappedHandler("/static/*", http.MethodGet, servermain.DefaultStaticFileHandler)
+	serverInstance.AddMappedHandlerWithNames("/script/?", http.MethodGet, servermain.DefaultOSScriptHandler, []string{"script"})
 	serverInstance.AddMappedHandlerWithNames("/site/?", http.MethodGet, servermain.DefaultTemplateFileHandler, []string{"template"})
 	serverInstance.AddMappedHandlerWithNames("/calc/qube/?", http.MethodGet, qubeHandler, []string{"qube"})
 	serverInstance.AddMappedHandlerWithNames("/calc/?/div/?", http.MethodGet, divHandler, []string{"calc", "div"})

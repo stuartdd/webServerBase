@@ -26,6 +26,15 @@ type Data struct {
 	StaticPaths        map[string]map[string]string
 	TemplatePaths      map[string]string
 	TemplateData       map[string]map[string]string
+	ScriptData         map[string]*ScriptData
+}
+
+/*
+ScriptData - For a goven OS define the scriptpath and the script data
+*/
+type ScriptData struct {
+	Path string
+	Data map[string][]string
 }
 
 /*
@@ -58,6 +67,7 @@ func LoadConfigData(configFileName string) error {
 		LoggerLevels:       make(map[string]string),
 		TemplatePaths:      make(map[string]string),
 		TemplateData:       make(map[string]map[string]string),
+		ScriptData:         make(map[string]*ScriptData),
 	}
 
 	/*
@@ -97,6 +107,14 @@ func (p *Data) GetConfigDataStaticFilePathForOS() map[string]string {
 	return path
 }
 
+func (p *Data) GetScriptDataForOS() *ScriptData {
+	sd := p.ScriptData[GetOS()]
+	if sd == nil {
+		log.Fatalf("Unable to find ScriptData in configuration file '%s' for operating system '%s'", GetConfigDataInstance().ConfigName, runtime.GOOS)
+	}
+	return sd
+}
+
 /*
 GetConfigDataTemplateFilePathForOS Get the static path for the OS. If not found return the first one!
 */
@@ -110,7 +128,7 @@ func (p *Data) GetConfigDataTemplateFilePathForOS() string {
 
 /*
 GetApplicationModuleName returns the name of the application. Testing and debugging changes this name so the code
-removes debug, test and .exe from the executable name. 
+removes debug, test and .exe from the executable name.
 */
 func GetApplicationModuleName() string {
 	exec, err := os.Executable()

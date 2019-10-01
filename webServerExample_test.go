@@ -27,6 +27,9 @@ func TestServer(t *testing.T) {
 	startServer(t)
 	defer stopServer(t)
 
+	test.AssertStringContains(t, "", sendGet(t, 200, "script/list", headers("txt", "")), []string{"<DIR>", "Directory of"})
+	test.AssertStringContains(t, "", sendGet(t, 404, "script/abc", headers("json", "")), []string{"\"Status\":404,\"Code\":" + strconv.Itoa(servermain.SCScriptNotFound) + ""})
+
 	test.AssertStringContains(t, "", sendGet(t, 200, "site/index1.html?Material=LEAD", headers("html", "")), []string{"<title>Soot</title>"})
 	test.AssertStringContains(t, "", sendGet(t, 404, "site/testfile", headers("json", "")), []string{"\"Status\":404", "\"Code\":" + strconv.Itoa(servermain.SCTemplateNotFound), "Not Found", "/site/testfile"})
 
