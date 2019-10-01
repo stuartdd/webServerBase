@@ -21,7 +21,18 @@ type CmdStatus struct {
 /*
 Run - run a command on the OS
 */
-func Run(name string, args ...string) *CmdStatus {
+func RunAndWait(name string, args ...string) *CmdStatus {
+	return run(name, args...)
+}
+
+/*
+RunBackground - run a command on the OS and call back when complete
+*/
+func RunAndCallback(callback func(status *CmdStatus), name string, args ...string) {
+	go callback(run(name, args...))
+}
+
+func run(name string, args ...string) *CmdStatus {
 	state := &CmdStatus{
 		name:    name,
 		args:    args,
@@ -48,6 +59,7 @@ func Run(name string, args ...string) *CmdStatus {
 	if err != nil {
 		captureError(state, err)
 	}
+
 	state.stdout = strings.TrimSpace(string(sout))
 	state.stderr = strings.TrimSpace(string(serr))
 
@@ -55,6 +67,7 @@ func Run(name string, args ...string) *CmdStatus {
 	if err != nil {
 		captureError(state, err)
 	}
+
 	if state.retCode < 0 {
 		state.retCode = 0
 	}
