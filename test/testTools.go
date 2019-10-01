@@ -41,7 +41,7 @@ func AssertError(t *testing.T, info string, err error) string {
 /*
 AssertErrorString assert strings are equal
 */
-func AssertErrorString(t *testing.T, info string, expected string, actual error) {
+func AssertErrorString(t *testing.T, info string, actual error, expected string) {
 	if actual == nil {
 		logStackTraceAndFail(t, "Expected error value should NOT be nil", info, debug.Stack())
 	}
@@ -82,7 +82,7 @@ func AssertErrorTextContains(t *testing.T, info string, err error, contains stri
 /*
 AssertIntEqual assert ints are equal
 */
-func AssertIntEqual(t *testing.T, info string, expected int, actual int) {
+func AssertIntEqual(t *testing.T, info string, actual int, expected int) {
 	if expected != actual {
 		logStackTraceAndFail(t, fmt.Sprintf("Expected %d actual %d", expected, actual), info, debug.Stack())
 	}
@@ -91,7 +91,7 @@ func AssertIntEqual(t *testing.T, info string, expected int, actual int) {
 /*
 AssertIntNotEqual assert ints are NOT equal
 */
-func AssertIntNotEqual(t *testing.T, info string, expected int, actual int) {
+func AssertIntNotEqual(t *testing.T, info string, actual int, expected int) {
 	if expected == actual {
 		logStackTraceAndFail(t, fmt.Sprintf("Expected %d NOT actual %d", expected, actual), info, debug.Stack())
 	}
@@ -192,7 +192,7 @@ func AssertStringDoesNotContain(t *testing.T, info string, content string, conta
 /*
 AssertTypeEquals assert strings are equal
 */
-func AssertTypeEquals(t *testing.T, info string, expectedTypeName string, actual interface{}) {
+func AssertTypeEquals(t *testing.T, info string, actual interface{}, expectedTypeName string) {
 	actualType := fmt.Sprintf("%T", actual)
 	if expectedTypeName != actualType {
 		logStackTraceAndFail(t, fmt.Sprintf("Expected type '%s' actual type '%s'", expectedTypeName, actualType), info, debug.Stack())

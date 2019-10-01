@@ -105,7 +105,7 @@ func sendGet(t *testing.T, st int, url string, headers map[string]string) string
 	if err != nil {
 		test.Fail(t, "Read response Failed", err.Error())
 	}
-	test.AssertIntEqual(t, "", st, resp.StatusCode)
+	test.AssertIntEqual(t, "", resp.StatusCode, st)
 	if headers != nil {
 		for name, value := range headers {
 			if value != "" {
@@ -129,7 +129,7 @@ func sendPost(t *testing.T, st int, url string, postBody string, headers map[str
 	if err != nil {
 		test.Fail(t, "Read response Failed", err.Error())
 	}
-	test.AssertIntEqual(t, "", st, resp.StatusCode)
+	test.AssertIntEqual(t, "", resp.StatusCode, st)
 	if headers != nil {
 		for name, value := range headers {
 			if value != "" {

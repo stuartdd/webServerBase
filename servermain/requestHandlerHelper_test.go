@@ -40,8 +40,8 @@ func TestWithBodyJsonObject(t *testing.T) {
 	testStruct := &TestStruct{}
 	d.GetJSONBodyAsObject(testStruct)
 	test.AssertStringEquals(t, "", "Fruit", testStruct.Name)
-	test.AssertIntEqual(t, "", 999, testStruct.ID)
-	test.AssertIntEqual(t, "", 3, len(testStruct.Types))
+	test.AssertIntEqual(t, "", testStruct.ID, 999)
+	test.AssertIntEqual(t, "", len(testStruct.Types), 3)
 	test.AssertStringEquals(t, "", "Apple", testStruct.Types[0])
 	test.AssertStringEquals(t, "", "Banana", testStruct.Types[1])
 	test.AssertStringEquals(t, "", "Orange", testStruct.Types[2])
@@ -55,8 +55,8 @@ func TestWithBodyJsonList(t *testing.T) {
 	}
 	d := NewRequestHandlerHelper(req, NewResponse(nil, nil))
 	aList := d.GetJSONBodyAsList()
-	test.AssertTypeEquals(t, "", "[]interface {}", aList)
-	test.AssertTypeEquals(t, "", "string", aList[0])
+	test.AssertTypeEquals(t, "", aList, "[]interface {}")
+	test.AssertTypeEquals(t, "", aList[0], "string")
 	test.AssertStringEquals(t, "", "TEST", aList[0].(string))
 	test.AssertStringEquals(t, "", "VALUE", aList[1].(string))
 }
@@ -79,7 +79,7 @@ func TestWithBodyJsonMap(t *testing.T) {
 	d := NewRequestHandlerHelper(req, NewResponse(nil, nil))
 	aMap := d.GetJSONBodyAsMap()
 	val := aMap["TEST"]
-	test.AssertTypeEquals(t, "", "string", val)
+	test.AssertTypeEquals(t, "", val, "string")
 	test.AssertStringEquals(t, "", "VALUE", val.(string))
 }
 
@@ -150,9 +150,9 @@ func TestWithUrl(t *testing.T) {
 
 	test.AssertStringEquals(t, "", "5", d.GetNamedQuery("A"))
 
-	test.AssertIntEqual(t, "", 4, d.GetPartsCount())
+	test.AssertIntEqual(t, "", d.GetPartsCount(), 4)
 
 	d2 := NewRequestHandlerHelper(req, NewResponse(nil, nil))
-	test.AssertIntEqual(t, "", 4, d2.GetPartsCount())
+	test.AssertIntEqual(t, "", d2.GetPartsCount(), 4)
 
 }

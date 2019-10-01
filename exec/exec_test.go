@@ -17,7 +17,7 @@ var testOS = runtime.GOOS
 func TestRunErr(t *testing.T) {
 	x := RunAndWait("", "sh", nil, "-c", "ls fred")
 	test.AssertError(t, "", x.Err)
-	test.AssertIntEqual(t, "", 2, x.RetCode)
+	test.AssertIntEqual(t, "", x.RetCode, 2)
 	test.AssertStringContains(t, "", x.Stderr, "cannot access 'fred'")
 	test.AssertStringEmpty(t, "", x.Stdout)
 	test.AssertErrorTextContains(t, "", x.Err, "exit status 2")
@@ -26,7 +26,7 @@ func TestRunErr(t *testing.T) {
 func TestRunErrWithPath(t *testing.T) {
 	x := RunAndWait("fred", "sh", nil, "-c", "ls")
 	test.AssertError(t, "", x.Err)
-	test.AssertIntEqual(t, "", 1, x.RetCode)
+	test.AssertIntEqual(t, "", x.RetCode, 1)
 	test.AssertStringEmpty(t, "", x.Stderr)
 	test.AssertStringEmpty(t, "", x.Stdout)
 	test.AssertErrorTextContains(t, "", x.Err, "Path [fred] does not exist")
@@ -35,7 +35,7 @@ func TestRunErrWithPath(t *testing.T) {
 func TestRunOk(t *testing.T) {
 	x := RunAndWait("", "sh", nil, "-c", "echo stdout; echo 1>&2 stderr")
 	test.AssertErrorIsNil(t, "", x.Err)
-	test.AssertIntEqual(t, "", 0, x.RetCode)
+	test.AssertIntEqual(t, "", x.RetCode, 0)
 	test.AssertStringEquals(t, "", "stderr", x.Stderr)
 	test.AssertStringEquals(t, "", "stdout", x.Stdout)
 }
@@ -44,7 +44,7 @@ func TestRunDIR(t *testing.T) {
 	if testOS == "windows" {
 		x := RunAndWait("", "cmd", nil, "/C", "dir", "c:\\Program Files")
 		test.AssertErrorIsNil(t, "", x.Err)
-		test.AssertIntEqual(t, "", 0, x.RetCode)
+		test.AssertIntEqual(t, "", x.RetCode, 0)
 		test.AssertStringEmpty(t, "", x.Stderr)
 		test.AssertStringContains(t, "", x.Stdout, "<DIR>", "Directory of c:\\Program Files")
 	}
@@ -54,7 +54,7 @@ func TestRunWithPath(t *testing.T) {
 	if testOS == "windows" {
 		x := RunAndWait("c:\\Program Files", "cmd", nil, "/C", "dir")
 		test.AssertErrorIsNil(t, "", x.Err)
-		test.AssertIntEqual(t, "", 0, x.RetCode)
+		test.AssertIntEqual(t, "", x.RetCode, 0)
 		test.AssertStringEmpty(t, "", x.Stderr)
 		test.AssertStringContains(t, "", x.Stdout, "<DIR>", "Directory of c:\\Program Files")
 	}
@@ -78,7 +78,7 @@ func TestRunDIRRunBackground(t *testing.T) {
 			return
 		}
 		test.AssertErrorIsNil(t, "", callBackResult.Err)
-		test.AssertIntEqual(t, "", 0, callBackResult.RetCode)
+		test.AssertIntEqual(t, "", callBackResult.RetCode, 0)
 		test.AssertStringEmpty(t, "", callBackResult.Stderr)
 		test.AssertStringContains(t, "", callBackResult.Stdout, "<DIR>")
 	}

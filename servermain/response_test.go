@@ -2,6 +2,7 @@ package servermain
 
 import (
 	"testing"
+
 	"github.com/stuartdd/webServerBase/test"
 )
 
@@ -23,7 +24,7 @@ func TestRespAsString(t *testing.T) {
 func TestCanAddHeaders(t *testing.T) {
 	resp := NewResponse(nil, nil)
 	resp.AddHeader("H1", []string{"a", "b"})
-	test.AssertIntEqual(t, "", 2, len(resp.GetHeaders()["H1"]))
+	test.AssertIntEqual(t, "", len(resp.GetHeaders()["H1"]), 2)
 	test.AssertStringEquals(t, "", "a", resp.GetHeaders()["H1"][0])
 	test.AssertStringEquals(t, "", "b", resp.GetHeaders()["H1"][1])
 }
@@ -32,7 +33,7 @@ func TestIsError(t *testing.T) {
 	resp := NewResponse(nil, nil)
 	test.AssertBoolFalse(t, "", resp.IsAnError())
 	test.AssertBoolFalse(t, "", resp.IsClosed())
-	test.AssertIntEqual(t, "", 200, resp.GetCode())
+	test.AssertIntEqual(t, "", resp.GetCode(), 200)
 }
 
 func TestRespAsInt(t *testing.T) {
@@ -58,7 +59,7 @@ func TestRespAsStructWithHeader(t *testing.T) {
 
 	resp.AddHeader("HI", []string{"A", "B"})
 	hi := resp.GetHeaders()["HI"]
-	test.AssertIntEqual(t, "", 2, len(hi))
+	test.AssertIntEqual(t, "", len(hi), 2)
 	test.AssertStringEquals(t, "Header[HI][0]", "A", hi[0])
 	test.AssertStringEquals(t, "Header[HI][1]", "B", hi[1])
 

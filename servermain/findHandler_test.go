@@ -54,19 +54,19 @@ func TestUrlParamNames(t *testing.T) {
 	url := []string{"a", "?", "c", "?"}
 	names := []string{"namea", "namec"}
 	m := validateNames(url, names)
-	test.AssertIntEqual(t, "", 2, len(m))
-	test.AssertIntEqual(t, "", 1, m["namea"])
-	test.AssertIntEqual(t, "", 3, m["namec"])
+	test.AssertIntEqual(t, "", len(m), 2)
+	test.AssertIntEqual(t, "", m["namea"], 1)
+	test.AssertIntEqual(t, "", m["namec"], 3)
 }
 
 func TestUrlParamNames3(t *testing.T) {
 	url := []string{"a", "?", "c", "?", "?"}
 	names := []string{"namea", "namec", "named"}
 	m := validateNames(url, names)
-	test.AssertIntEqual(t, "", 3, len(m))
-	test.AssertIntEqual(t, "", 1, m["namea"])
-	test.AssertIntEqual(t, "", 3, m["namec"])
-	test.AssertIntEqual(t, "", 4, m["named"])
+	test.AssertIntEqual(t, "", len(m), 3)
+	test.AssertIntEqual(t, "", m["namea"], 1)
+	test.AssertIntEqual(t, "", m["namec"], 3)
+	test.AssertIntEqual(t, "", m["named"], 4)
 }
 
 func TestCreateWithWC(t *testing.T) {

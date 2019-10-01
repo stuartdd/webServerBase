@@ -290,13 +290,13 @@ func TestNameToIndex(t *testing.T) {
 	levels := make(map[string]string)
 	levels["DEBUG"] = "DEFAULT"
 	CreateLogWithFilenameAndAppID("", "AppID", -1, levels)
-	test.AssertIntEqual(t, "GetLogLevelTypeForName:DEBUG", int(DebugLevel), int(GetLogLevelTypeIndexForLevelName("DEBUG")))
-	test.AssertIntEqual(t, "GetLogLevelTypeForName:INFO", int(InfoLevel), int(GetLogLevelTypeIndexForLevelName("INFO")))
-	test.AssertIntEqual(t, "GetLogLevelTypeForName:WARN", int(WarnLevel), int(GetLogLevelTypeIndexForLevelName("WARN")))
-	test.AssertIntEqual(t, "GetLogLevelTypeForName:ACCESS", int(AccessLevel), int(GetLogLevelTypeIndexForLevelName("ACCESS")))
-	test.AssertIntEqual(t, "GetLogLevelTypeForName:ERROR", int(ErrorLevel), int(GetLogLevelTypeIndexForLevelName("ERROR")))
-	test.AssertIntEqual(t, "GetLogLevelTypeForName:FATAL", int(FatalLevel), int(GetLogLevelTypeIndexForLevelName("FATAL")))
-	test.AssertIntEqual(t, "GetLogLevelTypeForName:UNKNOWN", int(NotFound), int(GetLogLevelTypeIndexForLevelName("UNKNOWN")))
+	test.AssertIntEqual(t, "GetLogLevelTypeForName:DEBUG", int(GetLogLevelTypeIndexForLevelName("DEBUG")), int(DebugLevel))
+	test.AssertIntEqual(t, "GetLogLevelTypeForName:INFO", int(GetLogLevelTypeIndexForLevelName("INFO")), int(InfoLevel))
+	test.AssertIntEqual(t, "GetLogLevelTypeForName:WARN", int(GetLogLevelTypeIndexForLevelName("WARN")), int(WarnLevel))
+	test.AssertIntEqual(t, "GetLogLevelTypeForName:ACCESS", int(GetLogLevelTypeIndexForLevelName("ACCESS")), int(AccessLevel))
+	test.AssertIntEqual(t, "GetLogLevelTypeForName:ERROR", int(GetLogLevelTypeIndexForLevelName("ERROR")), int(ErrorLevel))
+	test.AssertIntEqual(t, "GetLogLevelTypeForName:FATAL", int(GetLogLevelTypeIndexForLevelName("FATAL")), int(FatalLevel))
+	test.AssertIntEqual(t, "GetLogLevelTypeForName:UNKNOWN", int(GetLogLevelTypeIndexForLevelName("UNKNOWN")), int(NotFound))
 }
 
 func checkPanicIsThrown(t *testing.T, desc string) {
