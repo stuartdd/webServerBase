@@ -669,7 +669,7 @@ func getLogLevelFileDataForFilename(logFileNameUnresolved string) (*logLevelFile
 	m := make(map[string]string)
 	m["ID"] = logApplicationID
 
-	logFileName := substitution.ReplaceDollar(logFileNameUnresolved, m, '$')
+	logFileName := substitution.DoSubstitution(logFileNameUnresolved, m, '$')
 	nameUcTrim := strings.TrimSpace(strings.ToUpper(logFileName))
 	if val, ok := logLevelFileMap[nameUcTrim]; ok {
 		return val, nil

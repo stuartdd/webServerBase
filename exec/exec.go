@@ -44,7 +44,7 @@ func run(path string, name string, data map[string]string, args ...string) *CmdS
 
 	zData := make([]string, len(args))
 	for index, value := range args {
-		zData[index] = substitution.ReplaceDollar(value, data, '$')
+		zData[index] = substitution.DoSubstitution(value, data, '$')
 	}
 
 	cmd := exec.Command(name, zData...)

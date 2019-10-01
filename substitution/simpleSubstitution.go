@@ -16,12 +16,12 @@ type parseData struct {
 }
 
 /*
-ReplaceDollar - replace ${n} in string from:
+DoSubstitution - replace ${n} in string from:
 map passed in
 environment variables
 date and time
 */
-func ReplaceDollar(text string, dataIn map[string]string, tag byte) string {
+func DoSubstitution(text string, dataIn map[string]string, tag byte) string {
 	if text == "" {
 		return text
 	}
