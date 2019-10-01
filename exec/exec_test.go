@@ -1,4 +1,4 @@
-package servermain
+package exec
 
 import (
 	"runtime"
@@ -16,47 +16,47 @@ var testOS = runtime.GOOS
 
 func TestRunErr(t *testing.T) {
 	x := RunAndWait("", "sh", nil, "-c", "ls fred")
-	test.AssertError(t, "", x.err)
-	test.AssertIntEqual(t, "", 2, x.retCode)
-	test.AssertStringContains(t, "", x.stderr, []string{"cannot access 'fred'"})
-	test.AssertStringEmpty(t, "", x.stdout)
-	test.AssertErrorTextContains(t, "", x.err, "exit status 2")
+	test.AssertError(t, "", x.Err)
+	test.AssertIntEqual(t, "", 2, x.RetCode)
+	test.AssertStringContains(t, "", x.Stderr, []string{"cannot access 'fred'"})
+	test.AssertStringEmpty(t, "", x.Stdout)
+	test.AssertErrorTextContains(t, "", x.Err, "exit status 2")
 }
 
 func TestRunErrWithPath(t *testing.T) {
 	x := RunAndWait("fred", "sh", nil, "-c", "ls")
-	test.AssertError(t, "", x.err)
-	test.AssertIntEqual(t, "", 1, x.retCode)
-	test.AssertStringEmpty(t, "", x.stderr)
-	test.AssertStringEmpty(t, "", x.stdout)
-	test.AssertErrorTextContains(t, "", x.err, "Path [fred] does not exist")
+	test.AssertError(t, "", x.Err)
+	test.AssertIntEqual(t, "", 1, x.RetCode)
+	test.AssertStringEmpty(t, "", x.Stderr)
+	test.AssertStringEmpty(t, "", x.Stdout)
+	test.AssertErrorTextContains(t, "", x.Err, "Path [fred] does not exist")
 }
 
 func TestRunOk(t *testing.T) {
 	x := RunAndWait("", "sh", nil, "-c", "echo stdout; echo 1>&2 stderr")
-	test.AssertErrorIsNil(t, "", x.err)
-	test.AssertIntEqual(t, "", 0, x.retCode)
-	test.AssertStringEquals(t, "", x.stderr, "stderr")
-	test.AssertStringEquals(t, "", x.stdout, "stdout")
+	test.AssertErrorIsNil(t, "", x.Err)
+	test.AssertIntEqual(t, "", 0, x.RetCode)
+	test.AssertStringEquals(t, "", x.Stderr, "stderr")
+	test.AssertStringEquals(t, "", x.Stdout, "stdout")
 }
 
 func TestRunDIR(t *testing.T) {
 	if testOS == "windows" {
 		x := RunAndWait("", "cmd", nil, "/C", "dir", "c:\\Program Files")
-		test.AssertErrorIsNil(t, "", x.err)
-		test.AssertIntEqual(t, "", 0, x.retCode)
-		test.AssertStringEmpty(t, "", x.stderr)
-		test.AssertStringContains(t, "", x.stdout, []string{"<DIR>", "Directory of c:\\Program Files"})
+		test.AssertErrorIsNil(t, "", x.Err)
+		test.AssertIntEqual(t, "", 0, x.RetCode)
+		test.AssertStringEmpty(t, "", x.Stderr)
+		test.AssertStringContains(t, "", x.Stdout, []string{"<DIR>", "Directory of c:\\Program Files"})
 	}
 }
 
 func TestRunWithPath(t *testing.T) {
 	if testOS == "windows" {
 		x := RunAndWait("c:\\Program Files", "cmd", nil, "/C", "dir")
-		test.AssertErrorIsNil(t, "", x.err)
-		test.AssertIntEqual(t, "", 0, x.retCode)
-		test.AssertStringEmpty(t, "", x.stderr)
-		test.AssertStringContains(t, "", x.stdout, []string{"<DIR>", "Directory of c:\\Program Files"})
+		test.AssertErrorIsNil(t, "", x.Err)
+		test.AssertIntEqual(t, "", 0, x.RetCode)
+		test.AssertStringEmpty(t, "", x.Stderr)
+		test.AssertStringContains(t, "", x.Stdout, []string{"<DIR>", "Directory of c:\\Program Files"})
 	}
 }
 
@@ -77,10 +77,10 @@ func TestRunDIRRunBackground(t *testing.T) {
 			test.Fail(t, "", "Failed: (came back too soon!) Waitcount is "+strconv.Itoa(waitcount))
 			return
 		}
-		test.AssertErrorIsNil(t, "", callBackResult.err)
-		test.AssertIntEqual(t, "", 0, callBackResult.retCode)
-		test.AssertStringEmpty(t, "", callBackResult.stderr)
-		test.AssertStringContains(t, "", callBackResult.stdout, []string{"<DIR>"})
+		test.AssertErrorIsNil(t, "", callBackResult.Err)
+		test.AssertIntEqual(t, "", 0, callBackResult.RetCode)
+		test.AssertStringEmpty(t, "", callBackResult.Stderr)
+		test.AssertStringContains(t, "", callBackResult.Stdout, []string{"<DIR>"})
 	}
 }
 

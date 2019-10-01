@@ -8,10 +8,11 @@ import (
 	"os"
 	"path/filepath"
 	"runtime/debug"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/stuartdd/webServerBase/substitution"
 )
 
 const errorName = "ERROR"
@@ -437,7 +438,7 @@ func (p *LoggerDataReference) LogDebugf(format string, v ...interface{}) {
 }
 
 /*
-LogDebug delegates to log.Print. 
+LogDebug delegates to log.Print.
 Does nothing if logging is disabled or level is inactive
 Fallback mode is true when logger configuration failed. It logs to the console
 */
@@ -665,7 +666,10 @@ func updateLoggerPrefixesForAllModules() {
 }
 
 func getLogLevelFileDataForFilename(logFileNameUnresolved string) (*logLevelFileData, error) {
-	logFileName := resolvePercentValues(logFileNameUnresolved)
+	m := make(map[string]string)
+	m["ID"] = logApplicationID
+
+	logFileName := substitution.ReplaceDollar(logFileNameUnresolved, m, '$')
 	nameUcTrim := strings.TrimSpace(strings.ToUpper(logFileName))
 	if val, ok := logLevelFileMap[nameUcTrim]; ok {
 		return val, nil
@@ -693,56 +697,6 @@ func newError(message string) error {
 	return errors.New("Logging:" + message)
 }
 
-/*
-resolvePercentValues replaces substitution values in a String. This is NOT time critical as it is only
-called when the logger is created.
-
-Sub:%YYYY = 4 digt year
-Sub:%MM = 2 digt Month
-Sub:%DD = 2 digt Day
-Sub:%HH = 2 digt Hour
-Sub:%mm = 2 digt Minutes
-Sub:%SS = 2 digt Seconds
-Sub:%ID = The application ID
-Sub:%PID = The application process id
-Sub:%ENV = An environment variable
-	%ENV.NAME.ENV% will be replaced with the environment variable 'NAME' or an empty string.
-*/
-func resolvePercentValues(fn string) string {
-	if strings.Contains(fn, "%") {
-		tim := time.Now()
-		yyyy, mm, dd := tim.Date()
-		fn = strings.ReplaceAll(fn, "%YYYY", padString2(yyyy))
-		fn = strings.ReplaceAll(fn, "%MM", padString2(int(mm)))
-		fn = strings.ReplaceAll(fn, "%DD", padString2(dd))
-		fn = strings.ReplaceAll(fn, "%HH", padString2(tim.Hour()))
-		fn = strings.ReplaceAll(fn, "%mm", padString2(tim.Minute()))
-		fn = strings.ReplaceAll(fn, "%SS", padString2(tim.Second()))
-		fn = strings.ReplaceAll(fn, "%ID", logApplicationID)
-		fn = strings.ReplaceAll(fn, "%PID", padString2(os.Getpid()))
-		index1 := strings.Index(fn, "%ENV.")
-		for index1 >= 0 {
-			index2 := strings.Index(fn[index1:], ".ENV%")
-			if index2 > index1 {
-				tag := fn[index1 : index1+index2+5]
-				key := fn[index1+5 : index1+index2]
-				fn = strings.ReplaceAll(fn, tag, os.Getenv(key))
-			}
-			index1 = strings.Index(fn, "%ENV.")
-		}
-	}
-	return fn
-}
-
-func padString2(i int) string {
-	if i < 10 {
-		return "0" + strconv.Itoa(i)
-	}
-	return strconv.Itoa(i)
-}
-
 func clearFlags() {
 	loggerEnabled = true
 }
-
-

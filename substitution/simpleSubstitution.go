@@ -1,17 +1,18 @@
-package servermain
+package substitution
 
 import (
 	"bytes"
 	"os"
+	"runtime"
 	"strconv"
 	"time"
 )
 
 type parseData struct {
-	p int
-	c byte
-	b []byte
-	l int
+	p int    // position
+	c byte   // current char
+	b []byte // Text as bytes
+	l int    // langth of Text as bytes
 }
 
 /*
@@ -20,11 +21,10 @@ map passed in
 environment variables
 date and time
 */
-func ReplaceDollar(text string, data map[string]string, tag byte) string {
-	if (text == "") || (data == nil) {
+func ReplaceDollar(text string, dataIn map[string]string, tag byte) string {
+	if text == "" {
 		return text
 	}
-	var buf bytes.Buffer
 	by := []byte(text)
 	pa := &parseData{
 		p: -1,
@@ -32,17 +32,18 @@ func ReplaceDollar(text string, data map[string]string, tag byte) string {
 		c: 0,
 		l: len(by),
 	}
+	var buf bytes.Buffer
 	for pa.next() {
 		if pa.c == tag {
 			if pa.next() {
 				if pa.c == '{' {
 					n, f := pa.upTo('}')
-					s := data[n]
+					s := ""
+					if dataIn != nil {
+						s = dataIn[n]
+					}
 					if s == "" {
-						s = os.Getenv(n)
-						if s == "" {
-							s = dateTime(n)
-						}
+						s = systemSubs(n)
 					}
 					if s == "" {
 						buf.WriteByte(tag)
@@ -89,7 +90,7 @@ func (p *parseData) upTo(c byte) (string, bool) {
 	return buf.String(), false
 }
 
-func dateTime(n string) string {
+func systemSubs(n string) string {
 	tim := time.Now()
 	yyyy, mm, dd := tim.Date()
 	switch n {
@@ -107,8 +108,10 @@ func dateTime(n string) string {
 		return padString2(tim.Second())
 	case "PID":
 		return padString2(os.Getpid())
+	case "OS":
+		return runtime.GOOS
 	}
-	return ""
+	return os.Getenv(n)
 }
 
 func padString2(i int) string {

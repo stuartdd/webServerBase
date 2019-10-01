@@ -1,4 +1,4 @@
-package servermain
+package substitution
 
 import (
 	"os"
@@ -20,8 +20,7 @@ func TestReplaceFound(t *testing.T) {
 	test.AssertStringEquals(t, "", "x1x 2 "+os.Getenv("GOPATH"), ReplaceDollar("x${a}x ${b} ${GOPATH}", ma, '$'))
 
 	test.AssertStringEquals(t, "", "x1x 2 ${yyyy}", ReplaceDollar("x${a}x ${b} ${yyyy}", ma, '$'))
-	tim := time.Now()
-	yyyy, _, _ := tim.Date()
+	yyyy, _, _ := time.Now().Date()
 	test.AssertStringDoesNotContain(t, "", ReplaceDollar("x${a}x ${b} "+strconv.Itoa(yyyy), ma, '$'), []string{"${YYYY}"})
 
 }
@@ -41,7 +40,7 @@ func TestReplaceNotFound(t *testing.T) {
 	test.AssertStringEquals(t, "", "x{", ReplaceDollar("x{", m, '$'))
 	test.AssertStringEquals(t, "", "x", ReplaceDollar("x", m, '$'))
 	test.AssertStringEquals(t, "", "", ReplaceDollar("", m, '$'))
-
-	test.AssertStringEquals(t, "", "x${}x", ReplaceDollar("x${}x", nil, '$'))
+	yyyy, _, _ := time.Now().Date()
+	test.AssertStringEquals(t, "", "x${}x "+strconv.Itoa(yyyy), ReplaceDollar("x${}x ${YYYY}", nil, '$'))
 
 }

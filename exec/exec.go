@@ -1,4 +1,4 @@
-package servermain
+package exec
 
 import (
 	"errors"
@@ -6,16 +6,18 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+
+	"webServerExample.go/substitution"
 )
 
 /*
 CmdStatus - The outcome!
 */
 type CmdStatus struct {
-	stdout  string
-	stderr  string
-	retCode int
-	err     error
+	Stdout  string
+	Stderr  string
+	RetCode int
+	Err     error
 }
 
 /*
@@ -34,15 +36,15 @@ func RunAndCallback(callback func(status *CmdStatus), path string, name string, 
 
 func run(path string, name string, data map[string]string, args ...string) *CmdStatus {
 	state := &CmdStatus{
-		stdout:  "",
-		stderr:  "",
-		retCode: -1,
-		err:     nil,
+		Stdout:  "",
+		Stderr:  "",
+		RetCode: -1,
+		Err:     nil,
 	}
 
 	zData := make([]string, len(args))
 	for index, value := range args {
-		zData[index] = ReplaceDollar(value, data, '$')
+		zData[index] = substitution.ReplaceDollar(value, data, '$')
 	}
 
 	cmd := exec.Command(name, zData...)
@@ -70,28 +72,28 @@ func run(path string, name string, data map[string]string, args ...string) *CmdS
 		return captureError(state, err)
 	}
 
-	state.stdout = strings.TrimSpace(string(sout))
-	state.stderr = strings.TrimSpace(string(serr))
+	state.Stdout = strings.TrimSpace(string(sout))
+	state.Stderr = strings.TrimSpace(string(serr))
 
 	err = cmd.Wait()
 	if err != nil {
 		return captureError(state, err)
 	}
 
-	if state.retCode < 0 {
-		state.retCode = 0
+	if state.RetCode < 0 {
+		state.RetCode = 0
 	}
 	return state
 }
 
 func captureError(state *CmdStatus, err error) *CmdStatus {
-	state.err = err
+	state.Err = err
 	serr, ok := err.(*exec.ExitError)
 	if ok {
-		state.retCode = serr.ExitCode()
+		state.RetCode = serr.ExitCode()
 	}
-	if state.retCode < 0 {
-		state.retCode = 1
+	if state.RetCode < 0 {
+		state.RetCode = 1
 	}
 	return state
 }

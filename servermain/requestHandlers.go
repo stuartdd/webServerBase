@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/stuartdd/webServerBase/exec"
 	"github.com/stuartdd/webServerBase/logging"
 )
 
@@ -52,22 +53,22 @@ func DefaultOSScriptHandler(request *http.Request, response *Response) {
 		}
 	}
 
-	osData := RunAndWait(server.GetOsScriptsPath(), data[0], m, data[1:]...)
-	if osData.retCode == 0 {
+	osData := exec.RunAndWait(server.GetOsScriptsPath(), data[0], m, data[1:]...)
+	if osData.RetCode == 0 {
 		if logging.IsDebug() {
 			logger.LogDebugf("OS Script %s Executed OK", scriptName)
 		}
 		contentType := LookupContentType("txt")
-		response.SetResponse(200, osData.stdout, contentType+"; charset="+server.contentTypeCharset)
+		response.SetResponse(200, osData.Stdout, contentType+"; charset="+server.contentTypeCharset)
 		return
 	}
 
 	if logging.IsError() {
 		errText := ""
-		if osData.err != nil {
-			errText = osData.err.Error()
+		if osData.Err != nil {
+			errText = osData.Err.Error()
 		}
-		logger.LogErrorf("OS Script %s Failed. RC:%d. stderr[%s] error[%s]", scriptName, osData.retCode, osData.stderr, errText)
+		logger.LogErrorf("OS Script %s Failed. RC:%d. stderr[%s] error[%s]", scriptName, osData.RetCode, osData.Stderr, errText)
 	}
 	response.SetErrorResponse(417, SCScriptError, "Expectation Failed")
 }
