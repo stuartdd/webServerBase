@@ -12,10 +12,10 @@ func TestConfigLoad(t *testing.T) {
 
 	cfg := GetConfigDataInstance()
 	if runtime.GOOS == "windows" {
-		test.AssertStringEquals(t, "", "scripts\\", cfg.GetScriptDataForOS().Path)
+		test.AssertStringEquals(t, "", "site\\scripts\\", cfg.GetScriptDataForOS().Path)
 		test.AssertStringEquals(t, "", "cmd", cfg.GetScriptDataForOS().Data["list"][0])
 	} else {
-		test.AssertStringEquals(t, "", "scripts/", cfg.GetScriptDataForOS().Path)
+		test.AssertStringEquals(t, "", "site/scripts/", cfg.GetScriptDataForOS().Path)
 		test.AssertStringEquals(t, "", "sh", cfg.GetScriptDataForOS().Data["list"][0])
 	}
 }

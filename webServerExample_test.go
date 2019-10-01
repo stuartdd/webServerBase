@@ -27,7 +27,7 @@ func TestServer(t *testing.T) {
 	startServer(t)
 	defer stopServer(t)
 
-	test.AssertStringContains(t, "", sendGet(t, 200, "script/list?abc=123", headers("txt", "")), []string{"ARG 0: echop.sh", "ARG 1: $abc"})
+	test.AssertStringContains(t, "", sendGet(t, 200, "script/list?abc=123", headers("txt", "")), []string{"ARG 0: echop.sh", "ARG 1: 123-${xxx}"})
 	test.AssertStringContains(t, "", sendGet(t, 404, "script/abc", headers("json", "")), []string{"\"Status\":404,\"Code\":" + strconv.Itoa(servermain.SCScriptNotFound) + ""})
 
 	test.AssertStringContains(t, "", sendGet(t, 200, "site/index1.html?Material=LEAD", headers("html", "")), []string{"<title>Soot</title>"})
