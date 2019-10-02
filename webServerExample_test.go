@@ -161,6 +161,7 @@ func deleteFile(t *testing.T, name string) {
 
 func stopServer(t *testing.T) {
 	test.AssertStringContains(t, "", sendGet(t, 200, "stop", nil), "\"State\":\"STOPPING\"", "\"Executable\":\"TestExe\"", "\"Panics\":1")
+	testLog.LogDebug("SHUT DOWN STARTED")
 }
 
 func startServer(t *testing.T) {
@@ -171,7 +172,10 @@ func startServer(t *testing.T) {
 		}
 		configData = config.GetConfigDataInstance()
 		port = fmt.Sprintf("%d", configData.Port)
+		logging.CreateLogWithFilenameAndAppID(configData.DefaultLogFileName, "TEST:"+strconv.Itoa(configData.Port), 1, configData.LoggerLevels)
+		testLog = logging.CreateTestLogger("CONTROL")
 		go RunWithConfig(configData, "TestExe")
+		testLog.LogDebug("SERVER STARTING")
 		time.Sleep(time.Millisecond * time.Duration(500))
 	}
 }
