@@ -18,6 +18,8 @@ import (
 var log *logging.LoggerDataReference
 var serverInstance *servermain.ServerInstanceData
 
+const banner = "\n---------------------------------------------------------------------------------------------------------------"
+
 func main() {
 
 	/*
@@ -132,8 +134,18 @@ func RunWithConfig(configData *config.Data, executable string) {
 		If the after handler vetos the request then the after handler response is returned not the mapped handler's response
 	*/
 	serverInstance.AddAfterHandler(filterAfter)
-
+	defer checkForPanicAndRecover()
+	log.LogInfof(banner[2:22]+" Server starting port:%d "+banner[2:22], configData.Port)
 	serverInstance.ListenAndServeOnPort(configData.Port)
+}
+
+func checkForPanicAndRecover() {
+	rec := recover()
+	if rec != nil {
+		recStr := fmt.Sprintf("%s", rec)
+		logging.LogDirectToSystemError(banner+"\nAn UN-HANDLED error occured that terminated the server:\nError message: "+recStr+banner, true)
+		os.Exit(9)
+	}
 }
 
 /************************************************

@@ -499,6 +499,21 @@ func LoggerLevelDataString(name string) string {
 	return name + ":Not Found"
 }
 
+/*
+LogDirectToSystemError - Log to the syserr channel. Optionally ad a stach trace!
+*/
+func LogDirectToSystemError(msg string, withTrace bool) {
+	var b bytes.Buffer
+	l := log.New(os.Stderr, "", logDataFlags)
+	b.WriteString(msg)
+	b.WriteString("\n")
+	if withTrace {
+		b.WriteString(string(debug.Stack()))
+		b.WriteString("\n")
+	}
+	l.Println(b.String())
+}
+
 func startFromKnownState() {
 	/*
 		Make sure the lists and maps are empty first
