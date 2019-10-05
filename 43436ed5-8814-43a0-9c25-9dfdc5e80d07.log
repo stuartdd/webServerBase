@@ -1,0 +1,59 @@
+2019/10/05 23:36:47.256709 TestLogger CONTROL [-]  DEBUG SERVER STARTING
+2019/10/05 23:36:47.256766 TestLogger ServerMain [-]   INFO Server will start on port 8080
+2019/10/05 23:36:47.256777 TestLogger ServerMain [-]   INFO OS 'linux'. Static path will be:map[/static/:site/ data:site/]
+2019/10/05 23:36:47.256783 TestLogger ServerMain [-]   INFO To stop the server http://localhost:8080/stop
+2019/10/05 23:36:47.256901 TestLogger Template   [-]  DEBUG Loading: FILE:index1.template.html NAME:index1.html PATH:/home/stuart/git/webServerBase/templates/index1.template.html
+2019/10/05 23:36:47.256907 TestLogger ServerMain [-]   INFO Availiable Templates: index1.html
+2019/10/05 23:36:47.256935 TestLogger ServerMain [-]   INFO -------------------- Server starting port:8080 --------------------
+2019/10/05 23:36:47.257036 TestLogger TestExe    [-]  ERROR FAILED: Server terminated. Error: %s listen tcp :8080: bind: address already in use
+2019/10/05 23:36:47.257065 TestLogger TestExe    [-]  ERROR FAILED: Server terminated. Error: %s webServerExample%2ego.RunWithConfig(0xc000114080, 0x8af321, 0x7)
+2019/10/05 23:36:47.257070 TestLogger TestExe    [-]  ERROR FAILED: Server terminated. Error: %s 	/home/stuart/git/webServerBase/webServerExample.go:139 +0xa27
+2019/10/05 23:36:47.257072 TestLogger TestExe    [-]  ERROR FAILED: Server terminated. Error: %s created by webServerExample%2ego.startServer
+2019/10/05 23:36:47.257074 TestLogger TestExe    [-]  ERROR FAILED: Server terminated. Error: %s 	/home/stuart/git/webServerBase/webServerExample_test.go:177 +0x217
+2019/10/05 23:36:47.805139 TestLogger CONTROL    [-]  DEBUG SHUT DOWN STARTED
+--- FAIL: TestServer (0.55s)
+    testTools.go:290: TEST-FAILED: :Error[GET: Header value 'application/json; charset=utf-8; charset=utf-8' does not contain 'text/plain' in element[0]]
+    testTools.go:293: TEST-FAILED: :github.com/stuartdd/webServerBase/test.Fail(0xc000118100, 0x0, 0x0, 0xc000146150, 0x6e)
+    testTools.go:293: TEST-FAILED: :	/home/stuart/git/webServerBase/test/testTools.go:17 +0xab
+    testTools.go:293: TEST-FAILED: :webServerExample%2ego.sendGet(0xc000118100, 0xc8, 0x8baee0, 0x1b, 0xc000160000, 0x0, 0x0)
+    testTools.go:293: TEST-FAILED: :	/home/stuart/git/webServerBase/webServerExample_test.go:119 +0x3ee
+    testTools.go:293: TEST-FAILED: :webServerExample%2ego.TestServer(0xc000118100)
+    testTools.go:293: TEST-FAILED: :	/home/stuart/git/webServerBase/webServerExample_test.go:35 +0xd0
+    testTools.go:293: TEST-FAILED: :testing.tRunner(0xc000118100, 0x8d11a8)
+    testTools.go:293: TEST-FAILED: :	/usr/local/go/src/testing/testing.go:909 +0xc9
+    testTools.go:290: TEST-FAILED: :Error[GET: Header value 'application/json; charset=utf-8; charset=utf-8' does not contain 'text/plain' in element[0]]
+    testTools.go:293: TEST-FAILED: :github.com/stuartdd/webServerBase/test.Fail(0xc000118100, 0x0, 0x0, 0xc0001463f0, 0x6e)
+    testTools.go:293: TEST-FAILED: :	/home/stuart/git/webServerBase/test/testTools.go:17 +0xab
+    testTools.go:293: TEST-FAILED: :webServerExample%2ego.sendGet(0xc000118100, 0xc8, 0x8b6c03, 0x13, 0xc000142d20, 0x0, 0x0)
+    testTools.go:293: TEST-FAILED: :	/home/stuart/git/webServerBase/webServerExample_test.go:119 +0x3ee
+    testTools.go:293: TEST-FAILED: :webServerExample%2ego.TestServer(0xc000118100)
+    testTools.go:293: TEST-FAILED: :	/home/stuart/git/webServerBase/webServerExample_test.go:36 +0x255
+    testTools.go:293: TEST-FAILED: :testing.tRunner(0xc000118100, 0x8d11a8)
+    testTools.go:293: TEST-FAILED: :	/usr/local/go/src/testing/testing.go:909 +0xc9
+    testTools.go:290: TEST-FAILED: :String '{"UnixTime":1570315003,"StartTime":"2019-10-05 23:36:43","Executable":"webServerExample","State":"RUNNING","Panics":0,"Uptime":4}' does not contain '"Executable":"TestExe"'
+    testTools.go:293: TEST-FAILED: :github.com/stuartdd/webServerBase/test.AssertStringContains(0xc000118100, 0x0, 0x0, 0xc00015a510, 0x81, 0xc000135ef0, 0x3, 0x3)
+    testTools.go:293: TEST-FAILED: :	/home/stuart/git/webServerBase/test/testTools.go:176 +0x193
+    testTools.go:293: TEST-FAILED: :webServerExample%2ego.TestServer(0xc000118100)
+    testTools.go:293: TEST-FAILED: :	/home/stuart/git/webServerBase/webServerExample_test.go:65 +0x124d
+    testTools.go:293: TEST-FAILED: :testing.tRunner(0xc000118100, 0x8d11a8)
+    testTools.go:293: TEST-FAILED: :	/usr/local/go/src/testing/testing.go:909 +0xc9
+    testTools.go:293: TEST-FAILED: :created by testing.(*T).Run
+    testTools.go:293: TEST-FAILED: :	/usr/local/go/src/testing/testing.go:960 +0x350
+    testTools.go:290: TEST-FAILED: :String '{"UnixTime":1570315003,"StartTime":"2019-10-05 23:36:43","Executable":"webServerExample","State":"STOPPING","Panics":1,"Uptime":4}' does not contain '"Executable":"TestExe"'
+    testTools.go:293: TEST-FAILED: :github.com/stuartdd/webServerBase/test.AssertStringContains(0xc000118100, 0x0, 0x0, 0xc00036c000, 0x82, 0xc000135d38, 0x3, 0x3)
+    testTools.go:293: TEST-FAILED: :	/home/stuart/git/webServerBase/test/testTools.go:176 +0x193
+    testTools.go:293: TEST-FAILED: :webServerExample%2ego.stopServer(0xc000118100)
+    testTools.go:293: TEST-FAILED: :	/home/stuart/git/webServerBase/webServerExample_test.go:163 +0xc6
+    testTools.go:293: TEST-FAILED: :webServerExample%2ego.TestServer(0xc000118100)
+    testTools.go:293: TEST-FAILED: :	/home/stuart/git/webServerBase/webServerExample_test.go:90 +0x20dd
+    testTools.go:293: TEST-FAILED: :testing.tRunner(0xc000118100, 0x8d11a8)
+    testTools.go:293: TEST-FAILED: :	/usr/local/go/src/testing/testing.go:909 +0xc9
+FAIL
+FAIL	webServerExample.go	0.552s
+ok  	webServerExample.go/config	(cached)
+ok  	webServerExample.go/exec	(cached)
+ok  	webServerExample.go/logging	(cached)
+ok  	webServerExample.go/servermain	0.006s
+ok  	webServerExample.go/substitution	(cached)
+?   	webServerExample.go/test	[no test files]
+FAIL

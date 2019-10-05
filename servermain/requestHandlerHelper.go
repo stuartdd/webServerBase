@@ -6,7 +6,10 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
+
+	"github.com/google/uuid"
 )
 
 /*
@@ -21,6 +24,13 @@ type RequestHandlerHelper struct {
 	urlParts      []string
 	urlPartsCount int
 	queries       url.Values
+	uuid          string
+}
+
+type jsonWrapper struct {
+	Name string
+	UUID string
+	Data string
 }
 
 /*
@@ -34,7 +44,24 @@ func NewRequestHandlerHelper(r *http.Request, response *Response) *RequestHandle
 		urlParts:      nil,
 		urlPartsCount: 0,
 		queries:       nil,
+		uuid:          "",
 	}
+}
+
+/*
+WrapAsJSON wrap the response in JSON. If it fails it will just build the string
+*/
+func (p *RequestHandlerHelper) WrapAsJSON(name string, data string) string {
+	s := jsonWrapper{
+		Name: name,
+		UUID: p.GetUUID(),
+		Data: data,
+	}
+	b, err := json.Marshal(s)
+	if err != nil {
+		return fmt.Sprintf("{\"name\":\"%s\", \"data\": \"%s\"}", name, data)
+	}
+	return string(b)
 }
 
 /*
@@ -161,6 +188,13 @@ func (p *RequestHandlerHelper) GetURLPart(n int, defaultValue string) string {
 }
 
 /*
+GetURLParts returns part by index or panics if not found and default is empty
+*/
+func (p *RequestHandlerHelper) GetURLParts() []string {
+	return p.readParts()
+}
+
+/*
 GetPartsCount returns the number of parts in the URL
 */
 func (p *RequestHandlerHelper) GetPartsCount() int {
@@ -190,6 +224,16 @@ func (p *RequestHandlerHelper) GetNamedQuery(name string) string {
 }
 
 /*
+GetUUID returns part by name
+*/
+func (p *RequestHandlerHelper) GetUUID() string {
+	if p.uuid == "" {
+		p.uuid = uuid.New().String()
+	}
+	return p.uuid
+}
+
+/*
 GetQueries - return the URL Query parameters as a map
 */
 func (p *RequestHandlerHelper) GetQueries() map[string]string {
@@ -197,6 +241,24 @@ func (p *RequestHandlerHelper) GetQueries() map[string]string {
 	for name, val := range p.readQueries() {
 		m[name] = val[0]
 	}
+	return m
+}
+
+/*
+GetMapOfRequestData - return the URL Query parameters, Named paaremeters and URL Positional parameters
+*/
+func (p *RequestHandlerHelper) GetMapOfRequestData() map[string]string {
+	m := p.GetQueries()
+	for name, index := range p.response.names {
+		val := p.GetURLPart(index, "?")
+		if val != "?" {
+			m[name] = val
+		}
+	}
+	for index, value := range p.GetURLParts() {
+		m["url["+strconv.Itoa(index)+"]"] = value
+	}
+	m["uuid"] = p.GetUUID()
 	return m
 }
 

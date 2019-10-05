@@ -81,7 +81,7 @@ func (p *MappingElements) AddPathMappingElement(url string, method string, handl
 }
 
 /*
-AddPathMappingElement Add a path to the mapping
+AddPathMappingElementWithNames Add a path to the mapping
 */
 func (p *MappingElements) AddPathMappingElementWithNames(url string, method string, handlerFunc func(*http.Request, *Response), names []string) {
 	var me *MappingElements
