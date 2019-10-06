@@ -42,9 +42,19 @@ func DefaultOSScriptHandler(request *http.Request, response *Response) {
 	h := NewRequestHandlerHelper(request, response)
 	server := h.GetServer()
 	logger := server.GetServerLogger()
+	/*
+		Get the script name from the URL named parameters
+	*/
 	scriptName := h.GetNamedURLPart("script", "")
+	/*
+		Get the script data (command line arguments) for the script name
+	*/
 	data := server.GetOsScriptsData(scriptName)
+	/*
+		Run the script with the request data map to resolve substitutions.
 
+		Also package the response in to a JSON message
+	*/
 	osData := exec.RunAndWait(server.GetOsScriptsPath(), data[0], h.GetMapOfRequestData(), data[1:]...)
 	if osData.RetCode == 0 {
 		if logging.IsDebug() {
