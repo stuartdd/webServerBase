@@ -21,17 +21,64 @@ var configData *config.Data
 var testLog = logging.CreateTestLogger("Test-Logger")
 var port string
 
-func TestLargeFileRead(t *testing.T) {
+func TestLargeFileRead4(t *testing.T) {
 	name := "site/TestLargeFileRead-001.txt"
-	list := openInitial(name, 1)
+	list := openInitial(name, 5)
+	test.AssertStringEquals(t, "", list.largeFileHandlerReader(4, 4), "d")
+	test.AssertStringEquals(t, "", list.largeFileHandlerReader(4, 3), "d")
+	test.AssertStringEquals(t, "", list.largeFileHandlerReader(4, 2), "d")
+	test.AssertStringEquals(t, "", list.largeFileHandlerReader(4, 1), "d")
+	test.AssertStringEquals(t, "", list.largeFileHandlerReader(4, 0), "")
+}
+
+func TestLargeFileRead3(t *testing.T) {
+	name := "site/TestLargeFileRead-001.txt"
+	list := openInitial(name, 5)
+	test.AssertStringEquals(t, "", list.largeFileHandlerReader(3, 4), "d")
+	test.AssertStringEquals(t, "", list.largeFileHandlerReader(3, 3), "d")
+	test.AssertStringEquals(t, "", list.largeFileHandlerReader(3, 2), "d")
+	test.AssertStringEquals(t, "", list.largeFileHandlerReader(3, 1), "")
+	test.AssertStringEquals(t, "", list.largeFileHandlerReader(3, 0), "")
+}
+
+func TestLargeFileRead1(t *testing.T) {
+	name := "site/TestLargeFileRead-001.txt"
+	list := openInitial(name, 5)
+	test.AssertStringEquals(t, "", list.largeFileHandlerReader(1, 99), "b\nc\n\nd") // Passes because we trim ctrl chars from eol
+	test.AssertStringEquals(t, "", list.largeFileHandlerReader(1, 5), "b\nc\n\nd")  // Passes because we trim ctrl chars from eol
+	test.AssertStringEquals(t, "", list.largeFileHandlerReader(1, 5), "b\nc\n\nd")  // Passes because we trim ctrl chars from eol
+	test.AssertStringEquals(t, "", list.largeFileHandlerReader(1, 4), "b\nc\n\nd")
+	test.AssertStringEquals(t, "", list.largeFileHandlerReader(1, 3), "b\nc") // Passes because we trim ctrl chars from eol
+	test.AssertStringEquals(t, "", list.largeFileHandlerReader(1, 2), "b\nc")
+	test.AssertStringEquals(t, "", list.largeFileHandlerReader(1, 1), "b")
+	test.AssertStringEquals(t, "", list.largeFileHandlerReader(1, 0), "")
+}
+
+func TestLargeFileRead0(t *testing.T) {
+	name := "site/TestLargeFileRead-001.txt"
+	list := openInitial(name, 5)
+	test.AssertStringEquals(t, "", list.largeFileHandlerReader(0, 99), "a\nb\nc\n\nd")
+	test.AssertStringEquals(t, "", list.largeFileHandlerReader(0, 7), "a\nb\nc\n\nd")
+	test.AssertStringEquals(t, "", list.largeFileHandlerReader(0, 6), "a\nb\nc\n\nd")
+	test.AssertStringEquals(t, "", list.largeFileHandlerReader(0, 5), "a\nb\nc\n\nd")
+	test.AssertStringEquals(t, "", list.largeFileHandlerReader(0, 4), "a\nb\nc")
+	test.AssertStringEquals(t, "", list.largeFileHandlerReader(0, 3), "a\nb\nc")
+	test.AssertStringEquals(t, "", list.largeFileHandlerReader(0, 2), "a\nb")
+	test.AssertStringEquals(t, "", list.largeFileHandlerReader(0, 1), "a")
+	test.AssertStringEquals(t, "", list.largeFileHandlerReader(0, 0), "")
+}
+
+func TestLargeParse(t *testing.T) {
+	name := "site/TestLargeFileRead-001.txt"
+	list := openInitial(name, 5)
+	checkLFR(t, list)
+	list = openInitial(name, 1)
 	checkLFR(t, list)
 	list = openInitial(name, 2)
 	checkLFR(t, list)
 	list = openInitial(name, 3)
 	checkLFR(t, list)
 	list = openInitial(name, 4)
-	checkLFR(t, list)
-	list = openInitial(name, 5)
 	checkLFR(t, list)
 	list = openInitial(name, 6)
 	checkLFR(t, list)
@@ -49,13 +96,15 @@ func TestLargeFileRead(t *testing.T) {
 	checkLFR(t, list)
 }
 
-func checkLFR(t *testing.T, l []int64) {
-	test.AssertInt64Equal(t, "", 1, l[0])
-	test.AssertInt64Equal(t, "", 4, l[1])
-	test.AssertInt64Equal(t, "", 7, l[2])
-	test.AssertInt64Equal(t, "", 9, l[3])
-	test.AssertInt64Equal(t, "", 12, l[4])
-	test.AssertInt64Equal(t, "", 0, l[5])
+func checkLFR(t *testing.T, l *largeFileData) {
+	test.AssertIntEqual(t, "", l.LineCount, 7)
+	test.AssertInt64Equal(t, "", l.Offsets[0], 0)
+	test.AssertInt64Equal(t, "", l.Offsets[1], 1)
+	test.AssertInt64Equal(t, "", l.Offsets[2], 3)
+	test.AssertInt64Equal(t, "", l.Offsets[3], 5)
+	test.AssertInt64Equal(t, "", l.Offsets[4], 6)
+	test.AssertInt64Equal(t, "", l.Offsets[5], 8)
+	test.AssertInt64Equal(t, "", l.Offsets[6], 9)
 }
 
 /*

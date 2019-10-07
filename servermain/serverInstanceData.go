@@ -19,6 +19,7 @@ SCSubCodeZero and these constants are used as unique subcodes in error responses
 const (
 	SCSubCodeZero = iota
 	SCPathNotFound
+	SCFileNotFound
 	SCStaticPathNotFound
 	SCContentNotFound
 	SCContentReadFailed
