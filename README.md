@@ -15,6 +15,7 @@
   * [Group Templates](#Group%20Templates)
   * [Template Data](#Template%20Data)
 * [Server start](#Server%20start)
+* [Docker](#Docker)
 
 [comment]: <> (Use Crtl+Shift+v | Crtl+k+v to view in Visual Code MD pluggin markdownlint)
 
@@ -434,3 +435,7 @@ serverInstance.ListenAndServeOnPort(8080)
 ```
 
 This command does not return until the server terminates!
+
+## Docker
+
+Ref: [Docker Example](https://www.callicoder.com/docker-golang-image-container-example/)
