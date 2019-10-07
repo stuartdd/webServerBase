@@ -36,30 +36,32 @@ func StopServerInstance(request *http.Request, response *Response) {
 }
 
 /*
-DefaultTemplateFileHandler - Response handler for basic template processing
+DefaultOSScriptHandler - Response handler for basic template processing
 */
 func DefaultOSScriptHandler(request *http.Request, response *Response) {
 	h := NewRequestHandlerHelper(request, response)
 	server := h.GetServer()
 	logger := server.GetServerLogger()
+	/*
+		Get the script name from the URL named parameters
+	*/
 	scriptName := h.GetNamedURLPart("script", "")
+	/*
+		Get the script data (command line arguments) for the script name
+	*/
 	data := server.GetOsScriptsData(scriptName)
+	/*
+		Run the script with the request data map to resolve substitutions.
 
-	m := h.GetQueries()
-	for name, index := range response.names {
-		val := h.GetURLPart(index, "?")
-		if val != "?" {
-			m[name] = val
-		}
-	}
-
-	osData := exec.RunAndWait(server.GetOsScriptsPath(), data[0], m, data[1:]...)
+		Also package the response in to a JSON message
+	*/
+	osData := exec.RunAndWait(server.GetOsScriptsPath(), data[0], h.GetMapOfRequestData(), data[1:]...)
 	if osData.RetCode == 0 {
 		if logging.IsDebug() {
 			logger.LogDebugf("OS Script %s Executed OK", scriptName)
 		}
-		contentType := LookupContentType("txt")
-		response.SetResponse(200, osData.Stdout, contentType+"; charset="+server.contentTypeCharset)
+		contentType := LookupContentType("json")
+		response.SetResponse(200, h.WrapAsJSON(scriptName, osData.Stdout), contentType+"; charset="+server.contentTypeCharset)
 		return
 	}
 
@@ -86,14 +88,7 @@ func DefaultTemplateFileHandler(request *http.Request, response *Response) {
 		if (contentType != "") && (ww.Header()[ContentTypeName] == nil) {
 			ww.Header()[ContentTypeName] = []string{contentType + "; charset=" + server.contentTypeCharset}
 		}
-		m := h.GetQueries()
-		for name, index := range response.names {
-			val := h.GetURLPart(index, "?")
-			if val != "?" {
-				m[name] = val
-			}
-		}
-		server.TemplateWithWriter(ww, name, request, m)
+		server.TemplateWithWriter(ww, name, request, h.GetMapOfRequestData())
 		response.Close()
 		if logging.IsAccess() {
 			response.GetWrappedServer().GetServerLogger().LogAccessf("<<< STATUS=%d: CODE=%d: RESP-FROM-FILE=%s: TYPE=%s", response.GetCode(), response.GetSubCode(), name, contentType)

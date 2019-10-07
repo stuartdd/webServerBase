@@ -82,7 +82,7 @@ func makeContentTypesMap() map[string]string {
 }
 
 /*
-AddContentType for a given url return the content type based on the .ext
+AddNewContentTypeToMap for a given url return the content type based on the .ext
 */
 func AddNewContentTypeToMap(ext string, mime string) {
 	contentTypesMap[ext] = mime

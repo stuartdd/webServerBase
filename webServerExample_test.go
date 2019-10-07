@@ -32,8 +32,8 @@ func TestServer(t *testing.T) {
 		scriptType = "bat"
 	}
 
-	test.AssertStringContains(t, "", sendGet(t, 200, "script/list?abc=123&xxx=ABC", headers("txt", "")), "ARG 0: echop."+scriptType, "ARG 1: 123-ABC", "TYPE="+scriptType)
-	test.AssertStringContains(t, "", sendGet(t, 200, "script/list?abc=123", headers("txt", "")), "ARG 0: echop."+scriptType, "ARG 1: 123-${xxx}", "TYPE="+scriptType)
+	test.AssertStringContains(t, "", sendGet(t, 200, "script/list?abc=123&xxx=ABC", headers("json", "")), "ARG 0: echop."+scriptType, "ARG 1: 123-ABC", "TYPE="+scriptType)
+	test.AssertStringContains(t, "", sendGet(t, 200, "script/list?abc=123", headers("json", "")), "ARG 0: echop."+scriptType, "ARG 1: 123-${xxx}", "TYPE="+scriptType)
 	test.AssertStringContains(t, "", sendGet(t, 404, "script/abc", headers("json", "")), "\"Status\":404,\"Code\":"+strconv.Itoa(servermain.SCScriptNotFound)+"")
 
 	test.AssertStringContains(t, "", sendGet(t, 200, "site/index1.html?Material=LEAD", headers("html", "")), "<title>Soot</title>")
