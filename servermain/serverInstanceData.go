@@ -36,6 +36,7 @@ const (
 	SCParamValidation
 	SCScriptNotFound
 	SCScriptError
+	SCOpenFileError
 	SCMax
 )
 

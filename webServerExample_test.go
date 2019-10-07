@@ -21,6 +21,43 @@ var configData *config.Data
 var testLog = logging.CreateTestLogger("Test-Logger")
 var port string
 
+func TestLargeFileRead(t *testing.T) {
+	name := "site/TestLargeFileRead-001.txt"
+	list := openInitial(name, 1)
+	checkLFR(t, list)
+	list = openInitial(name, 2)
+	checkLFR(t, list)
+	list = openInitial(name, 3)
+	checkLFR(t, list)
+	list = openInitial(name, 4)
+	checkLFR(t, list)
+	list = openInitial(name, 5)
+	checkLFR(t, list)
+	list = openInitial(name, 6)
+	checkLFR(t, list)
+	list = openInitial(name, 7)
+	checkLFR(t, list)
+	list = openInitial(name, 8)
+	checkLFR(t, list)
+	list = openInitial(name, 9)
+	checkLFR(t, list)
+	list = openInitial(name, 10)
+	checkLFR(t, list)
+	list = openInitial(name, 11)
+	checkLFR(t, list)
+	list = openInitial(name, 101)
+	checkLFR(t, list)
+}
+
+func checkLFR(t *testing.T, l []int64) {
+	test.AssertInt64Equal(t, "", 1, l[0])
+	test.AssertInt64Equal(t, "", 4, l[1])
+	test.AssertInt64Equal(t, "", 7, l[2])
+	test.AssertInt64Equal(t, "", 9, l[3])
+	test.AssertInt64Equal(t, "", 12, l[4])
+	test.AssertInt64Equal(t, "", 0, l[5])
+}
+
 /*
 Start server. Do loads of tests. Stop the server...
 */

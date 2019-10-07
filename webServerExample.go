@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -17,6 +18,8 @@ import (
 
 var log *logging.LoggerDataReference
 var serverInstance *servermain.ServerInstanceData
+
+var pageMap = make(map[string][]int64)
 
 const banner = "\n---------------------------------------------------------------------------------------------------------------"
 
@@ -128,6 +131,8 @@ func RunWithConfig(configData *config.Data, executable string) {
 	serverInstance.AddMappedHandlerWithNames("/calc/?/div/?", http.MethodGet, divHandler, []string{"calc", "div"})
 	serverInstance.AddMappedHandlerWithNames("/path/?/file/?", http.MethodPost, fileSaveHandler, []string{"path", "filename"})
 	serverInstance.AddMappedHandlerWithNames("/path/?/file/?/ext/?", http.MethodPost, fileSaveHandler, []string{"path", "filename", "ext"})
+	serverInstance.AddMappedHandlerWithNames("/large/?/file/?/ext/?/page/?", http.MethodPost, fileLargeHandler, []string{"path", "filename", "ext", "page"})
+
 	/*
 		An after handler is executed after ALL requests have been handled
 		You can add multiple after handlers.
@@ -152,48 +157,74 @@ func checkForPanicAndRecover() {
 Start of handlers section
 *************************************************/
 
-/*
-templateDataProvider (example method) - When a template is executed this method is called.
-ref above: serverInstance.AddTemplateDataProvider(TemplateDataProviderOne)
-
-The data object is returned to the template for substitution.
-
-In this case the handler ReasonableTemplateFileHandler in file templateManager.go passes in the Query arguments
-from the URL as a map as the data object.
-
-In this method if it is a map we can assume ReasonableTemplateFileHandler has been invoked.
-
-The test in webServerExample_test.go sends 'site/index1.html?Material=LEAD' so Material would be LEAD.
-This data provider reads the confog TemplateData maps and merges the map associated with the template.
-The test asserts that Soot is returned in the template confirming that this provider has been called
-and the config data has been read.
-*/
-func templateDataProvider(r *http.Request, templateName string, data interface{}) {
-	/*
-		Only get involved if the data is a map
-	*/
-	v, ok := data.(map[string]string)
-	if ok {
-		/*
-			Look up a data map in the configuration data using the template name
-		*/
-		if config.GetConfigDataInstance().TemplateData != nil {
-			configData := config.GetConfigDataInstance().TemplateData[templateName]
-			if configData != nil {
-				/*
-					Merge the existing data and the config data.
-					Duplicate values in config data will take presedence.
-				*/
-				for name, value := range configData {
-					v[name] = value
-				}
-			}
-		}
-		/*
-			Add the template name in for good measure!
-		*/
-		v["TemplateName"] = templateName
+func fileLargeHandler(r *http.Request, response *servermain.Response) {
+	h := servermain.NewRequestHandlerHelper(r, response)
+	fileName := h.GetNamedURLPart("filename", "") // Not optional
+	pathName := h.GetNamedURLPart("path", "")     // Not optional
+	ext := h.GetNamedURLPart("ext", "txt")        // Optional. Default value txt
+	// line := h.GetNamedURLPart("line", "-1")         // Optional. Default value txt
+	fullFile := filepath.Join(h.GetStaticPathForName(pathName).FilePath, fileName+"."+ext)
+	fileID := h.GetUUID() + ".tracked"
+	if pageMap[fileID] == nil {
+		pageMap[fileID] = openInitial(fullFile, 5)
 	}
+	response.SetResponse(201, "{\"ref\":\""+fileID+"\"}", "application/json")
+}
+
+func largeFileHandlerReader(name string, offsets []int64, from int, max int) {
+	f, err := os.Open(name)
+	if err != nil {
+		servermain.ThrowPanic("E", 404, servermain.SCOpenFileError, "Not Found", fmt.Sprintf("File %s could not be opened. %s", name, err.Error()))
+	}
+	defer f.Close()
+	_, err = f.Seek(offsets[from], 0)
+
+}
+func openInitial(name string, blocks int) []int64 {
+	if blocks == 0 {
+		servermain.ThrowPanic("E", 500, servermain.SCParamValidation, "Internal Server Error", "Internal error: openInitial-->blocks Parameter cannot be 0")
+	}
+	f, err := os.Open(name)
+	if err != nil {
+		servermain.ThrowPanic("E", 404, servermain.SCOpenFileError, "Not Found", fmt.Sprintf("File %s could not be opened. %s", name, err.Error()))
+	}
+	defer f.Close()
+
+	ret := make([]int64, 100)
+	retIndex := 0
+	var offset int64 = 0
+	count := 0
+	notEOF := true
+	b := make([]byte, blocks)
+	for notEOF {
+		count, err = io.ReadAtLeast(f, b, blocks)
+		notEOF = checkOpenInitialError(name, err)
+		retIndex, offset = parseOpenInitial(count, b, offset, retIndex, ret)
+	}
+	return ret
+}
+
+func parseOpenInitial(count int, b []byte, offset int64, index int, offsets []int64) (int, int64) {
+	for i := 0; i < count; i++ {
+		if b[i] == 13 {
+			offsets[index] = offset
+			index++
+		}
+		offset++
+	}
+	return index, offset
+}
+
+func checkOpenInitialError(name string, err error) bool {
+	if err != nil {
+		switch err {
+		case io.EOF, io.ErrUnexpectedEOF:
+			return false
+		default:
+			servermain.ThrowPanic("E", 400, servermain.SCOpenFileError, "Read File", fmt.Sprintf("File %s could not read. %s", name, err.Error()))
+		}
+	}
+	return true
 }
 
 /*
@@ -260,6 +291,50 @@ func filterBefore(r *http.Request, response *servermain.Response) {
 
 func filterAfter(r *http.Request, response *servermain.Response) {
 	log.LogDebug("IN Filter After 1")
+}
+
+/*
+templateDataProvider (example method) - When a template is executed this method is called.
+ref above: serverInstance.AddTemplateDataProvider(TemplateDataProviderOne)
+
+The data object is returned to the template for substitution.
+
+In this case the handler ReasonableTemplateFileHandler in file templateManager.go passes in the Query arguments
+from the URL as a map as the data object.
+
+In this method if it is a map we can assume ReasonableTemplateFileHandler has been invoked.
+
+The test in webServerExample_test.go sends 'site/index1.html?Material=LEAD' so Material would be LEAD.
+This data provider reads the confog TemplateData maps and merges the map associated with the template.
+The test asserts that Soot is returned in the template confirming that this provider has been called
+and the config data has been read.
+*/
+func templateDataProvider(r *http.Request, templateName string, data interface{}) {
+	/*
+		Only get involved if the data is a map
+	*/
+	v, ok := data.(map[string]string)
+	if ok {
+		/*
+			Look up a data map in the configuration data using the template name
+		*/
+		if config.GetConfigDataInstance().TemplateData != nil {
+			configData := config.GetConfigDataInstance().TemplateData[templateName]
+			if configData != nil {
+				/*
+					Merge the existing data and the config data.
+					Duplicate values in config data will take presedence.
+				*/
+				for name, value := range configData {
+					v[name] = value
+				}
+			}
+		}
+		/*
+			Add the template name in for good measure!
+		*/
+		v["TemplateName"] = templateName
+	}
 }
 
 /************************************************

@@ -80,6 +80,15 @@ func AssertErrorTextContains(t *testing.T, info string, err error, contains stri
 }
 
 /*
+AssertInt64Equal assert ints are equal
+*/
+func AssertInt64Equal(t *testing.T, info string, actual int64, expected int64) {
+	if expected != actual {
+		logStackTraceAndFail(t, fmt.Sprintf("Expected %d actual %d", expected, actual), info, debug.Stack())
+	}
+}
+
+/*
 AssertIntEqual assert ints are equal
 */
 func AssertIntEqual(t *testing.T, info string, actual int, expected int) {
