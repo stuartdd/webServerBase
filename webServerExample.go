@@ -198,17 +198,24 @@ func (p *largeFileData) largeFileHandlerReader(from int, count int) string {
 			*/
 		}
 	}
-	if to >= p.LineCount {
-		to = p.LineCount - 1
-	}
 	if to < from {
 		return ""
 	}
 
-	start := p.Offsets[from]
-	end := p.Offsets[to]
-	bytesToRead := end - start
+	/*
+		If from is 0 then read from the start!
+	*/
+	var start int64 = 0
+	if from > 0 {
+		start = p.Offsets[from-1]
+	}
 
+	var end int64 = p.Offsets[p.LineCount-1]
+	if to <= p.LineCount {
+		end = p.Offsets[to-1]
+	}
+
+	bytesToRead := (end - start) + 1
 	if bytesToRead < 1 {
 		return ""
 	}
@@ -219,34 +226,33 @@ func (p *largeFileData) largeFileHandlerReader(from int, count int) string {
 		servermain.ThrowPanic("E", 417, servermain.SCOpenFileError, "Expectation Failed", fmt.Sprintf("File %s could not be opened. %s", p.Name, err.Error()))
 	}
 	defer f.Close()
-	_, err = f.Seek(start, 0)
-
-	bytes, err := io.ReadAtLeast(f, buf, int(bytesToRead))
-	if (bytes) < 1 {
-		return ""
-	}
-
-	if bytes < 2 {
-		if buf[0] < 32 {
-			return ""
+	/*
+		Read from a point in the file
+	*/
+	if start > 0 {
+		_, err = f.Seek(start, 0)
+		if err != nil {
+			servermain.ThrowPanic("E", 417, servermain.SCOpenFileError, "Expectation Failed", fmt.Sprintf("File %s could not seek. %s", p.Name, err.Error()))
 		}
-		return string(buf)
 	}
 
-	i := 0
-	for (buf[i] < 32) && (i < bytes) {
-		i++
-	}
-	j := len(buf) - 1
-	for (buf[j] < 32) && (j >= 0) {
-		j--
-	}
+	/*
+		Read the rquired number of bytes
+	*/
+	bytes, err := io.ReadAtLeast(f, buf, int(bytesToRead))
+	checkOpenInitialError(p.Name, err)
 
-	if j < i {
+	if bytes < 1 {
 		return ""
 	}
-	fmt.Println("[" + string(buf[i:j+1]) + "]")
-	return string(buf[i : j+1])
+	/*
+		Skip bytes from the start of the line is there!
+	*/
+	bufFrom := 0
+	if buf[bufFrom] == 13 || buf[bufFrom] == 10 {
+		bufFrom++
+	}
+	return string(buf[bufFrom:bytes])
 }
 
 func openInitial(name string, blocks int) *largeFileData {
@@ -276,10 +282,8 @@ func openInitial(name string, blocks int) *largeFileData {
 		Time:      time.Now(),     // The time we read the file
 	}
 	/*
-		While not ate the end of the file
+		While not at the end of the file
 	*/
-	data.Offsets[0] = 0
-	data.LineCount++
 	for notEOF {
 		bytesRead, err = io.ReadAtLeast(f, buf, blocks)
 		notEOF = checkOpenInitialError(name, err)

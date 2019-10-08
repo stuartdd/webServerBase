@@ -1,6 +1,7 @@
 package test
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -174,6 +175,30 @@ func AssertStringEquals(t *testing.T, info string, actual string, expected strin
 	if expected != actual {
 		logStackTraceAndFail(t, fmt.Sprintf("Expected '%s' actual '%s'", expected, actual), info, debug.Stack())
 	}
+}
+
+/*
+AssertStringEqualsUnix assert strings are equal ignoring cr-lf inconsistencies in the OS
+*/
+func AssertStringEqualsUnix(t *testing.T, info string, actual string, expected string) {
+	if cleanStr(expected) != cleanStr(actual) {
+		logStackTraceAndFail(t, fmt.Sprintf("Expected '%s' actual '%s'", cleanStr(expected), cleanStr(actual)), info, debug.Stack())
+	}
+}
+
+func cleanStr(str string) string {
+	var o bytes.Buffer
+	s := []byte(str)
+	for i := 0; i < len(s); i++ {
+		if s[i] != 13 {
+			if s[i] < 32 {
+				o.WriteString(fmt.Sprintf("[%d]", s[i]))
+			} else {
+				o.Write(s[i : i+1])
+			}
+		}
+	}
+	return o.String()
 }
 
 /*
