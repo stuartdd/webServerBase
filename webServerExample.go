@@ -207,7 +207,7 @@ func (p *largeFileData) largeFileHandlerReader(from int, count int) string {
 	*/
 	var start int64 = 0
 	if from > 0 {
-		start = p.Offsets[from-1]
+		start = p.Offsets[from-1] + 1 // To skip from the new line char to the start of the line!
 	}
 
 	var end int64 = p.Offsets[p.LineCount-1]
@@ -245,14 +245,7 @@ func (p *largeFileData) largeFileHandlerReader(from int, count int) string {
 	if bytes < 1 {
 		return ""
 	}
-	/*
-		Skip bytes from the start of the line is there!
-	*/
-	bufFrom := 0
-	if buf[bufFrom] == 13 || buf[bufFrom] == 10 {
-		bufFrom++
-	}
-	return string(buf[bufFrom:bytes])
+	return string(buf[0:bytes])
 }
 
 func openInitial(name string, blocks int) *largeFileData {
