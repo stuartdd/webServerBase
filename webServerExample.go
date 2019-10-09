@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -10,7 +9,6 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/stuartdd/webServerBase/config"
 	"github.com/stuartdd/webServerBase/logging"
@@ -19,16 +17,6 @@ import (
 
 var log *logging.LoggerDataReference
 var serverInstance *servermain.ServerInstanceData
-
-type largeFileData struct {
-	Name      string
-	Offsets   []int64
-	LineCount int
-	ModTime   time.Time
-	Time      time.Time
-}
-
-var pageMap = make(map[string]*largeFileData)
 
 const banner = "\n---------------------------------------------------------------------------------------------------------------"
 
@@ -174,153 +162,8 @@ func fileLargeHandler(r *http.Request, response *servermain.Response) {
 	// line := h.GetNamedURLPart("line", "-1")         // Optional. Default value txt
 	fullFile := filepath.Join(h.GetStaticPathForName(pathName).FilePath, fileName+"."+ext)
 	fileID := h.GetUUID() + ".tracked"
-	if pageMap[fileID] == nil {
-		pageMap[fileID] = openInitial(fullFile, 5)
-	}
+	servermain.NewLargeFileReader(fullFile, 1000)
 	response.SetResponse(201, "{\"ref\":\""+fileID+"\"}", "application/json")
-}
-
-func (p *largeFileData) largeFileHandlerReader(from int, count int) string {
-
-	info, err := os.Stat(p.Name)
-	if err != nil {
-		servermain.ThrowPanic("E", 404, servermain.SCFileNotFound, "Not Found", fmt.Sprintf("File %s could not be found. %s", p.Name, err.Error()))
-	}
-	if count == 0 {
-		return ""
-	}
-	to := from + count
-
-	if to >= p.LineCount {
-		if info.ModTime().After(p.ModTime) {
-			/*
-				File has changed
-			*/
-		}
-	}
-	if to < from {
-		return ""
-	}
-
-	/*
-		If from is 0 then read from the start!
-	*/
-	var start int64 = 0
-	if from > 0 {
-		start = p.Offsets[from-1] + 1 // To skip from the new line char to the start of the line!
-	}
-
-	var end int64 = p.Offsets[p.LineCount-1]
-	if to <= p.LineCount {
-		end = p.Offsets[to-1]
-	}
-
-	bytesToRead := (end - start) + 1
-	if bytesToRead < 1 {
-		return ""
-	}
-	buf := make([]byte, bytesToRead)
-
-	f, err := os.Open(p.Name)
-	if err != nil {
-		servermain.ThrowPanic("E", 417, servermain.SCOpenFileError, "Expectation Failed", fmt.Sprintf("File %s could not be opened. %s", p.Name, err.Error()))
-	}
-	defer f.Close()
-	/*
-		Read from a point in the file
-	*/
-	if start > 0 {
-		_, err = f.Seek(start, 0)
-		if err != nil {
-			servermain.ThrowPanic("E", 417, servermain.SCOpenFileError, "Expectation Failed", fmt.Sprintf("File %s could not seek. %s", p.Name, err.Error()))
-		}
-	}
-
-	/*
-		Read the rquired number of bytes
-	*/
-	bytes, err := io.ReadAtLeast(f, buf, int(bytesToRead))
-	checkOpenInitialError(p.Name, err)
-
-	if bytes < 1 {
-		return ""
-	}
-	return string(buf[0:bytes])
-}
-
-func openInitial(name string, blocks int) *largeFileData {
-	if blocks == 0 {
-		servermain.ThrowPanic("E", 500, servermain.SCParamValidation, "Internal Server Error", "Internal error: openInitial-->blocks Parameter cannot be 0")
-	}
-	info, err := os.Stat(name)
-	if err != nil {
-		servermain.ThrowPanic("E", 404, servermain.SCFileNotFound, "Not Found", fmt.Sprintf("File %s could not be found. %s", name, err.Error()))
-	}
-	f, err := os.Open(name)
-	if err != nil {
-		servermain.ThrowPanic("E", 417, servermain.SCOpenFileError, "Expectation Failed", fmt.Sprintf("File %s could not be opened. %s", name, err.Error()))
-	}
-	defer f.Close()
-
-	var offset int64 = 0        // Offset in to the file!
-	bytesRead := 0              // The number of bytest read
-	notEOF := true              // Are we at the end of the file
-	buf := make([]byte, blocks) // Buffer for the file
-
-	data := &largeFileData{
-		Name:      name,
-		Offsets:   make([]int64, 50), // Make room for 100 lines
-		LineCount: 0,
-		ModTime:   info.ModTime(), // The time the file was updated
-		Time:      time.Now(),     // The time we read the file
-	}
-	/*
-		While not at the end of the file
-	*/
-	for notEOF {
-		bytesRead, err = io.ReadAtLeast(f, buf, blocks)
-		notEOF = checkOpenInitialError(name, err)
-		offset = data.parseOpenInitial(bytesRead, buf, offset)
-	}
-	/*
-		Add an empty line to the end of the file so me now how big the file is
-	*/
-	offset = data.parseOpenInitial(2, []byte{10, 32}, offset)
-	return data
-}
-
-/*
-for each new line add the offset in the file to that line in the offsets
-*/
-func (p *largeFileData) parseOpenInitial(bytesRead int, b []byte, offset int64) int64 {
-	for i := 0; i < bytesRead; i++ {
-		if b[i] == 10 {
-			if p.LineCount >= len(p.Offsets) {
-				newLen := p.LineCount + 50
-				sb := make([]int64, newLen)
-				for i := 0; i < p.LineCount; i++ {
-					sb[i] = p.Offsets[i]
-				}
-				p.Offsets = sb
-			}
-			p.Offsets[p.LineCount] = offset
-			p.LineCount++
-		}
-		offset++
-	}
-	return offset
-}
-
-func checkOpenInitialError(name string, err error) bool {
-	if err != nil {
-		switch err {
-		case io.EOF, io.ErrUnexpectedEOF:
-			return false
-		default:
-			servermain.ThrowPanic("E", 400, servermain.SCOpenFileError, "Read File", fmt.Sprintf("File %s could not read. %s", name, err.Error()))
-		}
-	}
-	return true
 }
 
 /*

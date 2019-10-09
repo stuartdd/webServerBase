@@ -1,0 +1,43 @@
+{
+  "loggerLevels" : {"DEBUG":"SYSOUT","INFO":"SYSOUT", "WARN":"SYSOUT", "ACCESS":"SYSOUT"},
+  "staticPaths"  : {
+    "windows":{"/static/":"site\\", "data":"site\\"}, 
+    "linux":{"/static/":"site/", "data":"site/"},
+    "darwin":{"/static/":"site/", "data":"site/"}
+  }, 
+  "templatePaths"  : {
+    "windows":"site\\templates\\", 
+    "linux":"site/templates/",
+    "darwin":"site/templates/"
+  },
+  "templateData" : {
+    "index1.html" : {"Material":"Soot"}
+  },
+  "port" : 8080,
+  "redirections" : {"/":"/static/index.html"},
+  "contentTypes" : {"ico": "image/x-icon"},
+  "contentTypeCharset":"utf-8",
+  "panicResponseCode" : 500,
+  "scriptData" : {
+    "windows" : {
+      "path" : "site\\scripts\\",
+      "data" : {
+        "list" : ["cmd", "/C", "echop.bat", "${abc}-${xxx}", "${uuid}"]
+      }
+    },
+    "linux":{
+      "path" : "site/scripts/",
+      "data" : {
+        "test" : ["sh", "-C", "go-test.sh", "${proj}", "${uuid}"],
+        "build" : ["sh", "-C", "go-build.sh", "${proj}", "${module}", "${uuid}"],
+        "list" : ["sh", "-C", "echop.sh", "${abc}-${xxx}", "${uuid}"]
+      }
+    },
+    "darwin":{
+      "path" : "site/scripts/",
+      "data" : {
+        "list" : ["sh", "-c", "echop.sh", "${abc}=${xxx}", "${uuid}"]
+      }
+    }
+  }
+}
