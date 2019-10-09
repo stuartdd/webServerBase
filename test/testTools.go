@@ -12,6 +12,40 @@ import (
 )
 
 /*
+AppendToFile - Append text to a file. Create if not there
+*/
+func AppendToFile(t *testing.T, fileName string, text string) {
+	f, err := os.OpenFile("text.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err == nil {
+		logStackTraceAndFail(t, fmt.Sprintf("Failed to open file [%s]: %s", fileName, err.Error()), "AppendToFile", debug.Stack())
+		return
+	}
+	defer f.Close()
+	_, err = f.WriteString(text)
+	if err == nil {
+		logStackTraceAndFail(t, fmt.Sprintf("Failed to write to file [%s]: %s", fileName, err.Error()), "AppendToFile", debug.Stack())
+		return
+	}
+}
+
+/*
+DeleteFile delete a file. Use with defer
+*/
+func DeleteFile(t *testing.T, fileName string) {
+	_, err := os.Stat(fileName)
+	if err != nil {
+		logStackTraceAndFail(t, fmt.Sprintf("Failed to remove file [%s] Could not be found!: %s", fileName, err.Error()), "DeleteFile", debug.Stack())
+		return
+	}
+
+	err = os.Remove(fileName)
+	if err == nil {
+		logStackTraceAndFail(t, fmt.Sprintf("Failed to remove file [%s]: %s", fileName, err.Error()), "DeleteFile", debug.Stack())
+		return
+	}
+}
+
+/*
 Fail - Fail with a message and a StackTrace
 */
 func Fail(t *testing.T, info string, message string) {

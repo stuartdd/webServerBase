@@ -8,6 +8,11 @@ import (
 
 const testFilePrefix = "../site/TestLargeFileRead-"
 
+func TestExtendingFile(t *testing.T) {
+	test.AppendToFile(t, "tempfile.txt", "Line 1\nLine 2\nLine 3")
+	defer test.DeleteFile(t, "tempfile.txt")
+}
+
 /* ../site/TestLargeFileRead-002.txt
 0: \n
 1: b\n

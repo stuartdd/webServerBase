@@ -13,6 +13,7 @@ type largeFileData struct {
 	LineCount int
 	ModTime   time.Time
 	Time      time.Time
+	bufSize   int
 }
 
 var pageMap = make(map[string]*largeFileData)
@@ -33,6 +34,7 @@ func (p *largeFileData) ReadLargeFile(from int, count int) string {
 			/*
 				File has changed
 			*/
+			p.ReadMoreLines()
 		}
 	}
 	if to < from {
@@ -77,7 +79,7 @@ func (p *largeFileData) ReadLargeFile(from int, count int) string {
 		Read the rquired number of bytes
 	*/
 	bytes, err := io.ReadAtLeast(f, buf, int(bytesToRead))
-	checkOpenInitialError(p.Name, err)
+	checkOpenInitialError(p.Name, "ReadLargeFile", err)
 
 	if bytes < 1 {
 		return ""
@@ -93,17 +95,49 @@ func GetLargeFileReader(name string) *largeFileData {
 	return lfr
 }
 
+func (p *largeFileData) ReadMoreLines() {
+	_, err := os.Stat(p.Name)
+	if err != nil {
+		ThrowPanic("E", 404, SCFileNotFound, "Not Found", fmt.Sprintf("ReadMoreLines: File %s could not be found. %s", p.Name, err.Error()))
+	}
+	f, err := os.Open(p.Name)
+	if err != nil {
+		ThrowPanic("E", 417, SCOpenFileError, "Expectation Failed", fmt.Sprintf("ReadMoreLines: File %s could not be opened. %s", p.Name, err.Error()))
+	}
+	defer f.Close()
+
+	offset := p.Offsets[p.LineCount] // Offset in to the file!
+	bytesRead := 0                   // The number of bytest read
+	notEOF := true                   // Are we at the end of the file
+	buf := make([]byte, p.bufSize)   // Buffer for the file
+
+	_, err = f.Seek(offset, 0)
+	if err != nil {
+		ThrowPanic("E", 417, SCOpenFileError, "Expectation Failed", fmt.Sprintf("ReadMoreLines: File %s could not seek. %s", p.Name, err.Error()))
+	}
+
+	for notEOF {
+		bytesRead, err = io.ReadAtLeast(f, buf, p.bufSize)
+		notEOF = checkOpenInitialError(p.Name, "NewLargeFileReader", err)
+		offset = p.parseOpenInitial(bytesRead, buf, offset)
+	}
+	/*
+		Add an empty line to the end of the file so me now how big the file is
+	*/
+	offset = p.parseOpenInitial(2, []byte{10, 32}, offset)
+}
+
 func NewLargeFileReader(name string, fileReaderBufferSize int) *largeFileData {
 	if fileReaderBufferSize == 0 {
-		ThrowPanic("E", 500, SCParamValidation, "Internal Server Error", "Internal error: openInitial-->fileReaderBufferSize Parameter cannot be 0")
+		ThrowPanic("E", 500, SCParamValidation, "Internal Server Error", "NewLargeFileReader: Internal error: openInitial-->fileReaderBufferSize Parameter cannot be 0")
 	}
 	info, err := os.Stat(name)
 	if err != nil {
-		ThrowPanic("E", 404, SCFileNotFound, "Not Found", fmt.Sprintf("File %s could not be found. %s", name, err.Error()))
+		ThrowPanic("E", 404, SCFileNotFound, "Not Found", fmt.Sprintf("NewLargeFileReader: File %s could not be found. %s", name, err.Error()))
 	}
 	f, err := os.Open(name)
 	if err != nil {
-		ThrowPanic("E", 417, SCOpenFileError, "Expectation Failed", fmt.Sprintf("File %s could not be opened. %s", name, err.Error()))
+		ThrowPanic("E", 417, SCOpenFileError, "Expectation Failed", fmt.Sprintf("NewLargeFileReader: File %s could not be opened. %s", name, err.Error()))
 	}
 	defer f.Close()
 
@@ -116,15 +150,16 @@ func NewLargeFileReader(name string, fileReaderBufferSize int) *largeFileData {
 		Name:      name,
 		Offsets:   make([]int64, 50), // Make room for 100 lines
 		LineCount: 0,
-		ModTime:   info.ModTime(), // The time the file was updated
-		Time:      time.Now(),     // The time we read the file
+		ModTime:   info.ModTime(),       // The time the file was updated
+		Time:      time.Now(),           // The time we read the file
+		bufSize:   fileReaderBufferSize, // Keep this for ReadMoreLines to use
 	}
 	/*
 		While not at the end of the file
 	*/
 	for notEOF {
-		bytesRead, err = io.ReadAtLeast(f, buf, fileReaderBufferSize)
-		notEOF = checkOpenInitialError(name, err)
+		bytesRead, err = io.ReadAtLeast(f, buf, data.bufSize)
+		notEOF = checkOpenInitialError(name, "NewLargeFileReader", err)
 		offset = data.parseOpenInitial(bytesRead, buf, offset)
 	}
 	/*
@@ -157,13 +192,13 @@ func (p *largeFileData) parseOpenInitial(bytesRead int, b []byte, offset int64) 
 	return offset
 }
 
-func checkOpenInitialError(name string, err error) bool {
+func checkOpenInitialError(name string, context string, err error) bool {
 	if err != nil {
 		switch err {
 		case io.EOF, io.ErrUnexpectedEOF:
 			return false
 		default:
-			ThrowPanic("E", 400, SCOpenFileError, "Read File", fmt.Sprintf("File %s could not read. %s", name, err.Error()))
+			ThrowPanic("E", 400, SCOpenFileError, "Read File", fmt.Sprintf("%s: File %s could not read. %s", context, name, err.Error()))
 		}
 	}
 	return true
