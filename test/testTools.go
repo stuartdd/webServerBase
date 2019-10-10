@@ -15,14 +15,14 @@ import (
 AppendToFile - Append text to a file. Create if not there
 */
 func AppendToFile(t *testing.T, fileName string, text string) {
-	f, err := os.OpenFile("text.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err == nil {
+	f, err := os.OpenFile(fileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
 		logStackTraceAndFail(t, fmt.Sprintf("Failed to open file [%s]: %s", fileName, err.Error()), "AppendToFile", debug.Stack())
 		return
 	}
 	defer f.Close()
 	_, err = f.WriteString(text)
-	if err == nil {
+	if err != nil {
 		logStackTraceAndFail(t, fmt.Sprintf("Failed to write to file [%s]: %s", fileName, err.Error()), "AppendToFile", debug.Stack())
 		return
 	}
@@ -39,7 +39,7 @@ func DeleteFile(t *testing.T, fileName string) {
 	}
 
 	err = os.Remove(fileName)
-	if err == nil {
+	if err != nil {
 		logStackTraceAndFail(t, fmt.Sprintf("Failed to remove file [%s]: %s", fileName, err.Error()), "DeleteFile", debug.Stack())
 		return
 	}

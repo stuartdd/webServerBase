@@ -2,6 +2,7 @@ package servermain
 
 import (
 	"testing"
+	"time"
 
 	"webServerExample.go/test"
 )
@@ -9,8 +10,18 @@ import (
 const testFilePrefix = "../site/TestLargeFileRead-"
 
 func TestExtendingFile(t *testing.T) {
-	test.AppendToFile(t, "tempfile.txt", "Line 1\nLine 2\nLine 3")
-	defer test.DeleteFile(t, "tempfile.txt")
+	name := "tempFile.txt"
+	test.AppendToFile(t, name, "Line 1\nLine 2\nLine 3")
+	defer test.DeleteFile(t, name)
+	list := NewLargeFileReader(name, 50)
+	test.AssertStringContains(t, "1", list.ReadLargeFile(0, 1), "Line 1")
+	test.AssertStringContains(t, "2", list.ReadLargeFile(1, 1), "Line 2")
+	test.AssertStringContains(t, "3", list.ReadLargeFile(2, 1), "Line 3")
+	test.AssertStringEmpty(t, "4-", list.ReadLargeFile(3, 1))
+	test.AppendToFile(t, name, "\nLine 4\nLine 5")
+	time.Sleep(time.Millisecond * time.Duration(500))
+	test.AssertFileContains(t, "file", name, "Line 4", "Line 5")
+	test.AssertStringContains(t, "4+", list.ReadLargeFile(3, 1), "Line x")
 }
 
 /* ../site/TestLargeFileRead-002.txt

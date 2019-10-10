@@ -11,7 +11,7 @@ type largeFileData struct {
 	Name      string
 	Offsets   []int64
 	LineCount int
-	ModTime   time.Time
+	Size      int64
 	Time      time.Time
 	bufSize   int
 }
@@ -30,7 +30,7 @@ func (p *largeFileData) ReadLargeFile(from int, count int) string {
 	to := from + count
 
 	if to >= p.LineCount {
-		if info.ModTime().After(p.ModTime) {
+		if info.Size() != p.Size {
 			/*
 				File has changed
 			*/
@@ -106,10 +106,13 @@ func (p *largeFileData) ReadMoreLines() {
 	}
 	defer f.Close()
 
-	offset := p.Offsets[p.LineCount] // Offset in to the file!
-	bytesRead := 0                   // The number of bytest read
-	notEOF := true                   // Are we at the end of the file
-	buf := make([]byte, p.bufSize)   // Buffer for the file
+	offset := p.Offsets[p.LineCount-1] // Offset in to the file!
+	bytesRead := 0                     // The number of bytest read
+	notEOF := true                     // Are we at the end of the file
+	buf := make([]byte, p.bufSize)     // Buffer for the file
+
+	fmt.Printf("bs [%d]\n", p.bufSize)
+	fmt.Printf("of [%d]\n", offset)
 
 	_, err = f.Seek(offset, 0)
 	if err != nil {
@@ -118,6 +121,7 @@ func (p *largeFileData) ReadMoreLines() {
 
 	for notEOF {
 		bytesRead, err = io.ReadAtLeast(f, buf, p.bufSize)
+		fmt.Printf("[%s] [%d]\n", string(buf[0:bytesRead]), offset)
 		notEOF = checkOpenInitialError(p.Name, "NewLargeFileReader", err)
 		offset = p.parseOpenInitial(bytesRead, buf, offset)
 	}
@@ -150,7 +154,7 @@ func NewLargeFileReader(name string, fileReaderBufferSize int) *largeFileData {
 		Name:      name,
 		Offsets:   make([]int64, 50), // Make room for 100 lines
 		LineCount: 0,
-		ModTime:   info.ModTime(),       // The time the file was updated
+		Size:      info.Size(),          // The time the file was updated
 		Time:      time.Now(),           // The time we read the file
 		bufSize:   fileReaderBufferSize, // Keep this for ReadMoreLines to use
 	}
