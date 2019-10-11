@@ -22,6 +22,66 @@ type LargeFileData struct {
 var pageMap = make(map[string]*LargeFileData)
 
 /*
+NewLargeFileReader Initialise the large File Reader data set
+*/
+func NewLargeFileReader(name string, fileReaderBufferSize int) *LargeFileData {
+	if fileReaderBufferSize == 0 {
+		ThrowPanic("E", 500, SCParamValidation, "Internal Server Error", "NewLargeFileReader: Internal error: openInitial-->fileReaderBufferSize Parameter cannot be 0")
+	}
+	info, err := os.Stat(name)
+	if err != nil {
+		ThrowPanic("E", 404, SCFileNotFound, "Not Found", fmt.Sprintf("NewLargeFileReader: File %s could not be found. %s", name, err.Error()))
+	}
+	f, err := os.Open(name)
+	if err != nil {
+		ThrowPanic("E", 417, SCOpenFileError, "Expectation Failed", fmt.Sprintf("NewLargeFileReader: File %s could not be opened. %s", name, err.Error()))
+	}
+	defer f.Close()
+
+	var offset int64                          // Initial offset in to the file!
+	bytesRead := 0                            // The number of bytest read
+	notEOF := true                            // Are we at the end of the file
+	buf := make([]byte, fileReaderBufferSize) // Buffer for the file contents
+	/*
+		Init the data structure
+	*/
+	data := &LargeFileData{
+		Name:      name,
+		Offsets:   make([]int64, 50), // Make room for 100 lines
+		LineCount: 0,
+		Size:      info.Size(),          // The size of the file so we know if it is extended
+		Time:      time.Now(),           // The time we last read the file so we can clean up later
+		bufSize:   fileReaderBufferSize, // Keep this for ReadMoreLines to use
+	}
+	/*
+		While not at the end of the file
+	*/
+	for notEOF {
+		/*
+			Read a buffer sized chunk
+		*/
+		bytesRead, err = io.ReadAtLeast(f, buf, data.bufSize)
+		/*
+			Check for errors and End Of File
+		*/
+		notEOF = checkOpenInitialError(name, "NewLargeFileReader", err)
+		/*
+			Parse the buffer for line feeds and record their position
+		*/
+		offset = data.parseOpenInitial(bytesRead, buf, offset)
+	}
+	/*
+		Add an empty line to the end of the file so me now how big the file is
+	*/
+	offset = data.parseOpenInitial(2, []byte{10, 32}, offset)
+	/*
+		Add the data to the map so we can get it back
+	*/
+	pageMap[name] = data
+	return data
+}
+
+/*
 ReadLargeFile Read 'count' lines from the file from line 'from'
 */
 func (p *LargeFileData) ReadLargeFile(from int, count int) string {
@@ -35,7 +95,7 @@ func (p *LargeFileData) ReadLargeFile(from int, count int) string {
 	}
 	to := from + count
 
-	if to >= p.LineCount {
+	if to > p.LineCount {
 		if info.Size() != p.Size {
 			/*
 				File has changed
@@ -144,52 +204,6 @@ func (p *LargeFileData) readMoreLines() {
 		Add an empty line to the end of the file so me now how big the file is
 	*/
 	offset = p.parseOpenInitial(2, []byte{10, 32}, offset)
-}
-
-/*
-NewLargeFileReader Initialise the large File Reader data set
-*/
-func NewLargeFileReader(name string, fileReaderBufferSize int) *LargeFileData {
-	if fileReaderBufferSize == 0 {
-		ThrowPanic("E", 500, SCParamValidation, "Internal Server Error", "NewLargeFileReader: Internal error: openInitial-->fileReaderBufferSize Parameter cannot be 0")
-	}
-	info, err := os.Stat(name)
-	if err != nil {
-		ThrowPanic("E", 404, SCFileNotFound, "Not Found", fmt.Sprintf("NewLargeFileReader: File %s could not be found. %s", name, err.Error()))
-	}
-	f, err := os.Open(name)
-	if err != nil {
-		ThrowPanic("E", 417, SCOpenFileError, "Expectation Failed", fmt.Sprintf("NewLargeFileReader: File %s could not be opened. %s", name, err.Error()))
-	}
-	defer f.Close()
-
-	var offset int64                          // Offset in to the file!
-	bytesRead := 0                            // The number of bytest read
-	notEOF := true                            // Are we at the end of the file
-	buf := make([]byte, fileReaderBufferSize) // Buffer for the file
-
-	data := &LargeFileData{
-		Name:      name,
-		Offsets:   make([]int64, 50), // Make room for 100 lines
-		LineCount: 0,
-		Size:      info.Size(),          // The time the file was updated
-		Time:      time.Now(),           // The time we read the file
-		bufSize:   fileReaderBufferSize, // Keep this for ReadMoreLines to use
-	}
-	/*
-		While not at the end of the file
-	*/
-	for notEOF {
-		bytesRead, err = io.ReadAtLeast(f, buf, data.bufSize)
-		notEOF = checkOpenInitialError(name, "NewLargeFileReader", err)
-		offset = data.parseOpenInitial(bytesRead, buf, offset)
-	}
-	/*
-		Add an empty line to the end of the file so me now how big the file is
-	*/
-	offset = data.parseOpenInitial(2, []byte{10, 32}, offset)
-	pageMap[name] = data
-	return data
 }
 
 /*

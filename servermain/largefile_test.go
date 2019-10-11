@@ -25,13 +25,13 @@ func TestExtendingFile(t *testing.T) {
 	list := NewLargeFileReader(name, 50)
 
 	lc := list.LineCount
-	test.AssertIntEqual(t, "", lc, 3)
+	test.AssertIntEqual(t, "lc=5a", lc, 3)
 
 	test.AssertStringEqualsUnix(t, "1=", list.ReadLargeFile(0, 1), "Line 1\n")
 	test.AssertStringEqualsUnix(t, "2=", list.ReadLargeFile(1, 1), "Line 2\n")
 	test.AssertStringEqualsUnix(t, "3=", list.ReadLargeFile(2, 1), "Line 3")
 	test.AssertStringEqualsUnix(t, "4=", list.ReadLargeFile(3, 1), "")
-	test.AssertIntEqual(t, "", list.LineCount, lc)
+	test.AssertIntEqual(t, "lc=5b", list.LineCount, lc)
 
 	test.AppendToFile(t, name, "\nLine 4\nLine 5")
 	test.AssertFileContains(t, "file", name, "Line 4", "Line 5")
@@ -48,7 +48,6 @@ func TestExtendingFile(t *testing.T) {
 	test.AssertIntEqual(t, "", list.LineCount, lc+2)
 	test.AssertStringEqualsUnix(t, "6+", list.ReadLargeFile(5, 1), "")
 	test.AssertIntEqual(t, "", list.LineCount, lc+2)
-
 }
 
 /* ../site/TestLargeFileRead-002.txt
