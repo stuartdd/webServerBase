@@ -3,6 +3,8 @@ package servermain
 import (
 	"fmt"
 	"strings"
+
+	"github.com/stuartdd/webServerBase/panicapi"
 )
 
 /*
@@ -61,7 +63,7 @@ See tests for examples of matches
 func (p *StaticFileServerData) GetStaticPathForURL(url string) *FileServerContainer {
 	container := p.FileServerContainerRoot
 	if container == nil {
-		ThrowPanic("E", 500, SCStaticFileInit, fmt.Sprintf("URL:%s Unsupported", url), "Static File Server Data - File Server List has not been defined.")
+		panicapi.ThrowError(500, panicapi.SCStaticFileInit, fmt.Sprintf("URL:%s Unsupported", url), "Static File Server Data - File Server List has not been defined.")
 	}
 	if strings.HasPrefix(url, "/") {
 		return p.GetStaticPathForName(url)
@@ -76,7 +78,7 @@ See tests for examples of matches
 func (p *StaticFileServerData) GetStaticPathForName(name string) *FileServerContainer {
 	container := p.FileServerContainerRoot
 	if container == nil {
-		ThrowPanic("E", 500, SCStaticFileInit, fmt.Sprintf("Name:%s Unsupported", name), "Static File Server Data - File Server List has not been defined.")
+		panicapi.ThrowError(500, panicapi.SCStaticFileInit, fmt.Sprintf("Name:%s Unsupported", name), "Static File Server Data - File Server List has not been defined.")
 	}
 	var resp *FileServerContainer
 	var l = 0
@@ -90,8 +92,7 @@ func (p *StaticFileServerData) GetStaticPathForName(name string) *FileServerCont
 		container = container.next
 	}
 	if resp == nil {
-		ThrowPanic("W", 404, SCStaticPathNotFound, fmt.Sprintf("Entity:%s Not Found", name), fmt.Sprintf("Static File Server Data. Entity:%s is not defined", name))
+		panicapi.ThrowWarning(404, panicapi.SCStaticPathNotFound, fmt.Sprintf("Entity:%s Not Found", name), fmt.Sprintf("Static File Server Data. Entity:%s is not defined", name))
 	}
 	return resp
 }
-

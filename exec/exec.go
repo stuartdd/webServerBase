@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"webServerExample.go/substitution"
+	"github.com/stuartdd/webServerBase/substitution"
 )
 
 /*

@@ -7,38 +7,10 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/stuartdd/webServerBase/logging"
-)
-
-/*
-SCSubCodeZero and these constants are used as unique subcodes in error responses
-*/
-const (
-	SCSubCodeZero = iota
-	SCPathNotFound
-	SCFileNotFound
-	SCStaticPathNotFound
-	SCContentNotFound
-	SCContentReadFailed
-	SCServerShutDown
-	SCInvalidJSONRequest
-	SCReadJSONRequest
-	SCJSONResponseErr
-	SCMissingURLParam
-	SCStaticFileInit
-	SCTemplateNotFound
-	SCTemplateError
-	SCRuntimeError
-	SCStaticPath
-	SCWriteFile
-	SCParamValidation
-	SCScriptNotFound
-	SCScriptError
-	SCOpenFileError
-	SCMax
+	"github.com/stuartdd/webServerBase/panicapi"
 )
 
 /*
@@ -211,7 +183,7 @@ func (p *ServerInstanceData) ServeHTTP(rw http.ResponseWriter, httpRequest *http
 			Mapping not found,
 			delegate to the current error handler to manage the error
 		*/
-		ThrowPanic("W", 404, SCPathNotFound, fmt.Sprintf("%s URL:%s", httpRequest.Method, url), fmt.Sprintf("METHOD:%s URL:%s is not mapped", httpRequest.Method, url))
+		panicapi.ThrowWarning(404, panicapi.SCPathNotFound, fmt.Sprintf("%s URL:%s", httpRequest.Method, url), fmt.Sprintf("METHOD:%s URL:%s is not mapped", httpRequest.Method, url))
 	}
 	/*
 		Add any url parameter names and indexes to the response so we can get ? values
@@ -299,7 +271,7 @@ GetOsScriptsData - Get the OS Script data for a specific script name
 func (p *ServerInstanceData) GetOsScriptsData(scriptName string) []string {
 	data := p.osScripts[scriptName]
 	if data == nil {
-		ThrowPanic("E", 404, SCScriptNotFound, "Not found", "GetOsScriptsData: OS Script ["+scriptName+"] was not found")
+		panicapi.ThrowError(404, panicapi.SCScriptNotFound, "Not found", "GetOsScriptsData: OS Script ["+scriptName+"] was not found")
 	}
 	return data
 }
@@ -323,7 +295,7 @@ GetStaticFileServerData get the path for a static name
 */
 func (p *ServerInstanceData) GetStaticFileServerData() *StaticFileServerData {
 	if p.fileServerData == nil {
-		ThrowPanic("E", 500, SCStaticFileInit, fmt.Sprintf("File Server Data is undefined"), "Static File Server Data has not been defined.")
+		panicapi.ThrowError(500, panicapi.SCStaticFileInit, fmt.Sprintf("File Server Data is undefined"), "Static File Server Data has not been defined.")
 	}
 	return p.fileServerData
 }
@@ -406,7 +378,7 @@ func (p *ServerInstanceData) TemplateAsString(templateName string, r *http.Reque
 		p.templates.executeDataProvider(templateName, r, data)
 		return p.templates.executeString(templateName, data)
 	}
-	ThrowPanic("W", 404, SCTemplateNotFound, "Not Found", "Template "+templateName+" was not found")
+	panicapi.ThrowWarning(404, panicapi.SCTemplateNotFound, "Not Found", "Template "+templateName+" was not found")
 	return ""
 }
 
@@ -419,7 +391,7 @@ func (p *ServerInstanceData) TemplateWithWriter(w io.Writer, templateName string
 		p.templates.executeWriter(w, templateName, data)
 		return
 	}
-	ThrowPanic("W", 404, SCTemplateNotFound, "Not Found", "Template "+templateName+" was not found")
+	panicapi.ThrowWarning(404, panicapi.SCTemplateNotFound, "Not Found", "Template "+templateName+" was not found")
 
 }
 
@@ -588,25 +560,6 @@ func (p *ServerInstanceData) LogResponse(response *Response) {
 }
 
 /*
-ThrowPanic - Throw a PANIC that is handled by the checkForPanicAndRecover method.
-This results in the panic being 'recovered' and down graded to an error response.
-Parameter level:
- I for log at INFO level
- W for log at WARN level
- Anything else is ERROR level
-
- Note ALL data is logged.
- StatusCode, errorMessage are returned to the client as Code and Error. For example;
- {"Code":404,"Message":"Not Found","Error":"Parameter XXX Not Found"}
- The Message is derived from the statusCode standard messages (404==Not Found)
-
- Equivilent to panic("Level|statusCode|Error|info)
-*/
-func ThrowPanic(level string, statusCode, subCode int, errorText string, logMessage string) {
-	panic(fmt.Sprintf("%s|%d|%d|%s|%s", level, statusCode, subCode, errorText, logMessage))
-}
-
-/*
 ServeContent wraps the http.ServeContent. It opens the file first.
 If the open fails it returns an error.
 After that it delegates to http.ServeContent
@@ -615,9 +568,9 @@ func ServeContent(w *ResponseWriterWrapper, r *http.Request, name string) {
 	file, err := os.Open(name)
 	if err != nil {
 		if os.IsNotExist(err) {
-			ThrowPanic("W", 404, SCContentNotFound, fmt.Sprintf("URL:%s", r.URL.Path), err.Error())
+			panicapi.ThrowWarning(404, panicapi.SCContentNotFound, fmt.Sprintf("URL:%s", r.URL.Path), err.Error())
 		}
-		ThrowPanic("E", 500, SCContentReadFailed, fmt.Sprintf("URL:%s", r.URL.Path), err.Error())
+		panicapi.ThrowError(500, panicapi.SCContentReadFailed, fmt.Sprintf("URL:%s", r.URL.Path), err.Error())
 	}
 	defer file.Close()
 	http.ServeContent(w, r, name, time.Now(), file)
@@ -640,42 +593,32 @@ func checkForPanicAndRecover(r *http.Request, response *Response) {
 	server := response.GetWrappedServer()
 	rec := recover()
 	if rec != nil {
-		recStr := fmt.Sprintf("%s", rec)
-		parts := strings.Split(recStr, "|")
-		if len(parts) > 1 {
-			rc, err1 := strconv.Atoi(parts[1])
-			sub, err2 := strconv.Atoi(parts[2])
-			if (err1 == nil) && (err2 == nil) {
-				switch strings.ToUpper(parts[0]) {
-				case "I":
-					if logging.IsInfo() {
-						server.logger.LogInfo("--- PANIC|" + recStr[2:])
-					}
-					break
-				case "W":
-					if logging.IsWarn() {
-						server.logger.LogWarn("--- PANIC|" + recStr[2:])
-					}
-					break
-				case "E":
-					if logging.IsError() {
-						server.logger.LogError(fmt.Errorf("--- PANIC|%s", recStr[2:]))
-					}
-					break
-				default:
-					if logging.IsError() {
-						server.logger.LogError(fmt.Errorf("--- PANIC|%s", recStr))
-					}
-					break
+		panicState := panicapi.GetPanicData(rec)
+		if panicState.IsPanicData {
+			switch panicState.Severity {
+			case "I":
+				if logging.IsInfo() {
+					server.logger.LogInfo(panicState.String())
 				}
-				server.errorHandler(r, response.SetErrorResponse(rc, sub, parts[3]))
-				return
+				break
+			case "W":
+				if logging.IsWarn() {
+					server.logger.LogWarn(panicState.String())
+				}
+				break
+			default:
+				if logging.IsError() {
+					server.logger.LogError(panicState.Error())
+				}
+				break
 			}
+			server.errorHandler(r, response.SetErrorResponse(panicState.StatusCode, panicState.SubCode, panicState.ErrorText))
+			return
 		}
 		server.serverState.Panics++
-		text := fmt.Sprintf("REQUEST:%s MESSAGE:%s", r.URL.Path, recStr)
+		text := fmt.Sprintf("REQUEST:%s MESSAGE:%s", r.URL.Path, panicState.String())
 		server.logger.LogErrorWithStackTrace("!!!", text)
-		server.errorHandler(r, response.SetErrorResponse(server.panicStatusCode, SCRuntimeError, recStr))
+		server.errorHandler(r, response.SetErrorResponse(server.panicStatusCode, panicapi.SCRuntimeError, "Unhandled Error"))
 	}
 }
 
@@ -708,7 +651,7 @@ func (p *ServerInstanceData) stopServerThread(waitForSeconds int) {
 	}
 	err := p.server.Shutdown(context.TODO())
 	if err != nil {
-		ThrowPanic("E", 500, SCServerShutDown, "Server Shutdown Failed", err.Error())
+		panicapi.ThrowError(500, panicapi.SCServerShutDown, "Server Shutdown Failed", err.Error())
 	}
 }
 

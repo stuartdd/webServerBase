@@ -11,7 +11,9 @@ import (
 	"strings"
 
 	"github.com/stuartdd/webServerBase/config"
+	"github.com/stuartdd/webServerBase/largefile"
 	"github.com/stuartdd/webServerBase/logging"
+	"github.com/stuartdd/webServerBase/panicapi"
 	"github.com/stuartdd/webServerBase/servermain"
 )
 
@@ -162,7 +164,7 @@ func fileLargeHandler(r *http.Request, response *servermain.Response) {
 	// line := h.GetNamedURLPart("line", "-1")         // Optional. Default value txt
 	fullFile := filepath.Join(h.GetStaticPathForName(pathName).FilePath, fileName+"."+ext)
 	fileID := h.GetUUID() + ".tracked"
-	servermain.NewLargeFileReader(fullFile, 1000)
+	largefile.NewLargeFileReader(fullFile, 1000)
 	response.SetResponse(201, "{\"ref\":\""+fileID+"\"}", "application/json")
 }
 
@@ -186,7 +188,7 @@ func fileSaveHandler(r *http.Request, response *servermain.Response) {
 	fullFile := filepath.Join(h.GetStaticPathForName(pathName).FilePath, fileName+"."+ext)
 	err := ioutil.WriteFile(fullFile, h.GetBody(), 0644)
 	if err != nil {
-		servermain.ThrowPanic("E", 400, servermain.SCWriteFile, fmt.Sprintf("fileSaveHandler: static path [%s], file [%s] could not write file", pathName, fileName), err.Error())
+		panicapi.ThrowError(400, panicapi.SCWriteFile, fmt.Sprintf("fileSaveHandler: static path [%s], file [%s] could not write file", pathName, fileName), err.Error())
 	}
 	response.SetResponse(201, "{\"Created\":\"OK\"}", "application/json")
 }
@@ -199,7 +201,7 @@ func qubeHandler(r *http.Request, response *servermain.Response) {
 	p1 := h.GetNamedURLPart("qube", "")
 	a1, err := strconv.Atoi(p1)
 	if err != nil {
-		servermain.ThrowPanic("E", 400, servermain.SCParamValidation, "invalid number "+p1, err.Error())
+		panicapi.ThrowError(400, panicapi.SCParamValidation, "invalid number "+p1, err.Error())
 	}
 	response.SetResponse(200, strconv.Itoa(a1*a1*a1*a1), "")
 }
@@ -215,11 +217,11 @@ func divHandler(r *http.Request, response *servermain.Response) {
 	p2 := h.GetNamedURLPart("div", "")
 	a1, err := strconv.Atoi(p1)
 	if err != nil {
-		servermain.ThrowPanic("E", 400, servermain.SCParamValidation, "invalid number "+p1, err.Error())
+		panicapi.ThrowError(400, panicapi.SCParamValidation, "invalid number "+p1, err.Error())
 	}
 	a2, err := strconv.Atoi(p2)
 	if err != nil {
-		servermain.ThrowPanic("E", 400, servermain.SCParamValidation, "invalid number "+p2, err.Error())
+		panicapi.ThrowError(400, panicapi.SCParamValidation, "invalid number "+p2, err.Error())
 	}
 	response.SetResponse(200, strconv.Itoa(a1/a2), "")
 }

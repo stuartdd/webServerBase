@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/stuartdd/webServerBase/test"
+	"github.com/stuartdd/webServerBase/panicapi"
 )
 
 type TestStruct struct {
@@ -66,7 +67,7 @@ func TestWithBodyJsonListPanic(t *testing.T) {
 	if err != nil {
 		test.Fail(t, "", err.Error())
 	}
-	defer test.AssertPanicAndRecover(t, "E|400|"+strconv.Itoa(SCInvalidJSONRequest)+"|Invalid JSON")
+	defer test.AssertPanicAndRecover(t, "E|400|"+strconv.Itoa(panicapi.SCInvalidJSONRequest)+"|Invalid JSON")
 	d := NewRequestHandlerHelper(req, NewResponse(nil, nil))
 	d.GetJSONBodyAsList()
 }
@@ -89,7 +90,7 @@ func TestWithBodyJsonMapPanic(t *testing.T) {
 		test.Fail(t, "", err.Error())
 	}
 	d := NewRequestHandlerHelper(req, NewResponse(nil, nil))
-	defer test.AssertPanicAndRecover(t, "E|400|"+strconv.Itoa(SCInvalidJSONRequest)+"|Invalid JSON")
+	defer test.AssertPanicAndRecover(t, "E|400|"+strconv.Itoa(panicapi.SCInvalidJSONRequest)+"|Invalid JSON")
 	d.GetJSONBodyAsMap()
 }
 

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+
+	"github.com/stuartdd/webServerBase/panicapi"
 )
 
 /*
@@ -99,7 +101,7 @@ GetRespAsJSON returns the String response as JSON
 func (p *Response) GetRespAsJSON() string {
 	json, err := json.Marshal(p.response.resp)
 	if err != nil {
-		ThrowPanic("E", 500, SCJSONResponseErr, "Failed to marshal response to JSON", fmt.Sprintf("Marshal response type [%T] failed: %e", p.response.resp, err))
+		panicapi.ThrowError(500, panicapi.SCJSONResponseErr, "Failed to marshal response to JSON", fmt.Sprintf("Marshal response type [%T] failed: %e", p.response.resp, err))
 	}
 	return string(json)
 }
@@ -173,7 +175,7 @@ func NewResponse(w *ResponseWriterWrapper, s *ServerInstanceData) *Response {
 	return &Response{
 		response: &responseState{
 			code:         200,
-			subCode:      SCSubCodeZero,
+			subCode:      panicapi.SCSubCodeZero,
 			resp:         nil,
 			contentType:  "",
 			errorMessage: "",
@@ -224,7 +226,7 @@ SetResponse set the content type. E.G. application/json
 func (p *Response) SetResponse(code int, resp interface{}, contentType string) *Response {
 	p.response = &responseState{
 		code:         code,
-		subCode:      SCSubCodeZero,
+		subCode:      panicapi.SCSubCodeZero,
 		resp:         resp,
 		errorMessage: "",
 		contentType:  contentType,

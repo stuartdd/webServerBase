@@ -8,6 +8,7 @@ import (
 
 	"github.com/stuartdd/webServerBase/exec"
 	"github.com/stuartdd/webServerBase/logging"
+	"github.com/stuartdd/webServerBase/panicapi"
 )
 
 /*
@@ -28,7 +29,7 @@ func StopServerInstance(request *http.Request, response *Response) {
 	h := NewRequestHandlerHelper(request, response)
 	count, err := strconv.Atoi(h.GetNamedURLPart("seconds", "2")) // Optional. Default value 2
 	if err != nil {
-		ThrowPanic("E", 400, SCParamValidation, "Invalid stop period", err.Error())
+		panicapi.ThrowError(400, panicapi.SCParamValidation, "Invalid stop period", err.Error())
 	} else {
 		response.GetWrappedServer().StopServerLater(count, fmt.Sprintf("Stopped by request. Delay %d seconds", count))
 		response.SetResponse(200, response.GetWrappedServer().GetStatusData(), "application/json")
@@ -72,7 +73,7 @@ func DefaultOSScriptHandler(request *http.Request, response *Response) {
 		}
 		logger.LogErrorf("OS Script %s Failed. RC:%d. stderr[%s] error[%s]", scriptName, osData.RetCode, osData.Stderr, errText)
 	}
-	response.SetErrorResponse(417, SCScriptError, "Expectation Failed")
+	response.SetErrorResponse(417, panicapi.SCScriptError, "Expectation Failed")
 }
 
 /*
@@ -95,7 +96,7 @@ func DefaultTemplateFileHandler(request *http.Request, response *Response) {
 			response.GetWrappedServer().LogHeaderMap(response.GetHeaders(), "<-<")
 		}
 	} else {
-		response.SetError404(h.GetURL()+" "+server.ListTemplateNames("|"), SCTemplateNotFound)
+		response.SetError404(h.GetURL()+" "+server.ListTemplateNames("|"), panicapi.SCTemplateNotFound)
 	}
 }
 

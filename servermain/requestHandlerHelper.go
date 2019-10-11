@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/stuartdd/webServerBase/panicapi"
 )
 
 /*
@@ -109,7 +110,7 @@ func (p *RequestHandlerHelper) GetJSONBodyAsObject(configObject interface{}) {
 	jsonBytes := p.GetBody()
 	err := json.Unmarshal(jsonBytes, configObject)
 	if err != nil {
-		ThrowPanic("E", 400, SCInvalidJSONRequest, "Invalid JSON in request body", err.Error())
+		panicapi.ThrowError(400, panicapi.SCInvalidJSONRequest, "Invalid JSON in request body", err.Error())
 	}
 }
 
@@ -124,7 +125,7 @@ func (p *RequestHandlerHelper) GetJSONBodyAsMap() map[string]interface{} {
 	var v interface{}
 	err := json.Unmarshal(jsonBytes, &v)
 	if err != nil {
-		ThrowPanic("E", 400, SCInvalidJSONRequest, "Invalid JSON in request body", err.Error())
+		panicapi.ThrowError(400, panicapi.SCInvalidJSONRequest, "Invalid JSON in request body", err.Error())
 	}
 	return v.(map[string]interface{})
 }
@@ -139,7 +140,7 @@ func (p *RequestHandlerHelper) GetJSONBodyAsList() []interface{} {
 	var v interface{}
 	err := json.Unmarshal(jsonBytes, &v)
 	if err != nil {
-		ThrowPanic("E", 400, SCInvalidJSONRequest, "Invalid JSON in request body", err.Error())
+		panicapi.ThrowError(400, panicapi.SCInvalidJSONRequest, "Invalid JSON in request body", err.Error())
 	}
 	return v.([]interface{})
 }
@@ -158,7 +159,7 @@ func (p *RequestHandlerHelper) GetBody() []byte {
 	bodyBytes, err := ioutil.ReadAll(p.request.Body)
 	defer p.request.Body.Close()
 	if err != nil {
-		ThrowPanic("E", 400, SCReadJSONRequest, "Error reading request body", err.Error())
+		panicapi.ThrowError(400, panicapi.SCReadJSONRequest, "Error reading request body", err.Error())
 	}
 	return bodyBytes
 }
@@ -182,7 +183,7 @@ func (p *RequestHandlerHelper) GetURLPart(n int, defaultValue string) string {
 		return list[n]
 	}
 	if defaultValue == "" {
-		ThrowPanic("E", 400, SCMissingURLParam, fmt.Sprintf("URL parameter '%d' missing", n), fmt.Sprintf("URL parameter at position '%d' returned an empty value.", n))
+		panicapi.ThrowError(400, panicapi.SCMissingURLParam, fmt.Sprintf("URL parameter '%d' missing", n), fmt.Sprintf("URL parameter at position '%d' returned an empty value.", n))
 	}
 	return defaultValue
 }
@@ -211,7 +212,7 @@ func (p *RequestHandlerHelper) GetNamedURLPart(name string, defaultValue string)
 		return p.GetURLPart(i, defaultValue)
 	}
 	if defaultValue == "" {
-		ThrowPanic("E", 400, SCMissingURLParam, fmt.Sprintf("URL parameter '%s' missing", name), fmt.Sprintf("URL parameter '%s' returned an empty value.", name))
+		panicapi.ThrowError(400, panicapi.SCMissingURLParam, fmt.Sprintf("URL parameter '%s' missing", name), fmt.Sprintf("URL parameter '%s' returned an empty value.", name))
 	}
 	return defaultValue
 }

@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/stuartdd/webServerBase/logging"
+	"github.com/stuartdd/webServerBase/panicapi"
 )
 
 type templateGroup struct {
@@ -24,22 +25,20 @@ type templateGroup struct {
 var groupList []templateGroup
 
 type templateData struct {
-	name         string
-	file         string
-	template     *template.Template
+	name     string
+	file     string
+	template *template.Template
 }
 
 /*
 Templates list of templates by ID
 */
 type Templates struct {
-	templates map[string]*templateData
+	templates    map[string]*templateData
 	dataProvider func(*http.Request, string, interface{})
-
 }
 
 var logger *logging.LoggerDataReference
-
 
 /*
 LoadTemplates - Load the templates given the template paths. For example
@@ -197,11 +196,11 @@ ExecuteWriter writes a template to a io.Writer object
 func (p *Templates) executeWriter(w io.Writer, templateName string, data interface{}) {
 	tmpl := p.templates[templateName]
 	if tmpl == nil {
-		ThrowPanic("E", 400, SCTemplateNotFound, fmt.Sprintf("Template '%s' not found", templateName), "")
+		panicapi.ThrowError(400, panicapi.SCTemplateNotFound, fmt.Sprintf("Template '%s' not found", templateName), "")
 	}
 	err := tmpl.template.Execute(w, data)
 	if err != nil {
-		ThrowPanic("E", 400, SCTemplateError, fmt.Sprintf("Template '%s' error", templateName), err.Error())
+		panicapi.ThrowError(400, panicapi.SCTemplateError, fmt.Sprintf("Template '%s' error", templateName), err.Error())
 	}
 }
 
