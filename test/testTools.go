@@ -31,10 +31,12 @@ func AppendToFile(t *testing.T, fileName string, text string) {
 /*
 DeleteFile delete a file. Use with defer
 */
-func DeleteFile(t *testing.T, fileName string) {
+func DeleteFile(t *testing.T, fileName string, mustExist bool) {
 	_, err := os.Stat(fileName)
 	if err != nil {
-		logStackTraceAndFail(t, fmt.Sprintf("Failed to remove file [%s] Could not be found!: %s", fileName, err.Error()), "DeleteFile", debug.Stack())
+		if mustExist {
+			logStackTraceAndFail(t, fmt.Sprintf("Failed to remove file [%s] Could not be found!: %s", fileName, err.Error()), "DeleteFile", debug.Stack())
+		}
 		return
 	}
 

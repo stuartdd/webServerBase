@@ -114,7 +114,10 @@ func (p *largeFileData) ReadMoreLines() {
 	fmt.Printf("bs [%d]\n", p.bufSize)
 	fmt.Printf("of [%d]\n", offset)
 
-	_, err = f.Seek(offset, 0)
+	/*
+		Pluss 1 so it is at the start of the next line!
+	*/
+	_, err = f.Seek(offset+1, 0)
 	if err != nil {
 		ThrowPanic("E", 417, SCOpenFileError, "Expectation Failed", fmt.Sprintf("ReadMoreLines: File %s could not seek. %s", p.Name, err.Error()))
 	}

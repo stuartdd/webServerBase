@@ -2,26 +2,45 @@ package servermain
 
 import (
 	"testing"
-	"time"
 
 	"webServerExample.go/test"
 )
 
 const testFilePrefix = "../site/TestLargeFileRead-"
 
+/* Offsets
+0	1	2	3	4	5	6
+6	13	20	27	34	0	0
+*/
 func TestExtendingFile(t *testing.T) {
 	name := "tempFile.txt"
+	test.DeleteFile(t, name, false)
 	test.AppendToFile(t, name, "Line 1\nLine 2\nLine 3")
-	defer test.DeleteFile(t, name)
+	defer test.DeleteFile(t, name, true)
 	list := NewLargeFileReader(name, 50)
-	test.AssertStringContains(t, "1", list.ReadLargeFile(0, 1), "Line 1")
-	test.AssertStringContains(t, "2", list.ReadLargeFile(1, 1), "Line 2")
-	test.AssertStringContains(t, "3", list.ReadLargeFile(2, 1), "Line 3")
-	test.AssertStringEmpty(t, "4-", list.ReadLargeFile(3, 1))
+
+	lc := list.LineCount
+	test.AssertIntEqual(t, "", lc, 4)
+
+	test.AssertStringEqualsUnix(t, "1=", list.ReadLargeFile(0, 1), "Line 1\n")
+	test.AssertStringEqualsUnix(t, "2=", list.ReadLargeFile(1, 1), "Line 2\n")
+	test.AssertStringEqualsUnix(t, "3=", list.ReadLargeFile(2, 1), "Line 3")
+	test.AssertStringEqualsUnix(t, "4=", list.ReadLargeFile(3, 1), "")
+	test.AssertIntEqual(t, "", list.LineCount, lc)
+
 	test.AppendToFile(t, name, "\nLine 4\nLine 5")
-	time.Sleep(time.Millisecond * time.Duration(500))
 	test.AssertFileContains(t, "file", name, "Line 4", "Line 5")
-	test.AssertStringContains(t, "4+", list.ReadLargeFile(3, 1), "Line x")
+
+	test.AssertStringEqualsUnix(t, "1=", list.ReadLargeFile(0, 1), "Line 1\n")
+	test.AssertIntEqual(t, "", list.LineCount, lc)
+	test.AssertStringEqualsUnix(t, "2=", list.ReadLargeFile(1, 1), "Line 2\n")
+	test.AssertIntEqual(t, "", list.LineCount, lc)
+	test.AssertStringEqualsUnix(t, "3=", list.ReadLargeFile(2, 1), "Line 3\n")
+	test.AssertIntEqual(t, "", list.LineCount, lc)
+	test.AssertStringEqualsUnix(t, "4=", list.ReadLargeFile(3, 1), "Line 4\n")
+	test.AssertStringEqualsUnix(t, "5=", list.ReadLargeFile(4, 1), "Line 5")
+	test.AssertStringEqualsUnix(t, "6=", list.ReadLargeFile(5, 1), "")
+
 }
 
 /* ../site/TestLargeFileRead-002.txt
