@@ -7,7 +7,10 @@ import (
 	"time"
 )
 
-type largeFileData struct {
+/*
+LargeFileData contains the data associated with a large file.
+*/
+type LargeFileData struct {
 	Name      string
 	Offsets   []int64
 	LineCount int
@@ -16,9 +19,12 @@ type largeFileData struct {
 	bufSize   int
 }
 
-var pageMap = make(map[string]*largeFileData)
+var pageMap = make(map[string]*LargeFileData)
 
-func (p *largeFileData) ReadLargeFile(from int, count int) string {
+/*
+ReadLargeFile Read 'count' lines from the file from line 'from'
+*/
+func (p *LargeFileData) ReadLargeFile(from int, count int) string {
 
 	info, err := os.Stat(p.Name)
 	if err != nil {
@@ -34,7 +40,7 @@ func (p *largeFileData) ReadLargeFile(from int, count int) string {
 			/*
 				File has changed
 			*/
-			p.ReadMoreLines()
+			p.readMoreLines()
 		}
 	}
 	if to < from {
@@ -44,12 +50,12 @@ func (p *largeFileData) ReadLargeFile(from int, count int) string {
 	/*
 		If from is 0 then read from the start!
 	*/
-	var start int64 = 0
+	var start int64
 	if from > 0 {
 		start = p.Offsets[from-1] + 1 // To skip from the new line char to the start of the line!
 	}
 
-	var end int64 = p.Offsets[p.LineCount-1]
+	end := p.Offsets[p.LineCount-1]
 	if to <= p.LineCount {
 		end = p.Offsets[to-1]
 	}
@@ -87,7 +93,10 @@ func (p *largeFileData) ReadLargeFile(from int, count int) string {
 	return string(buf[0:bytes])
 }
 
-func GetLargeFileReader(name string) *largeFileData {
+/*
+GetLargeFileReader returns LargeFileReader data for a specific file.
+*/
+func GetLargeFileReader(name string) *LargeFileData {
 	lfr := pageMap[name]
 	if lfr == nil {
 		return nil
@@ -95,8 +104,8 @@ func GetLargeFileReader(name string) *largeFileData {
 	return lfr
 }
 
-func (p *largeFileData) ReadMoreLines() {
-	_, err := os.Stat(p.Name)
+func (p *LargeFileData) readMoreLines() {
+	info, err := os.Stat(p.Name)
 	if err != nil {
 		ThrowPanic("E", 404, SCFileNotFound, "Not Found", fmt.Sprintf("ReadMoreLines: File %s could not be found. %s", p.Name, err.Error()))
 	}
@@ -117,10 +126,13 @@ func (p *largeFileData) ReadMoreLines() {
 	/*
 		Pluss 1 so it is at the start of the next line!
 	*/
-	_, err = f.Seek(offset+1, 0)
+	offset, err = f.Seek(offset+1, 0)
 	if err != nil {
 		ThrowPanic("E", 417, SCOpenFileError, "Expectation Failed", fmt.Sprintf("ReadMoreLines: File %s could not seek. %s", p.Name, err.Error()))
 	}
+
+	p.Size = info.Size()
+	p.Time = time.Now()
 
 	for notEOF {
 		bytesRead, err = io.ReadAtLeast(f, buf, p.bufSize)
@@ -134,7 +146,10 @@ func (p *largeFileData) ReadMoreLines() {
 	offset = p.parseOpenInitial(2, []byte{10, 32}, offset)
 }
 
-func NewLargeFileReader(name string, fileReaderBufferSize int) *largeFileData {
+/*
+NewLargeFileReader Initialise the large File Reader data set
+*/
+func NewLargeFileReader(name string, fileReaderBufferSize int) *LargeFileData {
 	if fileReaderBufferSize == 0 {
 		ThrowPanic("E", 500, SCParamValidation, "Internal Server Error", "NewLargeFileReader: Internal error: openInitial-->fileReaderBufferSize Parameter cannot be 0")
 	}
@@ -148,12 +163,12 @@ func NewLargeFileReader(name string, fileReaderBufferSize int) *largeFileData {
 	}
 	defer f.Close()
 
-	var offset int64 = 0                      // Offset in to the file!
+	var offset int64                          // Offset in to the file!
 	bytesRead := 0                            // The number of bytest read
 	notEOF := true                            // Are we at the end of the file
 	buf := make([]byte, fileReaderBufferSize) // Buffer for the file
 
-	data := &largeFileData{
+	data := &LargeFileData{
 		Name:      name,
 		Offsets:   make([]int64, 50), // Make room for 100 lines
 		LineCount: 0,
@@ -180,7 +195,7 @@ func NewLargeFileReader(name string, fileReaderBufferSize int) *largeFileData {
 /*
 for each new line add the offset in the file to that line in the offsets
 */
-func (p *largeFileData) parseOpenInitial(bytesRead int, b []byte, offset int64) int64 {
+func (p *LargeFileData) parseOpenInitial(bytesRead int, b []byte, offset int64) int64 {
 	for i := 0; i < bytesRead; i++ {
 		if b[i] == 10 {
 			if p.LineCount >= len(p.Offsets) {

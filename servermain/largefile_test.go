@@ -10,7 +10,12 @@ const testFilePrefix = "../site/TestLargeFileRead-"
 
 /* Offsets
 0	1	2	3	4	5	6
-6	13	20	27	34	0	0
+6	13	20*					Actual file offsets *=EOF
+6	13	20	0	0	0	0 	Initial state
+6	13	20	27	34*			Actual file offests *=EOF
+6	13	20	27	34	0	0 	After append
+
+Chars per line is 7
 */
 func TestExtendingFile(t *testing.T) {
 	name := "tempFile.txt"
@@ -20,7 +25,7 @@ func TestExtendingFile(t *testing.T) {
 	list := NewLargeFileReader(name, 50)
 
 	lc := list.LineCount
-	test.AssertIntEqual(t, "", lc, 4)
+	test.AssertIntEqual(t, "", lc, 3)
 
 	test.AssertStringEqualsUnix(t, "1=", list.ReadLargeFile(0, 1), "Line 1\n")
 	test.AssertStringEqualsUnix(t, "2=", list.ReadLargeFile(1, 1), "Line 2\n")
@@ -33,13 +38,16 @@ func TestExtendingFile(t *testing.T) {
 
 	test.AssertStringEqualsUnix(t, "1=", list.ReadLargeFile(0, 1), "Line 1\n")
 	test.AssertIntEqual(t, "", list.LineCount, lc)
-	test.AssertStringEqualsUnix(t, "2=", list.ReadLargeFile(1, 1), "Line 2\n")
+	test.AssertStringEqualsUnix(t, "2+", list.ReadLargeFile(1, 1), "Line 2\n")
 	test.AssertIntEqual(t, "", list.LineCount, lc)
-	test.AssertStringEqualsUnix(t, "3=", list.ReadLargeFile(2, 1), "Line 3\n")
+	test.AssertStringEqualsUnix(t, "3+", list.ReadLargeFile(2, 1), "Line 3\n")
 	test.AssertIntEqual(t, "", list.LineCount, lc)
-	test.AssertStringEqualsUnix(t, "4=", list.ReadLargeFile(3, 1), "Line 4\n")
-	test.AssertStringEqualsUnix(t, "5=", list.ReadLargeFile(4, 1), "Line 5")
-	test.AssertStringEqualsUnix(t, "6=", list.ReadLargeFile(5, 1), "")
+	test.AssertStringEqualsUnix(t, "4+", list.ReadLargeFile(3, 1), "Line 4\n")
+	test.AssertIntEqual(t, "", list.LineCount, lc+2)
+	test.AssertStringEqualsUnix(t, "5+", list.ReadLargeFile(4, 1), "Line 5")
+	test.AssertIntEqual(t, "", list.LineCount, lc+2)
+	test.AssertStringEqualsUnix(t, "6+", list.ReadLargeFile(5, 1), "")
+	test.AssertIntEqual(t, "", list.LineCount, lc+2)
 
 }
 
