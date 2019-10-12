@@ -13,9 +13,9 @@ import (
 
 	"github.com/stuartdd/webServerBase/config"
 	"github.com/stuartdd/webServerBase/logging"
+	"github.com/stuartdd/webServerBase/panicapi"
 	"github.com/stuartdd/webServerBase/servermain"
 	"github.com/stuartdd/webServerBase/test"
-	"github.com/stuartdd/webServerBase/panicapi"
 )
 
 var configData *config.Data
@@ -86,7 +86,7 @@ func TestServer(t *testing.T) {
 		Test PANIC responses
 	*/
 	prc := configData.PanicResponseCode
-	test.AssertStringContains(t, "", sendGet(t, prc, "calc/10/div/0", headers("json", "")), "\"Status\":"+strconv.Itoa(prc), "\"Code\":"+strconv.Itoa(panicapi.SCRuntimeError), "integer divide by zero", "Internal Server Error")
+	test.AssertStringContains(t, "DIV By Zero", sendGet(t, prc, "calc/10/div/0", headers("json", "")), "\"Status\":"+strconv.Itoa(prc), "\"Code\":"+strconv.Itoa(panicapi.SCRuntimeError), "integer divide by zero", "Internal Server Error")
 
 }
 

@@ -223,6 +223,7 @@ func divHandler(r *http.Request, response *servermain.Response) {
 	if err != nil {
 		panicapi.ThrowError(400, panicapi.SCParamValidation, "invalid number "+p2, err.Error())
 	}
+
 	response.SetResponse(200, strconv.Itoa(a1/a2), "")
 }
 

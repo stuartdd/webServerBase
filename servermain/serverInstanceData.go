@@ -618,7 +618,7 @@ func checkForPanicAndRecover(r *http.Request, response *Response) {
 		server.serverState.Panics++
 		text := fmt.Sprintf("REQUEST:%s MESSAGE:%s", r.URL.Path, panicState.String())
 		server.logger.LogErrorWithStackTrace("!!!", text)
-		server.errorHandler(r, response.SetErrorResponse(server.panicStatusCode, panicapi.SCRuntimeError, "Unhandled Error"))
+		server.errorHandler(r, response.SetErrorResponse(server.panicStatusCode, panicapi.SCRuntimeError, panicState.LogMessage))
 	}
 }
 
