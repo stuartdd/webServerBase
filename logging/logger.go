@@ -455,11 +455,12 @@ func (p *LoggerDataReference) LogDebug(message string) {
 /*
 LogErrorWithStackTrace - Log an error with a prefix and a stack trace. Each line of the stacktrace has the prefix.
 */
-func (p *LoggerDataReference) LogErrorWithStackTrace(prefix string, message string) {
+func (p *LoggerDataReference) LogErrorWithStackTrace(txid string, prefix string, message string) {
 	if fallBack {
 		fmt.Println("FALLBACK:ERROR: " + prefix + " " + message + "\n" + string(debug.Stack()))
 		return
 	}
+	prefix = "ID: " + txid + " " + prefix
 	if logLevelDataIndexList[ErrorLevel].active && isEnabled() {
 		logLevelDataIndexList[ErrorLevel].logger.Print(p.loggerPrefix + logLevelDataIndexList[ErrorLevel].paddedName + prefix + " " + message)
 		st := string(debug.Stack())

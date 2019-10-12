@@ -14,7 +14,7 @@ type testStruct struct {
 }
 
 func TestRespAsString(t *testing.T) {
-	resp := NewResponse(nil, nil).SetResponse(200, "String", LookupContentType("json"))
+	resp := NewResponse(nil, nil, "TXID").SetResponse(200, "String", LookupContentType("json"))
 	test.AssertStringEquals(t, "Response should be String", "String", resp.GetResp())
 	test.AssertBoolFalse(t, "", resp.IsAnError())
 	test.AssertStringEquals(t, "Response ContentType should be String", LookupContentType("json"), resp.GetContentType())
@@ -22,7 +22,7 @@ func TestRespAsString(t *testing.T) {
 }
 
 func TestCanAddHeaders(t *testing.T) {
-	resp := NewResponse(nil, nil)
+	resp := NewResponse(nil, nil, "TXID")
 	resp.AddHeader("H1", []string{"a", "b"})
 	test.AssertIntEqual(t, "", len(resp.GetHeaders()["H1"]), 2)
 	test.AssertStringEquals(t, "", "a", resp.GetHeaders()["H1"][0])
@@ -30,14 +30,14 @@ func TestCanAddHeaders(t *testing.T) {
 }
 
 func TestIsError(t *testing.T) {
-	resp := NewResponse(nil, nil)
+	resp := NewResponse(nil, nil, "TXID")
 	test.AssertBoolFalse(t, "", resp.IsAnError())
 	test.AssertBoolFalse(t, "", resp.IsClosed())
 	test.AssertIntEqual(t, "", resp.GetCode(), 200)
 }
 
 func TestRespAsInt(t *testing.T) {
-	resp := NewResponse(nil, nil).SetErrorResponse(300, 90, "MeError")
+	resp := NewResponse(nil, nil, "TXID").SetErrorResponse(300, 90, "MeError")
 	test.AssertStringEquals(t, "", "Multiple Choices", resp.GetResp())
 	test.AssertBoolTrue(t, "", resp.IsAnError())
 	test.AssertStringEmpty(t, "", resp.GetContentType())
@@ -45,7 +45,7 @@ func TestRespAsInt(t *testing.T) {
 }
 
 func TestRespAsStructWithHeader(t *testing.T) {
-	resp := NewResponse(nil, nil).SetResponse(299, testStruct{
+	resp := NewResponse(nil, nil, "TXID").SetResponse(299, testStruct{
 		A: "A",
 		B: true,
 		C: 72.8,

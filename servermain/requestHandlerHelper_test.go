@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stuartdd/webServerBase/test"
 	"github.com/stuartdd/webServerBase/panicapi"
+	"github.com/stuartdd/webServerBase/test"
 )
 
 type TestStruct struct {
@@ -36,7 +36,7 @@ func TestWithBodyJsonObject(t *testing.T) {
 	if err != nil {
 		test.Fail(t, "", err.Error())
 	}
-	d := NewRequestHandlerHelper(req, NewResponse(nil, nil))
+	d := NewRequestHandlerHelper(req, NewResponse(nil, nil, "TXID"))
 
 	testStruct := &TestStruct{}
 	d.GetJSONBodyAsObject(testStruct)
@@ -54,7 +54,7 @@ func TestWithBodyJsonList(t *testing.T) {
 	if err != nil {
 		test.Fail(t, "", err.Error())
 	}
-	d := NewRequestHandlerHelper(req, NewResponse(nil, nil))
+	d := NewRequestHandlerHelper(req, NewResponse(nil, nil, "TXID"))
 	aList := d.GetJSONBodyAsList()
 	test.AssertTypeEquals(t, "", aList, "[]interface {}")
 	test.AssertTypeEquals(t, "", aList[0], "string")
@@ -68,7 +68,7 @@ func TestWithBodyJsonListPanic(t *testing.T) {
 		test.Fail(t, "", err.Error())
 	}
 	defer test.AssertPanicAndRecover(t, "E|400|"+strconv.Itoa(panicapi.SCInvalidJSONRequest)+"|Invalid JSON")
-	d := NewRequestHandlerHelper(req, NewResponse(nil, nil))
+	d := NewRequestHandlerHelper(req, NewResponse(nil, nil, "TXID"))
 	d.GetJSONBodyAsList()
 }
 
@@ -77,7 +77,7 @@ func TestWithBodyJsonMap(t *testing.T) {
 	if err != nil {
 		test.Fail(t, "", err.Error())
 	}
-	d := NewRequestHandlerHelper(req, NewResponse(nil, nil))
+	d := NewRequestHandlerHelper(req, NewResponse(nil, nil, "TXID"))
 	aMap := d.GetJSONBodyAsMap()
 	val := aMap["TEST"]
 	test.AssertTypeEquals(t, "", val, "string")
@@ -89,7 +89,7 @@ func TestWithBodyJsonMapPanic(t *testing.T) {
 	if err != nil {
 		test.Fail(t, "", err.Error())
 	}
-	d := NewRequestHandlerHelper(req, NewResponse(nil, nil))
+	d := NewRequestHandlerHelper(req, NewResponse(nil, nil, "TXID"))
 	defer test.AssertPanicAndRecover(t, "E|400|"+strconv.Itoa(panicapi.SCInvalidJSONRequest)+"|Invalid JSON")
 	d.GetJSONBodyAsMap()
 }
@@ -99,7 +99,7 @@ func TestWithBodyText(t *testing.T) {
 	if err != nil {
 		test.Fail(t, "", err.Error())
 	}
-	d := NewRequestHandlerHelper(req, NewResponse(nil, nil))
+	d := NewRequestHandlerHelper(req, NewResponse(nil, nil, "TXID"))
 	text := d.GetBodyString()
 	test.AssertStringEquals(t, "", text, "TEST")
 }
@@ -109,7 +109,7 @@ func TestGetURLPartPanics(t *testing.T) {
 	if err != nil {
 		test.Fail(t, "", err.Error())
 	}
-	d := NewRequestHandlerHelper(req, NewResponse(nil, nil))
+	d := NewRequestHandlerHelper(req, NewResponse(nil, nil, "TXID"))
 	defer test.AssertPanicAndRecover(t, "URL parameter at position '4' returned an empty value")
 	d.GetURLPart(4, "")
 }
@@ -119,7 +119,7 @@ func TestGetNamedPartPanics(t *testing.T) {
 	if err != nil {
 		test.Fail(t, "", err.Error())
 	}
-	d := NewRequestHandlerHelper(req, NewResponse(nil, nil))
+	d := NewRequestHandlerHelper(req, NewResponse(nil, nil, "TXID"))
 	defer test.AssertPanicAndRecover(t, "URL parameter 'XXX' returned an empty value")
 	d.GetNamedURLPart("XXX", "")
 }
@@ -129,7 +129,7 @@ func TestWithUrl(t *testing.T) {
 	if err != nil {
 		test.Fail(t, "", err.Error())
 	}
-	resp := NewResponse(nil, nil)
+	resp := NewResponse(nil, nil, "TXID")
 	resp.names = make(map[string]int)
 	resp.names["data1"] = 1
 	resp.names["data2"] = 3
@@ -153,7 +153,7 @@ func TestWithUrl(t *testing.T) {
 
 	test.AssertIntEqual(t, "", d.GetPartsCount(), 4)
 
-	d2 := NewRequestHandlerHelper(req, NewResponse(nil, nil))
+	d2 := NewRequestHandlerHelper(req, NewResponse(nil, nil, "TXID"))
 	test.AssertIntEqual(t, "", d2.GetPartsCount(), 4)
 
 }

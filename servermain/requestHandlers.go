@@ -92,8 +92,8 @@ func DefaultTemplateFileHandler(request *http.Request, response *Response) {
 		server.TemplateWithWriter(ww, name, request, h.GetMapOfRequestData())
 		response.Close()
 		if logging.IsAccess() {
-			response.GetWrappedServer().GetServerLogger().LogAccessf("<<< STATUS=%d: CODE=%d: RESP-FROM-FILE=%s: TYPE=%s", response.GetCode(), response.GetSubCode(), name, contentType)
-			response.GetWrappedServer().LogHeaderMap(response.GetHeaders(), "<-<")
+			response.GetWrappedServer().GetServerLogger().LogAccessf("<<< ID: %s STATUS=%d: CODE=%d: RESP-FROM-FILE=%s: TYPE=%s", response.GetTransactionID(), response.GetCode(), response.GetSubCode(), name, contentType)
+			response.GetWrappedServer().LogHeaderMap(response.GetTransactionID(), response.GetHeaders(), "<-<")
 		}
 	} else {
 		response.SetError404(h.GetURL()+" "+server.ListTemplateNames("|"), panicapi.SCTemplateNotFound)
@@ -146,8 +146,8 @@ func DefaultStaticFileHandler(request *http.Request, response *Response) {
 		Dont log the full file name as this reveals the server file system structure and can lead to vulnerabilities.
 	*/
 	if logging.IsAccess() {
-		response.GetWrappedServer().GetServerLogger().LogAccessf("<<< STATUS=%d: CODE=%d: RESP-FROM-FILE=%s: TYPE=%s", response.GetCode(), response.GetSubCode(), fileShort, contentType)
-		response.GetWrappedServer().LogHeaderMap(response.GetHeaders(), "<-<")
+		response.GetWrappedServer().GetServerLogger().LogAccessf("<<< ID: %s STATUS=%d: CODE=%d: RESP-FROM-FILE=%s: TYPE=%s", response.GetTransactionID(), response.GetCode(), response.GetSubCode(), fileShort, contentType)
+		response.GetWrappedServer().LogHeaderMap(response.GetTransactionID(), response.GetHeaders(), "<-<")
 	}
 	return
 }

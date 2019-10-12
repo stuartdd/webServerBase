@@ -45,6 +45,7 @@ type PanicState struct {
 	SubCode     int
 	ErrorText   string
 	LogMessage  string
+	TxID        string
 	original    string
 }
 
@@ -72,7 +73,7 @@ func ThrowError(statusCode, subCode int, errorText string, logMessage string) {
 /*
 GetPanicData converts a formatted panic string in to a PanicState struce
 */
-func GetPanicData(panic interface{}) *PanicState {
+func GetPanicData(panic interface{}, txid string) *PanicState {
 	panicString := fmt.Sprintf("%s", panic)
 	parts := strings.Split(panicString, "|")
 	if len(parts) == 1 && parts[0] != "I" && parts[0] != "W" && parts[0] != "E" {
@@ -80,6 +81,7 @@ func GetPanicData(panic interface{}) *PanicState {
 			Cannot understand the erroe text!
 		*/
 		return &PanicState{
+			TxID:        txid,
 			IsPanicData: false,
 			Severity:    "E",
 			StatusCode:  500,
@@ -92,6 +94,7 @@ func GetPanicData(panic interface{}) *PanicState {
 		Convert the error text to a PanicState
 	*/
 	return &PanicState{
+		TxID:        txid,
 		IsPanicData: true,
 		Severity:    getStringValue(parts, 0),
 		StatusCode:  getIntValue(parts, 1),

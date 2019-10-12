@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/google/uuid"
 	"github.com/stuartdd/webServerBase/panicapi"
 )
 
@@ -25,7 +24,6 @@ type RequestHandlerHelper struct {
 	urlParts      []string
 	urlPartsCount int
 	queries       url.Values
-	uuid          string
 }
 
 type jsonWrapper struct {
@@ -45,7 +43,6 @@ func NewRequestHandlerHelper(r *http.Request, response *Response) *RequestHandle
 		urlParts:      nil,
 		urlPartsCount: 0,
 		queries:       nil,
-		uuid:          "",
 	}
 }
 
@@ -55,12 +52,12 @@ WrapAsJSON wrap the response in JSON. If it fails it will just build the string
 func (p *RequestHandlerHelper) WrapAsJSON(name string, data string) string {
 	s := jsonWrapper{
 		Name: name,
-		UUID: p.GetUUID(),
+		UUID: p.GetTransactionID(),
 		Data: data,
 	}
 	b, err := json.Marshal(s)
 	if err != nil {
-		return fmt.Sprintf("{\"name\":\"%s\", \"data\": \"%s\"}", name, data)
+		return fmt.Sprintf("{\"ID\":\"%s\", \"name\":\"%s\", \"data\": \"%s\"}", p.GetTransactionID(), name, data)
 	}
 	return string(b)
 }
@@ -225,13 +222,10 @@ func (p *RequestHandlerHelper) GetNamedQuery(name string) string {
 }
 
 /*
-GetUUID returns part by name
+GetTransactionID returns part by name
 */
-func (p *RequestHandlerHelper) GetUUID() string {
-	if p.uuid == "" {
-		p.uuid = uuid.New().String()
-	}
-	return p.uuid
+func (p *RequestHandlerHelper) GetTransactionID() string {
+	return p.response.GetTransactionID()
 }
 
 /*
@@ -259,7 +253,7 @@ func (p *RequestHandlerHelper) GetMapOfRequestData() map[string]string {
 	for index, value := range p.GetURLParts() {
 		m["url["+strconv.Itoa(index)+"]"] = value
 	}
-	m["uuid"] = p.GetUUID()
+	m["uuid"] = p.GetTransactionID()
 	return m
 }
 

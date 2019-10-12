@@ -27,6 +27,7 @@ type responseState struct {
 	contentType  string
 	errorMessage string
 	closed       bool
+	txid         string
 }
 
 /*
@@ -121,6 +122,13 @@ func (p *Response) GetCode() int {
 }
 
 /*
+GetTransactionID returns the http status code
+*/
+func (p *Response) GetTransactionID() string {
+	return p.response.txid
+}
+
+/*
 GetSubCode returns the http status code
 */
 func (p *Response) GetSubCode() int {
@@ -145,11 +153,11 @@ func (p *Response) GetWrappedWriter() *ResponseWriterWrapper {
 GetCSV returns JSON string representing this object
 */
 func (p *Response) GetCSV() string {
-	return fmt.Sprintf("status=%d, subCode=%d, errorMessage=%s, resp=%s, contentType=%s", p.response.code, p.response.subCode, p.response.errorMessage, p.response.resp, p.response.contentType)
+	return fmt.Sprintf("id=%s, status=%d, subCode=%d, errorMessage=%s, resp=%s, contentType=%s", p.response.txid, p.response.code, p.response.subCode, p.response.errorMessage, p.response.resp, p.response.contentType)
 }
 
 func (p *Response) toErrorJSON() string {
-	return fmt.Sprintf("{\"Status\":%d,\"Code\":%d,\"Message\":\"%s\",\"Error\":\"%s\"}", p.GetCode(), p.GetSubCode(), p.GetResp(), p.GetErrorMessage())
+	return fmt.Sprintf("{\"ID\":\"%s\", \"Status\":%d,\"Code\":%d,\"Message\":\"%s\",\"Error\":\"%s\"}", p.response.txid, p.response.code, p.response.subCode, p.response.resp, p.response.errorMessage)
 }
 
 /*
@@ -171,7 +179,7 @@ func (p *Response) IsClosed() bool {
 /*
 NewResponse create an error response
 */
-func NewResponse(w *ResponseWriterWrapper, s *ServerInstanceData) *Response {
+func NewResponse(w *ResponseWriterWrapper, s *ServerInstanceData, txid string) *Response {
 	return &Response{
 		response: &responseState{
 			code:         200,
@@ -180,6 +188,7 @@ func NewResponse(w *ResponseWriterWrapper, s *ServerInstanceData) *Response {
 			contentType:  "",
 			errorMessage: "",
 			closed:       false,
+			txid:         txid,
 		},
 		context: &responseContext{
 			writer: w,
@@ -201,6 +210,7 @@ func (p *Response) SetError404(url string, subCode int) *Response {
 		errorMessage: url,
 		contentType:  p.GetContentType(),
 		closed:       false,
+		txid:         p.response.txid,
 	}
 	return p
 }
@@ -216,6 +226,7 @@ func (p *Response) SetErrorResponse(statusCode int, subCode int, errorMessage st
 		errorMessage: errorMessage,
 		contentType:  p.GetContentType(),
 		closed:       false,
+		txid:         p.response.txid,
 	}
 	return p
 }
@@ -231,6 +242,7 @@ func (p *Response) SetResponse(code int, resp interface{}, contentType string) *
 		errorMessage: "",
 		contentType:  contentType,
 		closed:       false,
+		txid:         p.response.txid,
 	}
 	return p
 }

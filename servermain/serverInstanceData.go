@@ -2,6 +2,8 @@ package servermain
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"net/http"
@@ -119,7 +121,7 @@ func (p *ServerInstanceData) ListenAndServeOnPort(port int) {
 		p.serverReturnCode = 0
 	} else {
 		if err != nil {
-			p.logger.LogErrorWithStackTrace("FAILED: Server terminated. Error: %s", err.Error())
+			p.logger.LogErrorWithStackTrace("", "FAILED: Server terminated. Error: %s", err.Error())
 			p.serverReturnCode = 1
 		} else {
 			p.logger.LogInfo("Server Halted.")
@@ -144,16 +146,6 @@ func (p *ServerInstanceData) ServeHTTP(rw http.ResponseWriter, httpRequest *http
 	*/
 	w := NewResponseWriterWrapper(rw)
 	/*
-		Create the response object so we can pass it to the handlers
-	*/
-	actualResponse := NewResponse(w, p)
-	/*
-		Log the request.
-		Define ACCESS logging to see the request in the logs
-		Define DEBUG and ACCESS to see the request and headers in the logs
-	*/
-	p.logRequest(httpRequest)
-	/*
 		Check for a matching url in the redirections map and redirect if found
 	*/
 	redirect := p.redirections[url]
@@ -171,9 +163,30 @@ func (p *ServerInstanceData) ServeHTTP(rw http.ResponseWriter, httpRequest *http
 		return
 	}
 	/*
+		Create a uniqie id for the transaction
+	*/
+	txid := "InvalidID"
+	c := 6
+	b := make([]byte, c)
+	_, err := rand.Read(b)
+	if err == nil {
+		txid = base64.URLEncoding.EncodeToString(b)
+	}
+	/*
+		Create the response object so we can pass it to the handlers
+	*/
+	actualResponse := NewResponse(w, p, txid)
+	/*
+		Log the request.
+		Define ACCESS logging to see the request in the logs
+		Define DEBUG and ACCESS to see the request and headers in the logs
+	*/
+	p.logRequest(httpRequest, txid)
+	/*
 		If a panic is thrown by ANY handler this defered method will clean up and LOG the event correctly.
 	*/
-	defer checkForPanicAndRecover(httpRequest, actualResponse)
+
+	defer checkForPanicAndRecover(httpRequest, actualResponse, txid)
 	/*
 		Find the mapping for the url (ReST style)
 	*/
@@ -196,7 +209,7 @@ func (p *ServerInstanceData) ServeHTTP(rw http.ResponseWriter, httpRequest *http
 	p.invokeAllVetoHandlersInList(httpRequest, actualResponse, &p.before)
 	if actualResponse.IsAnError() {
 		if logging.IsWarn() {
-			p.logger.LogWarnf("Request was Vetoed by 'Before' handler:%s", actualResponse.GetCSV())
+			p.logger.LogWarnf("ID: %s. Request was Vetoed by 'Before' handler:%s", txid, actualResponse.GetCSV())
 		}
 	} else {
 		/*
@@ -212,7 +225,7 @@ func (p *ServerInstanceData) ServeHTTP(rw http.ResponseWriter, httpRequest *http
 			p.invokeAllVetoHandlersInList(httpRequest, actualResponse, &p.after)
 			if actualResponse.IsAnError() {
 				if logging.IsWarn() {
-					p.logger.LogWarnf("Response was Vetoed by 'After' handler:%s", actualResponse.GetCSV())
+					p.logger.LogWarnf("ID: %s. Response was Vetoed by 'After' handler:%s", txid, actualResponse.GetCSV())
 				}
 			}
 		}
@@ -554,8 +567,8 @@ func (p *ServerInstanceData) LogResponse(response *Response) {
 		if errText != "" {
 			errText = ": ERROR=" + errText
 		}
-		p.logger.LogAccessf("<<< STATUS=%d: CODE=%d: RESP=%s%s", response.GetCode(), response.GetSubCode(), response.GetResp(), errText)
-		p.LogHeaderMap(response.GetHeaders(), "<-<")
+		p.logger.LogAccessf("ID: %s <<< STATUS=%d: CODE=%d: RESP=%s%s", response.GetTransactionID(), response.GetCode(), response.GetSubCode(), response.GetResp(), errText)
+		p.LogHeaderMap(response.GetTransactionID(), response.GetHeaders(), "<-<")
 	}
 }
 
@@ -581,34 +594,34 @@ LogHeaderMap logs the header data.
 
 dir will usually be '<-<' or '>->'. Keep it to 3 chars or the logs will look untidy!
 */
-func (p *ServerInstanceData) LogHeaderMap(headers map[string][]string, dir string) {
+func (p *ServerInstanceData) LogHeaderMap(txid string, headers map[string][]string, dir string) {
 	if logging.IsDebug() {
 		for k, v := range headers {
-			p.logger.LogDebugf("%s HEADER=%s=%s", dir, k, v)
+			p.logger.LogDebugf("ID: %s %s HEADER=%s=%s", txid, dir, k, v)
 		}
 	}
 }
 
-func checkForPanicAndRecover(r *http.Request, response *Response) {
+func checkForPanicAndRecover(r *http.Request, response *Response, txid string) {
 	server := response.GetWrappedServer()
 	rec := recover()
 	if rec != nil {
-		panicState := panicapi.GetPanicData(rec)
+		panicState := panicapi.GetPanicData(rec, txid)
 		if panicState.IsPanicData {
 			switch panicState.Severity {
 			case "I":
 				if logging.IsInfo() {
-					server.logger.LogInfo(panicState.String())
+					server.logger.LogInfof("ID: %s %s", panicState.TxID, panicState.String())
 				}
 				break
 			case "W":
 				if logging.IsWarn() {
-					server.logger.LogWarn(panicState.String())
+					server.logger.LogWarnf("ID: %s %s", panicState.TxID, panicState.String())
 				}
 				break
 			default:
 				if logging.IsError() {
-					server.logger.LogError(panicState.Error())
+					server.logger.LogErrorf("ID: %s %s", panicState.TxID, panicState.Error())
 				}
 				break
 			}
@@ -616,8 +629,8 @@ func checkForPanicAndRecover(r *http.Request, response *Response) {
 			return
 		}
 		server.serverState.Panics++
-		text := fmt.Sprintf("REQUEST:%s MESSAGE:%s", r.URL.Path, panicState.String())
-		server.logger.LogErrorWithStackTrace("!!!", text)
+		text := fmt.Sprintf("ID: %s REQUEST:%s MESSAGE:%s", panicState.TxID, r.URL.Path, panicState.String())
+		server.logger.LogErrorWithStackTrace(txid, "!!!", text)
 		server.errorHandler(r, response.SetErrorResponse(server.panicStatusCode, panicapi.SCRuntimeError, panicState.LogMessage))
 	}
 }
@@ -672,21 +685,14 @@ func (p *ServerInstanceData) invokeAllVetoHandlersInList(httpRequest *http.Reque
 	}
 }
 
-func (p *ServerInstanceData) logFileServerResponse(response *ResponseWriterWrapper, path string, ext string, mime string, fileName string) {
-	if logging.IsAccess() {
-		p.logger.LogAccessf("<<< STATUS=%d staticPath:%s ext:%s Content-Type:%s file:%s", response.GetStatusCode(), path, ext, mime, fileName)
-		p.LogHeaderMap(response.Header(), "<-<")
-	}
-}
-
 /*
 	logRequest - Log the request.
 	Define ACCESS logging to see the request in the logs
 	Define DEBUG and ACCESS to see the request and headers in the logs
 */
-func (p *ServerInstanceData) logRequest(r *http.Request) {
+func (p *ServerInstanceData) logRequest(r *http.Request, txid string) {
 	if logging.IsAccess() {
-		p.logger.LogAccessf(">>> METHOD=%s: REQUEST=%s", r.Method, r.URL.Path)
-		p.LogHeaderMap(r.Header, ">->")
+		p.logger.LogAccessf("ID: %s >>> METHOD=%s: REQUEST=%s", txid, r.Method, r.URL.Path)
+		p.LogHeaderMap(txid, r.Header, ">->")
 	}
 }
