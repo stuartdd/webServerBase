@@ -66,7 +66,7 @@ func TestFallback(t *testing.T) {
 	tstlog.LogInfof("LINE %d", 8)
 	tstlog.LogError(fmt.Errorf("LINE %d", 9))
 	tstlog.LogErrorf("LINE %d", 10)
-	tstlog.LogErrorWithStackTrace("TRACE 11", "LINE 11")
+	tstlog.LogErrorWithStackTrace("id", "TRACE 11", "LINE 11")
 	tstlog.Fatal(fmt.Errorf("FATAL %d", 12))
 
 	test.AssertBoolFalse(t, "", IsAccess())

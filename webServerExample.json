@@ -1,9 +1,9 @@
 {
   "loggerLevels" : {"DEBUG":"SYSOUT","INFO":"SYSOUT", "WARN":"SYSOUT", "ACCESS":"SYSOUT"},
   "staticPaths"  : {
-    "windows":{"/static/":"site\\", "data":"site\\"}, 
-    "linux":{"/static/":"site/", "data":"site/"},
-    "darwin":{"/static/":"site/", "data":"site/"}
+    "windows":{"/static":"site\\", "data":"site\\"}, 
+    "linux":{"/static":"site/", "data":"site/"},
+    "darwin":{"/static":"site/", "data":"site/"}
   }, 
   "templatePaths"  : {
     "windows":"site\\templates\\", 

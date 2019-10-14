@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/stuartdd/webServerBase/exec"
 	"github.com/stuartdd/webServerBase/logging"
@@ -122,6 +123,13 @@ func DefaultStaticFileHandler(request *http.Request, response *Response) {
 		Work out the content type from the file name extension and add it to the wrapped http.ResponseWriter
 		Dont overwrite a content type that already exists!
 	*/
+	if !strings.Contains(url, ".") {
+		if strings.HasSuffix(url, "/") {
+			url = url + "index.html"
+		} else {
+			url = url + "/index.html"
+		}
+	}
 	contentType := LookupContentType(url)
 	if (contentType != "") && (ww.Header()[ContentTypeName] == nil) {
 		ww.Header()[ContentTypeName] = []string{contentType + "; charset=" + server.contentTypeCharset}

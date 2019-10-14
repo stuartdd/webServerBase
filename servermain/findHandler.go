@@ -132,8 +132,26 @@ func (p *MappingElements) GetMappingElementTreeString(heading string) string {
 
 func (p *MappingElements) getPathMappingElement(parts []string, method string, pos int, me *MappingElements) (*MappingElements, bool) {
 	if pos >= len(parts) {
-		if me.RequestMethod != method || me.RequestMethod == "" {
-			return nil, false
+		/*
+			We have run out of parts so check that the url has a * wildcard! For example:
+			mapping  = /static/*
+			url = /static/
+			parts size = 1 = [static]
+			This should match!
+		*/
+		wc := me.elements["*"]
+		if wc == nil {
+			if me.RequestMethod != method || me.RequestMethod == "" {
+				return nil, false
+			}
+		} else {
+			/*
+				Even a wildcard needs to match the method
+			*/
+			if wc.RequestMethod != method || wc.RequestMethod == "" {
+				return nil, false
+			}
+			return wc, true
 		}
 		return me, true
 	}
