@@ -24,7 +24,7 @@ var err1 error
 func TestLoadTemplatesNested(t *testing.T) {
 	if templ == nil {
 		logging.CreateTestLogger("TestTemplates")
-		templ, err1 = loadTemplates("../site")
+		templ, err1 = loadTemplates("../site/templates")
 		test.AssertErrorIsNil(t, "", err1)
 	}
 	mapData := make(map[string]string)
@@ -44,7 +44,7 @@ func TestLoadTemplatesNested(t *testing.T) {
 }
 
 func TestFileGroupTemplates(t *testing.T) {
-	tmpl, err := template.ParseFiles("../site/import1.html", "../site/part1.html", "../site/part2.html")
+	tmpl, err := template.ParseFiles("../site/templates/import1.html", "../site/templates/part1.html", "../site/templates/part2.html")
 	test.AssertErrorIsNil(t, "", err)
 	buf := new(bytes.Buffer)
 	mapData := make(map[string]string)
@@ -59,7 +59,7 @@ func TestFileGroupTemplates(t *testing.T) {
 }
 func TestWriterNotFoundPanic(t *testing.T) {
 	if templ == nil {
-		templ, err1 = loadTemplates("../site")
+		templ, err1 = loadTemplates("../site/templates")
 	}
 	test.AssertErrorIsNil(t, "", err1)
 	defer test.AssertPanicAndRecover(t, "Template 'simple4.html' not found")
@@ -81,7 +81,7 @@ func TestWriterPanic(t *testing.T) {
 
 func TestLoadTemplatesFromPath(t *testing.T) {
 	if templ == nil {
-		templ, err1 = loadTemplates("../site")
+		templ, err1 = loadTemplates("../site/templates")
 	}
 
 	test.AssertErrorIsNil(t, "", err1)
@@ -138,12 +138,12 @@ func TestStaticTemplates(t *testing.T) {
 }
 
 func TestFileTemplateNotFound(t *testing.T) {
-	_, err := template.ParseFiles("../site/simple1.template.html.x")
+	_, err := template.ParseFiles("../site/templates/simple1.template.html.x")
 	test.AssertError(t, "File should NOT be found", err)
 }
 
 func TestFileTemplates(t *testing.T) {
-	tmpl, err := template.ParseFiles("../site/simple1.template.html")
+	tmpl, err := template.ParseFiles("../site/templates/simple1.template.html")
 	test.AssertErrorIsNil(t, "", err)
 	buf := new(bytes.Buffer)
 	data1 := Data{

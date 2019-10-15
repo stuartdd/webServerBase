@@ -63,7 +63,7 @@ func main() {
 RunWithConfig runs with a sgeneric handler
 Param - config a ref to the config object
 */
-func RunWithConfig(configData *config.Data, executable string) {
+func RunWithConfig(configData *config.Data, executableName string) {
 	/*
 		Add loggers for each module (Makes for neater logs!)
 	*/
@@ -77,7 +77,7 @@ func RunWithConfig(configData *config.Data, executable string) {
 	/*
 		Configure and Start the server.
 	*/
-	serverInstance = servermain.NewServerInstanceData(executable, configData.ContentTypeCharset)
+	serverInstance = servermain.NewServerInstanceData(executableName, configData.ContentTypeCharset)
 	/*
 		Set the static file data paths for the given OS. When this is done we can add the handler.
 	*/
