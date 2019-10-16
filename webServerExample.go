@@ -164,7 +164,7 @@ func fileLargeHandler(r *http.Request, response *servermain.Response) {
 	// line := h.GetNamedURLPart("line", "-1")         // Optional. Default value txt
 	fullFile := filepath.Join(h.GetStaticPathForName(pathName).FilePath, fileName+"."+ext)
 	fileID := h.GetTransactionID() + ".tracked"
-	largefile.NewLargeFileReader(fullFile, 1000)
+	largefile.NewLargeFileReader(fullFile)
 	response.SetResponse(201, "{\"ref\":\""+fileID+"\"}", "application/json")
 }
 

@@ -19,14 +19,21 @@ type LargeFileData struct {
 	Size      int64
 	Time      time.Time
 	bufSize   int
+	extendBy  int
 }
 
 var pageMap = make(map[string]*LargeFileData)
 
 /*
-NewLargeFileReader Initialise the large File Reader data set
+ */
+func NewLargeFileReader(name string) *LargeFileData {
+	return NewLargeFileReaderDetailed(name, 100, 100, 50)
+}
+
+/*
+NewLargeFileReaderDetailed Initialise the large File Reader data set
 */
-func NewLargeFileReader(name string, fileReaderBufferSize int) *LargeFileData {
+func NewLargeFileReaderDetailed(name string, fileReaderBufferSize int, initialLineCount int, extendBy int) *LargeFileData {
 	if fileReaderBufferSize == 0 {
 		panicapi.ThrowError(500, panicapi.SCParamValidation, "Internal Server Error", "NewLargeFileReader: Internal error: openInitial-->fileReaderBufferSize Parameter cannot be 0")
 	}
@@ -49,11 +56,12 @@ func NewLargeFileReader(name string, fileReaderBufferSize int) *LargeFileData {
 	*/
 	data := &LargeFileData{
 		Name:      name,
-		Offsets:   make([]int64, 50), // Make room for 100 lines
+		Offsets:   make([]int64, initialLineCount), // Make room for 100 lines
 		LineCount: 0,
 		Size:      info.Size(),          // The size of the file so we know if it is extended
 		Time:      time.Now(),           // The time we last read the file so we can clean up later
 		bufSize:   fileReaderBufferSize, // Keep this for ReadMoreLines to use
+		extendBy:  extendBy,             // Extend the offsets array by this amount
 	}
 	/*
 		While not at the end of the file
@@ -182,9 +190,6 @@ func (p *LargeFileData) readMoreLines() {
 	notEOF := true                     // Are we at the end of the file
 	buf := make([]byte, p.bufSize)     // Buffer for the file
 
-	fmt.Printf("bs [%d]\n", p.bufSize)
-	fmt.Printf("of [%d]\n", offset)
-
 	/*
 		Pluss 1 so it is at the start of the next line!
 	*/
@@ -198,7 +203,6 @@ func (p *LargeFileData) readMoreLines() {
 
 	for notEOF {
 		bytesRead, err = io.ReadAtLeast(f, buf, p.bufSize)
-		fmt.Printf("[%s] [%d]\n", string(buf[0:bytesRead]), offset)
 		notEOF = checkOpenInitialError(p.Name, "NewLargeFileReader", err)
 		offset = p.parseOpenInitial(bytesRead, buf, offset)
 	}
@@ -215,11 +219,9 @@ func (p *LargeFileData) parseOpenInitial(bytesRead int, b []byte, offset int64) 
 	for i := 0; i < bytesRead; i++ {
 		if b[i] == 10 {
 			if p.LineCount >= len(p.Offsets) {
-				newLen := p.LineCount + 50
+				newLen := p.LineCount + p.extendBy
 				sb := make([]int64, newLen)
-				for i := 0; i < p.LineCount; i++ {
-					sb[i] = p.Offsets[i]
-				}
+				//				copy(sb, p.Offsets)
 				p.Offsets = sb
 			}
 			p.Offsets[p.LineCount] = offset
