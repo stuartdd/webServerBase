@@ -112,7 +112,7 @@ ListenAndServeOnPort start the server on a specific port
 func (p *ServerInstanceData) ListenAndServeOnPort(port int) {
 	p.server = &http.Server{Addr: ":" + strconv.Itoa(port)}
 	p.server.Handler = p
-	p.logger.LogDebugf("Server HI -----------------: %n", port)
+	p.logger.LogDebugf("Server Instance created for port : %d", port)
 	err := p.server.ListenAndServe()
 	if p.GetServerClosedReason() != "" {
 		p.logger.LogInfof("Server Halted: %s", p.GetServerClosedReason())

@@ -6,7 +6,7 @@ import (
 	"github.com/stuartdd/webServerBase/test"
 )
 
-const testFilePrefix = "../site/TestLargeFileRead-"
+const testFilePrefix = "../example/site/TestLargeFileRead-"
 
 /* Offsets
 0	1	2	3	4	5	6
@@ -50,7 +50,7 @@ func TestExtendingFile(t *testing.T) {
 	test.AssertIntEqual(t, "", list.LineCount, lc+2)
 }
 
-/* ../site/TestLargeFileRead-002.txt
+/* ../example/site/TestLargeFileRead-002.txt
 0: \n
 1: b\n
 2: c\n
@@ -79,7 +79,7 @@ func TestLargeFileRead002_1(t *testing.T) {
 	test.AssertStringEqualsUnix(t, "0", list.ReadLargeFile(0, 0), "")
 }
 
-/* ../site/TestLargeFileRead-001.txt
+/* ../example/site/TestLargeFileRead-001.txt
 0: a\n
 1: b\n
 2: c\n

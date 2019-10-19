@@ -8,7 +8,7 @@ import (
 )
 
 func TestConfigLoad(t *testing.T) {
-	test.AssertErrorIsNil(t, "Should not return an error", LoadConfigData("../webServerExample.json"))
+	test.AssertErrorIsNil(t, "Should not return an error", LoadConfigData("../example/webServerExample.json"))
 
 	cfg := GetConfigDataInstance()
 	if runtime.GOOS == "windows" {

@@ -221,7 +221,7 @@ func (p *LargeFileData) parseOpenInitial(bytesRead int, b []byte, offset int64) 
 			if p.LineCount >= len(p.Offsets) {
 				newLen := p.LineCount + p.extendBy
 				sb := make([]int64, newLen)
-				//				copy(sb, p.Offsets)
+				copy(sb, p.Offsets)
 				p.Offsets = sb
 			}
 			p.Offsets[p.LineCount] = offset
